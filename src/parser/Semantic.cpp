@@ -1,0 +1,243 @@
+#include "Semantic.h"
+#include <algorithm>
+
+USE_MODULE(Arcana::Parser);
+
+
+#define ADD_STREAM(stream)              _streams [ #stream ] = stream.buffer
+
+
+struct SemanticStreamer
+{
+    SemanticStreamer& operator |  (const TokenType type); 
+    SemanticStreamer& operator |  (const SemanticStreamer& streamer); 
+    SemanticStreamer& operator || (TokenType type);
+
+    SemanticStream    buffer;
+};
+
+SemanticStreamer operator | (TokenType lhs, TokenType rhs) 
+{
+    SemanticStreamer b;
+    SemanticNode     lnode { lhs };
+    SemanticNode     rnode { rhs };
+
+    b.buffer.push_back(lnode);
+    b.buffer.push_back(rnode);
+    return b;
+}
+
+SemanticStreamer operator || (TokenType lhs, TokenType rhs) 
+{
+    SemanticStreamer b;
+    SemanticNode     node { lhs, rhs };
+
+    b.buffer.push_back(node);
+    return b;
+}
+
+
+SemanticStreamer& SemanticStreamer::operator | (const TokenType type)
+{
+    SemanticNode node { type };
+
+    buffer.push_back(node);
+    return *this;
+}
+
+SemanticStreamer& SemanticStreamer::operator | (const SemanticStreamer& streamer)
+{
+    buffer.insert(buffer.end(), streamer.buffer.begin(), streamer.buffer.end());
+    return *this;
+}
+
+
+SemanticStreamer& SemanticStreamer::operator || (const TokenType type)
+{
+    buffer.back().push_back(type);
+    return *this;
+}
+
+
+
+
+
+
+static SemanticStreamer VARIABLE_ASSIGNMENT = 
+{
+    TokenType::IDENTIFIER                           |
+    TokenType::ASSIGN                               |
+    TokenType::ANY                                  |
+    ( TokenType::NEWLINE || TokenType::SEMICOLON || TokenType::ENDOFFILE )
+};
+
+
+static SemanticStreamer EMPTY_LINE = 
+{
+    ( TokenType::NEWLINE || TokenType::ENDOFFILE )
+};
+
+
+static SemanticStreamer ATTRIBUTE = 
+{
+    TokenType::AT           |
+    TokenType::IDENTIFIER   |
+    TokenType::NEWLINE
+};
+
+
+static SemanticStreamer BUILTIN_TASK_DECL = 
+{
+    TokenType::IDENTIFIER   |
+    TokenType::IDENTIFIER   |
+    TokenType::ROUNDLP      |
+    TokenType::ANY          |
+    TokenType::ROUNDRP      |
+    TokenType::CURLYLP      |
+    TokenType::CURLYRP      |
+    ( TokenType::NEWLINE || TokenType::ENDOFFILE )     
+};
+
+static SemanticStreamer TASK_DECL = 
+{
+    TokenType::IDENTIFIER   |
+    TokenType::IDENTIFIER   |
+    TokenType::ROUNDLP      |
+    TokenType::ANY          |
+    TokenType::ROUNDRP      |
+    TokenType::NEWLINE      |
+    TokenType::CURLYLP      |
+    TokenType::ANY          |
+    TokenType::CURLYRP      |
+    ( TokenType::NEWLINE || TokenType::ENDOFFILE )  
+};
+
+
+
+std::string Arcana::Parser::SemanticTypeRepr(const SemanticType type)
+{
+    switch (type)
+    {
+        case SemanticType::UNDEFINED:         return "UNDEFINED";
+        case SemanticType::VARIABLE_ASSIGN:   return "VARIABLE_ASSIGN";
+        case SemanticType::EMPTY_LINE:        return "EMPTY_LINE";
+        case SemanticType::ATTRIBUTE:         return "ATTRIBUTE";
+        case SemanticType::BUILTIN_TASK_DECL: return "BUILTIN_TASK_DECL";
+        case SemanticType::TASK_DECL:         return "TASK_DECL";
+        default:                              return "<INVALID>";
+    }
+}
+
+
+
+Semantic::Semantic() 
+{
+    _streams[SemanticType::VARIABLE_ASSIGN]   = VARIABLE_ASSIGNMENT.buffer;
+    _streams[SemanticType::EMPTY_LINE]        = EMPTY_LINE.buffer;
+    _streams[SemanticType::ATTRIBUTE]         = ATTRIBUTE.buffer;
+    _streams[SemanticType::BUILTIN_TASK_DECL] = BUILTIN_TASK_DECL.buffer;
+    _streams[SemanticType::TASK_DECL]         = TASK_DECL.buffer;
+}
+
+
+Match Semantic::match(const TokenType token)
+{
+    bool                         error       = false;
+    bool                         cached      = false;
+    bool                         matched     = false;
+    bool                         remove      = false;
+    uint32_t                     position    = 0;
+    SemanticType                 stype       = SemanticType::UNDEFINED;
+    SemanticNode                 snode;
+    std::set<SemanticType>       new_key_cache;
+    SemanticNode::const_iterator found;
+    SemanticNode::const_iterator wildcard;
+
+    if (_cache.data.size() == 0)
+    {
+        for (const auto& pair : _streams) 
+        {
+            _cache.keys.insert(pair.first);
+        }
+    }
+    else
+    {
+        cached = true;
+    }
+
+    std::set<SemanticType> &keys = _cache.keys;
+
+    for (auto it = keys.begin(); it != keys.end() && !matched; )
+    {   
+        const auto  key   = *it;
+        const auto& value = _streams[key];
+        position          = cached ? _cache.data[key] : 0;
+        remove            = false;
+
+        if (position < value.size())
+        {
+            auto& node     = value[position];
+                  found    = std::find(node.begin(), node.end(), token);
+                  wildcard = std::find(node.begin(), node.end(), TokenType::ANY);
+                  snode    = node;
+
+            if ( (found != node.end()))
+            {
+                _cache.data[key] = ++position;
+                matched          = (position == value.size());
+
+                if (matched) stype = key;
+
+                new_key_cache.insert(key);
+            }
+            else if (wildcard != node.end())
+            {
+                position++;
+                auto& lookahead  = value[position];
+
+                found            = std::find(lookahead.begin(), lookahead.end(), token);
+                position         = (found == lookahead.end()) ? position - 1 : position + 1;
+                _cache.data[key] = position;
+                matched          = (position == value.size());
+
+                if (matched) stype = key;
+            }
+            else
+            {
+                remove = true;
+            }
+
+            if (remove)
+            {
+                it = keys.erase(it);
+
+                if (keys.empty())
+                {
+                    error = true;
+                    if (cached)
+                    {
+                        _cache.reset();
+                    }
+
+                    break;
+                }
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
+    if (new_key_cache.size())
+    {
+        _cache.keys = new_key_cache;
+    }
+
+    if (matched) 
+    {
+        _cache.reset();
+    }
+
+    return { matched, stype, { Token{}, snode, error } };
+}

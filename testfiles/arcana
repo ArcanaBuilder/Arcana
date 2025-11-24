@@ -1,0 +1,27 @@
+#!/usr/bin/arcana
+
+COMPILER = gcc
+FLAGS    = -Wall
+ARTIFACT = run
+
+@profiling
+@logic
+task Create(folder)
+{
+    mkdir folder
+}
+
+
+@logic
+task Clean()
+
+
+@profiling
+task Build(sources)
+{
+    COMPILER FLAGS sources -o ARTIFACT
+}
+
+
+
+

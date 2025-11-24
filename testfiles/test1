@@ -1,0 +1,17 @@
+COMPILER = gcc
+FLAGS    = -Wall -pedantic
+TARGET   = app
+
+@builtin
+task Clean(folder) {}
+
+@profile
+task Build(sources) 
+{
+    COMPILER FLAGS sources -o TARGET
+}
+
+task Install() 
+{
+    mv TARGET /usr/local/bin
+}
