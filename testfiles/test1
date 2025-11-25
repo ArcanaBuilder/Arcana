@@ -3,6 +3,21 @@ FLAGS    = -Wall -pedantic
 TARGET   = app
 
 @builtin
+MODE     = Release
+
+@precompiler
+task Create_Folders(folders)
+{
+    mkdir build
+}
+
+@postcompiler
+task Say_Something(msg)
+{
+    mkdir build
+}
+
+@builtin
 task Clean(folder) {}
 
 @profile
@@ -15,3 +30,6 @@ task Install()
 {
     mv TARGET /usr/local/bin
 }
+
+
+Say_Something('ciao');

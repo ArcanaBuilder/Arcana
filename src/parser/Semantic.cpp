@@ -113,6 +113,17 @@ static SemanticStreamer TASK_DECL =
 };
 
 
+static SemanticStreamer TASK_CALL = 
+{
+    TokenType::IDENTIFIER   |
+    TokenType::ROUNDLP      |
+    TokenType::ANY          |
+    TokenType::ROUNDRP      |
+    TokenType::SEMICOLON    |
+    ( TokenType::NEWLINE || TokenType::ENDOFFILE )  
+};
+
+
 
 std::string Arcana::Parser::SemanticTypeRepr(const SemanticType type)
 {
@@ -124,6 +135,7 @@ std::string Arcana::Parser::SemanticTypeRepr(const SemanticType type)
         case SemanticType::ATTRIBUTE:         return "ATTRIBUTE";
         case SemanticType::BUILTIN_TASK_DECL: return "BUILTIN_TASK_DECL";
         case SemanticType::TASK_DECL:         return "TASK_DECL";
+        case SemanticType::TASK_CALL:         return "TASK_CALL";
         default:                              return "<INVALID>";
     }
 }
@@ -132,21 +144,23 @@ std::string Arcana::Parser::SemanticTypeRepr(const SemanticType type)
 
 Semantic::Semantic() 
 {
-    _streams[SemanticType::VARIABLE_ASSIGN]   = VARIABLE_ASSIGNMENT.buffer;
-    _streams[SemanticType::EMPTY_LINE]        = EMPTY_LINE.buffer;
-    _streams[SemanticType::ATTRIBUTE]         = ATTRIBUTE.buffer;
+    _streams[SemanticType::VARIABLE_ASSIGN  ] = VARIABLE_ASSIGNMENT.buffer;
+    _streams[SemanticType::EMPTY_LINE       ] = EMPTY_LINE.buffer;
+    _streams[SemanticType::ATTRIBUTE        ] = ATTRIBUTE.buffer;
     _streams[SemanticType::BUILTIN_TASK_DECL] = BUILTIN_TASK_DECL.buffer;
-    _streams[SemanticType::TASK_DECL]         = TASK_DECL.buffer;
+    _streams[SemanticType::TASK_DECL        ] = TASK_DECL.buffer;
+    _streams[SemanticType::TASK_CALL        ] = TASK_CALL.buffer;
 }
 
 
-Match Semantic::match(const TokenType token)
+void Semantic::match(const Token& token, Match& match)
 {
     bool                         error       = false;
     bool                         cached      = false;
     bool                         matched     = false;
     bool                         remove      = false;
     uint32_t                     position    = 0;
+    TokenType                    ttype       = token.type;
     SemanticType                 stype       = SemanticType::UNDEFINED;
     SemanticNode                 snode;
     std::set<SemanticType>       new_key_cache;
@@ -177,7 +191,7 @@ Match Semantic::match(const TokenType token)
         if (position < value.size())
         {
             auto& node     = value[position];
-                  found    = std::find(node.begin(), node.end(), token);
+                  found    = std::find(node.begin(), node.end(), ttype);
                   wildcard = std::find(node.begin(), node.end(), TokenType::ANY);
                   snode    = node;
 
@@ -195,7 +209,7 @@ Match Semantic::match(const TokenType token)
                 position++;
                 auto& lookahead  = value[position];
 
-                found            = std::find(lookahead.begin(), lookahead.end(), token);
+                found            = std::find(lookahead.begin(), lookahead.end(), ttype);
                 position         = (found == lookahead.end()) ? position - 1 : position + 1;
                 _cache.data[key] = position;
                 matched          = (position == value.size());
@@ -239,5 +253,12 @@ Match Semantic::match(const TokenType token)
         _cache.reset();
     }
 
-    return { matched, stype, { Token{}, snode, error } };
+    match.valid          = matched;
+    match.type           = stype;
+    match.Error.current  = Token{};
+    match.Error.found    = snode;
+    match.Error.presence = error;
+
+    return;
+    //return { matched, stype, { Token{}, snode, error } };
 }

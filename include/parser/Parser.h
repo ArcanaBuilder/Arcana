@@ -34,6 +34,7 @@ private:
     void Handle_Attribute(Tokens& tokens);
     void Handle_BuiltinTaskDecl(Tokens& tokens);
     void Handle_TaskDecl(Tokens& tokens);
+    void Handle_TaskCall(Tokens& tokens);
 
 };
 

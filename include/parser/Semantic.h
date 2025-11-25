@@ -21,6 +21,7 @@ enum class SemanticType : uint32_t
     ATTRIBUTE             ,
     BUILTIN_TASK_DECL     ,
     TASK_DECL             ,
+    TASK_CALL             ,
 };
 
 
@@ -47,6 +48,8 @@ struct Match
 {
     bool         valid;
     SemanticType type;
+
+    std::vector<std::stringstream> buffer;
     
     struct
     {
@@ -57,6 +60,10 @@ struct Match
 
     bool isValid () const noexcept { return valid;          }
     bool isError () const noexcept { return Error.presence; }
+
+    std::string operator [] (const size_t index) const { return buffer[index].str(); }
+
+    void reset() { buffer.clear(); }
 };
 
 
@@ -69,7 +76,7 @@ class Semantic
 public:
     Semantic();
 
-    Match match(const TokenType token);
+    void match(const Token& token, Match& match);
 
 private:
     SemanticStreams _streams;

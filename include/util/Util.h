@@ -67,6 +67,8 @@
 #ifdef DEBUG
   #include <iostream>
   #define DMSG(msg)                             std::cout << "[" << ANSI_BYELLOW << ANSI_DIM << "DEBUG" << ANSI_RESET "] " << ANSI_GRAY << msg << ANSI_RESET << std::endl;
+#else
+  #define DMSG(msg)
 #endif
 
 #include <stdint.h>

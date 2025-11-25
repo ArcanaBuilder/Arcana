@@ -1,5 +1,5 @@
 #include "Parser.h"
-
+#include "Instruction.h"
 
 
 USE_MODULE(Arcana::Parser);
@@ -19,15 +19,14 @@ void Parser::AddErrorCallback(const ErrorCallback& ecb)
 
 void Parser::parse()
 {
-    Token  token;
-    Tokens tokens;
+    Token token;
+    Match match;
 
     do
     {   
-        token       = lexer.next();
-        Match match = semantic.match(token.type);
+        token = lexer.next();
 
-        tokens.push_back(token);
+        semantic.match(token, match);
 
         if (match.isValid())
         {
@@ -38,6 +37,7 @@ void Parser::parse()
                 case SemanticType::ATTRIBUTE:         Handle_Attribute(tokens);       tokens.clear(); break;
                 case SemanticType::BUILTIN_TASK_DECL: Handle_BuiltinTaskDecl(tokens); tokens.clear(); break;
                 case SemanticType::TASK_DECL:         Handle_TaskDecl(tokens);        tokens.clear(); break;
+                case SemanticType::TASK_CALL:         Handle_TaskCall(tokens);        tokens.clear(); break;
 
                 /* how can we reach this case? */
                 case SemanticType::UNDEFINED:                                         tokens.clear(); break;
@@ -57,7 +57,14 @@ void Parser::parse()
 
 void Parser::Handle_VarAssign(Tokens& tokens)
 {
+    std::string var = tokens[0].lexeme;
+    std::string val = tokens[2].lexeme;
+
+    Arcana::Core::InstructionAssign assign(var, val);
+
     DMSG( "(VARASSIGN)         " << lexer[tokens[0].line - 1]);
+    DMSG( "                    " << assign.var << " <- " << assign.val);
+
 }
 
 
@@ -75,5 +82,12 @@ void Parser::Handle_BuiltinTaskDecl(Tokens& tokens)
 
 void Parser::Handle_TaskDecl(Tokens& tokens)
 {
+    std::string task_name = tokens[1].lexeme;
+
     DMSG( "(TASK DECL)         " << lexer[tokens[0].line - 1]);
+}
+
+void Parser::Handle_TaskCall(Tokens& tokens)
+{
+    DMSG( "(TASK CALL)         " << lexer[tokens[0].line - 1]);
 }
