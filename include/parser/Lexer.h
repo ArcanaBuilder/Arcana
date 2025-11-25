@@ -44,7 +44,8 @@ struct Token
     TokenType    type;
     std::string  lexeme;
     std::size_t  line;
-    std::size_t  column;
+    std::size_t  start;
+    std::size_t  end;
 };
 
 
@@ -67,7 +68,7 @@ public:
         return lines[pos];
     }
 
-    inline std::string operator[] (const Token& token) 
+    inline std::string& operator[] (const Token& token) 
     {
         return lines[token.line - 1];
     }
@@ -88,7 +89,7 @@ private:
     Token identifier();
     Token number();
     Token makeToken(TokenType type, std::string lexeme,
-                    std::size_t line, std::size_t column);
+                    std::size_t line, std::size_t start, std::size_t end);
 };
 
 

@@ -1,27 +1,34 @@
-#!/usr/bin/arcana
+COMPILER = g++
+FLAGS    = -std=c++17 -Os -Wall -Wextra -DDEBUG
+TARGET   = app
+MODE     = Release
 
-COMPILER = gcc
-FLAGS    = -Wall
-ARTIFACT = run
+BUILD    = Build
+SOURCE   = Source/**
 
-@profiling
-@logic
-task Create(folder)
-{
-    mkdir folder
+@folder
+@file
+task Clean(BUILD);
+
+task Install(TARGET);
+
+
+@profile
+task Build() {
+    COMPILER FLAGS SOURCE -o TARGET
 }
 
-
-@logic
-task Clean()
-
-
-@profiling
-task Build(sources)
+@precompiler
+task Create_Folders()
 {
-    COMPILER FLAGS sources -o ARTIFACT
+    mkdir BUILD
+    mkdir test
 }
 
+@postcompiler
+task Say_Something(msg)
+{
+    echo msg
+}
 
-
-
+Say_Something('All Done!');

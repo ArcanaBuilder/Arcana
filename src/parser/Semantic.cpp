@@ -93,8 +93,7 @@ static SemanticStreamer BUILTIN_TASK_DECL =
     TokenType::ROUNDLP      |
     TokenType::ANY          |
     TokenType::ROUNDRP      |
-    TokenType::CURLYLP      |
-    TokenType::CURLYRP      |
+    TokenType::SEMICOLON    |
     ( TokenType::NEWLINE || TokenType::ENDOFFILE )     
 };
 
@@ -150,6 +149,13 @@ Semantic::Semantic()
     _streams[SemanticType::BUILTIN_TASK_DECL] = BUILTIN_TASK_DECL.buffer;
     _streams[SemanticType::TASK_DECL        ] = TASK_DECL.buffer;
     _streams[SemanticType::TASK_CALL        ] = TASK_CALL.buffer;
+
+    _indexes[SemanticType::VARIABLE_ASSIGN  ] = std::vector<Index>(VARIABLE_ASSIGNMENT.buffer.size());
+    _indexes[SemanticType::EMPTY_LINE       ] = std::vector<Index>(EMPTY_LINE.buffer.size());
+    _indexes[SemanticType::ATTRIBUTE        ] = std::vector<Index>(ATTRIBUTE.buffer.size());
+    _indexes[SemanticType::BUILTIN_TASK_DECL] = std::vector<Index>(BUILTIN_TASK_DECL.buffer.size());
+    _indexes[SemanticType::TASK_DECL        ] = std::vector<Index>(TASK_DECL.buffer.size());
+    _indexes[SemanticType::TASK_CALL        ] = std::vector<Index>(TASK_CALL.buffer.size());
 }
 
 
@@ -197,10 +203,15 @@ void Semantic::match(const Token& token, Match& match)
 
             if ( (found != node.end()))
             {
-                _cache.data[key] = ++position;
-                matched          = (position == value.size());
+                _collect_input(token, *found, key, position);
 
-                if (matched) stype = key;
+                _cache.data[key]  = ++position;
+                matched           = (position == value.size());
+
+                if (matched)
+                {
+                    stype = key;
+                }
 
                 new_key_cache.insert(key);
             }
@@ -208,13 +219,26 @@ void Semantic::match(const Token& token, Match& match)
             {
                 position++;
                 auto& lookahead  = value[position];
-
                 found            = std::find(lookahead.begin(), lookahead.end(), ttype);
-                position         = (found == lookahead.end()) ? position - 1 : position + 1;
-                _cache.data[key] = position;
-                matched          = (position == value.size());
 
-                if (matched) stype = key;
+                if (found == lookahead.end())
+                {
+                    position -= 1;
+                    _collect_input(token, *wildcard, key, position);
+                }
+                else
+                {
+                    position += 1;
+                    _collect_input(token, *found, key, position - 1);
+                }
+                
+                _cache.data[key]  = position;
+                matched           = (position == value.size());
+
+                if (matched)
+                {
+                    stype = key;
+                } 
             }
             else
             {
@@ -248,17 +272,62 @@ void Semantic::match(const Token& token, Match& match)
         _cache.keys = new_key_cache;
     }
 
-    if (matched) 
-    {
-        _cache.reset();
-    }
-
     match.valid          = matched;
     match.type           = stype;
-    match.Error.current  = Token{};
+    match.indexes        = _indexes[stype];
+    match.Error.token    = token;
     match.Error.found    = snode;
     match.Error.presence = error;
+    
+    if (matched) 
+    {
+        _reset();
+    }
 
     return;
-    //return { matched, stype, { Token{}, snode, error } };
+}
+
+
+void Semantic::_collect_input(const Token& token, const TokenType tt, const SemanticType st, const uint32_t pos)
+{
+    auto& index = _indexes[st][pos];
+
+    index.token = token;
+    index.end   = token.start + token.lexeme.size();
+
+    if (tt == TokenType::ANY)
+    {
+        if (index.any == false)
+        {
+            index.start = token.start;
+            index.any   = true;
+        }
+    }
+    else
+    {
+        if (index.any == false)
+        {
+            index.start = token.start;
+        }
+        else
+        {
+            index.any   = false;
+        }
+    }
+    
+    return;
+}
+
+
+void Semantic::_reset()
+{
+    _cache.reset();
+
+    for (auto &pair : _indexes)
+    {
+        for (auto &idx : pair.second)
+        {
+            idx.reset();
+        }
+    }
 }

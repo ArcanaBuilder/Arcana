@@ -30,11 +30,11 @@ private:
     Semantic&      semantic;
     ErrorCallback  errorcb;
 
-    void Handle_VarAssign(Tokens& tokens);
-    void Handle_Attribute(Tokens& tokens);
-    void Handle_BuiltinTaskDecl(Tokens& tokens);
-    void Handle_TaskDecl(Tokens& tokens);
-    void Handle_TaskCall(Tokens& tokens);
+    void Handle_VarAssign(Match& match);
+    void Handle_Attribute(Match& match);
+    void Handle_BuiltinTaskDecl(Match& match);
+    void Handle_TaskDecl(Match& match);
+    void Handle_TaskCall(Match& match);
 
 };
 

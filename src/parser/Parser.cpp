@@ -32,21 +32,20 @@ void Parser::parse()
         {
             switch (match.type)
             {
-                case SemanticType::VARIABLE_ASSIGN:   Handle_VarAssign(tokens);       tokens.clear(); break;
-                case SemanticType::EMPTY_LINE:        /* just ignore this */          tokens.clear(); break;
-                case SemanticType::ATTRIBUTE:         Handle_Attribute(tokens);       tokens.clear(); break;
-                case SemanticType::BUILTIN_TASK_DECL: Handle_BuiltinTaskDecl(tokens); tokens.clear(); break;
-                case SemanticType::TASK_DECL:         Handle_TaskDecl(tokens);        tokens.clear(); break;
-                case SemanticType::TASK_CALL:         Handle_TaskCall(tokens);        tokens.clear(); break;
+                case SemanticType::VARIABLE_ASSIGN:   Handle_VarAssign(match);       break;
+                case SemanticType::EMPTY_LINE:        /* just ignore this */         break;
+                case SemanticType::ATTRIBUTE:         Handle_Attribute(match);       break;
+                case SemanticType::BUILTIN_TASK_DECL: Handle_BuiltinTaskDecl(match); break;
+                case SemanticType::TASK_DECL:         Handle_TaskDecl(match);        break;
+                case SemanticType::TASK_CALL:         Handle_TaskCall(match);        break;
 
                 /* how can we reach this case? */
-                case SemanticType::UNDEFINED:                                         tokens.clear(); break;
+                case SemanticType::UNDEFINED:                                        break;
             }
         }
 
         if (match.isError())
         {
-            match.Error.current = token;
             errorcb(match);
             break;
         }
@@ -55,39 +54,89 @@ void Parser::parse()
 }
 
 
-void Parser::Handle_VarAssign(Tokens& tokens)
+void Parser::Handle_VarAssign(Match& match)
 {
-    std::string var = tokens[0].lexeme;
-    std::string val = tokens[2].lexeme;
+    const Index* p1            = match[(size_t) Grammar_VARIABLE_ASSIGN::VARNAME];
+    const Index* p2            = match[(size_t) Grammar_VARIABLE_ASSIGN::VALUE];
+    std::string& input         = lexer[p1->token];
 
-    Arcana::Core::InstructionAssign assign(var, val);
+    std::string  var           = input.substr(p1->start, p1->end - p1->start);
+    std::string  value         = input.substr(p2->start, p2->end - p2->start);
+    
+    DMSG( "(VARASSIGN)         " << "Var:    " << var);
+    DMSG( "                    " << "Val:    " << value);
 
-    DMSG( "(VARASSIGN)         " << lexer[tokens[0].line - 1]);
-    DMSG( "                    " << assign.var << " <- " << assign.val);
-
+    DMSG("");
 }
 
 
-void Parser::Handle_Attribute(Tokens& tokens)
+void Parser::Handle_Attribute(Match& match)
 {      
-    DMSG( "(ATTRIBUTE)         " << lexer[tokens[0].line - 1]);
+    const Index* p1            = match[(size_t) Grammar_ATTRIBUTE::ATTRNAME];
+    std::string& input         = lexer[p1->token];
+
+    std::string  attr          = input.substr(p1->start, p1->start - p1->end);
+    
+    DMSG( "(ATTRIBUTE)         " << "Attr:   " << attr);
+    DMSG("");
 }
 
 
-void Parser::Handle_BuiltinTaskDecl(Tokens& tokens)
+void Parser::Handle_BuiltinTaskDecl(Match& match)
 {
-    DMSG( "(BUILTIN TASK DECL) " << lexer[tokens[0].line - 1]);
+    const Index* p1            = match[(size_t) Grammar_BUILTIN_TASK_DECL::TASKNAME];
+    const Index* p2            = match[(size_t) Grammar_BUILTIN_TASK_DECL::PARAMS];
+    std::string& input         = lexer[p1->token];
+
+    std::string  task          = input.substr(p1->start, p1->end - p1->start);
+    std::string  param         = input.substr(p2->start, p2->end - p2->start);
+    
+    DMSG( "(BUILTIN TASK DECL) " << "Name:   " << task);
+    DMSG( "                    " << "Params: " << param);
+    DMSG("");
 }
 
 
-void Parser::Handle_TaskDecl(Tokens& tokens)
+void Parser::Handle_TaskDecl(Match& match)
 {
-    std::string task_name = tokens[1].lexeme;
+    std::vector<std::string> body;
+    
+    const Index* p1            = match[(size_t) Grammar_TASK_DECL::TASKNAME];
+    const Index* p2            = match[(size_t) Grammar_TASK_DECL::PARAMS];
+    std::string  input         = lexer[p1->token];
 
-    DMSG( "(TASK DECL)         " << lexer[tokens[0].line - 1]);
+    const Index* bbody         = match[(size_t) Grammar_TASK_DECL::CURLYLP];
+    const Index* ebody         = match[(size_t) Grammar_TASK_DECL::CURLYRP];
+
+    for (size_t i = bbody->token.line; i < ebody->token.line - 1; ++ i)
+    {
+        body.push_back(ltrim(lexer[i]));
+    }
+    
+    std::string  task          = input.substr(p1->start, p1->end - p1->start);
+    std::string  param         = input.substr(p2->start, p2->end - p2->start);
+    
+    DMSG( "(TASK DECL)         " << "Name:   " << task);
+    DMSG( "                    " << "Params: " << param);
+    DMSG( "                    " << "Body:");
+
+    for (size_t i = 0; i < body.size(); ++ i)
+    {
+        DMSG( "                            " << i + 1 << ": " << body[i]);
+    }
+    DMSG("");
 }
 
-void Parser::Handle_TaskCall(Tokens& tokens)
+void Parser::Handle_TaskCall(Match& match)
 {
-    DMSG( "(TASK CALL)         " << lexer[tokens[0].line - 1]);
+    const Index* p1            = match[(size_t) Grammar_TASK_CALL::TASKNAME];
+    const Index* p2            = match[(size_t) Grammar_TASK_CALL::PARAMS];
+    std::string& input         = lexer[p1->token];
+
+    std::string  task          = input.substr(p1->start, p1->end - p1->start);
+    std::string  param         = input.substr(p2->start, p2->end - p2->start);
+    
+    DMSG( "(TASK CALL)         " << "Name:   " << task);
+    DMSG( "                    " << "Params: " << param);
+    DMSG("");
 }

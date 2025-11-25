@@ -33,11 +33,12 @@ int run(const Arguments& args)
         const auto& [token, found, _] = m.Error;
 
         std::string       escaping;
-        std::string       s(token.column, '-');
+        std::string       s(token.start + 1, '-');
+        std::string       symbol(token.end, '^');
         std::stringstream ss;
 
         ss << "[" << ANSI_BRED << "ERROR" << ANSI_RESET << "] Semantic error on line " << token.line << ": '" << lex[token] << "'" << std::endl;
-        ss << ANSI_RED << "        +-------------------------" << s << "^" << ANSI_RESET << std::endl;
+        ss << ANSI_RED << "        +-------------------------" << s << symbol << ANSI_RESET << std::endl;
         
         escaping = (token.lexeme == "\n") ? "<New Line>" : token.lexeme;
 

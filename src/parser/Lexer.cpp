@@ -68,7 +68,7 @@ Token Lexer::next()
 
     if (!in_) 
     {
-        return makeToken(TokenType::ENDOFFILE, "", line_, col_);
+        return makeToken(TokenType::ENDOFFILE, "", line_, col_, col_);
     }
 
     if (std::isalpha(static_cast<unsigned char>(current_)) || current_ == '_') 
@@ -119,26 +119,46 @@ void Lexer::load_file_lines(std::istream& in)
 
 void Lexer::advance() 
 {
-    int c = in_.get();
-    if (c == EOF) 
+    for (;;)
     {
-        in_.setstate(std::ios::eofbit);
-        current_ = '\0';
+        int c = in_.get();
+        if (c == EOF) 
+        {
+            in_.setstate(std::ios::eofbit);
+            current_ = '\0';
+            return;
+        }
+
+        if (c == '\\')
+        {
+            int n = in_.peek();
+            if (n == '\n')
+            {
+                in_.get();
+
+                ++line_;
+                nlcol_ = col_;
+                col_   = 0;
+
+                continue;
+            }
+        }
+
+        current_ = static_cast<char>(c);
+
+        if (current_ == '\n') 
+        {
+            ++line_;
+            nlcol_ = col_;
+            col_   = 0;
+        } 
+        else 
+        {
+            ++nlcol_;
+            ++col_;
+        }
+
         return;
-    }
-
-    current_ = static_cast<char>(c);
-
-    if (current_ == '\n') 
-    {
-        ++line_;
-        nlcol_ = col_;
-        col_   = 0;
-    } 
-    else 
-    {
-        ++nlcol_;
-        ++col_;
     }
 }
 
@@ -153,17 +173,17 @@ void Lexer::skipWhitespace()
 Token Lexer::simpleToken(TokenType type) 
 {
     char c       = current_;
-    auto tokLine = (type == TokenType::NEWLINE) ? line_ - 1 : line_;
-    auto tokCol  = (type == TokenType::NEWLINE) ? nlcol_    : col_;
+    auto tokLine = (type == TokenType::NEWLINE) ? line_  - 1 : line_;
+    auto tokCol  = (type == TokenType::NEWLINE) ? nlcol_ - 1 : col_ - 1;
     advance();
-    return makeToken(type, std::string(1, c), tokLine, tokCol);
+    return makeToken(type, std::string(1, c), tokLine, tokCol, tokCol);
 }
 
 Token Lexer::identifier() 
 {
     std::string lexeme;
     auto tokLine = line_;
-    auto tokCol  = col_;
+    auto tokCol  = col_ - 1;
 
     while (in_ && (std::isalnum(static_cast<unsigned char>(current_)) || current_ == '_')) 
     {
@@ -172,14 +192,14 @@ Token Lexer::identifier()
     }
 
     // Qui potresti fare lookup per parole chiave e cambiare TokenType
-    return makeToken(TokenType::IDENTIFIER, std::move(lexeme), tokLine, tokCol);
+    return makeToken(TokenType::IDENTIFIER, std::move(lexeme), tokLine, tokCol, lexeme.size());
 }
 
 Token Lexer::number() 
 {
     std::string lexeme;
     auto tokLine = line_;
-    auto tokCol  = col_;
+    auto tokCol  = col_ - 1;
 
     while (in_ && std::isdigit(static_cast<unsigned char>(current_))) 
     {
@@ -188,11 +208,11 @@ Token Lexer::number()
     }
 
     // Estendibile a numeri con punto, notazione scientifica, ecc.
-    return makeToken(TokenType::NUMBER, std::move(lexeme), tokLine, tokCol);
+    return makeToken(TokenType::NUMBER, std::move(lexeme), tokLine, tokCol, lexeme.size());
 }
 
 Token Lexer::makeToken(TokenType type, std::string lexeme,
-                       std::size_t line, std::size_t column) 
+                       std::size_t line, std::size_t start, std::size_t end) 
 {
-    return Token{ type, std::move(lexeme), line, column };
+    return Token{ type, std::move(lexeme), line, start, end };
 }
