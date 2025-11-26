@@ -11,30 +11,31 @@ std::string Arcana::Parser::TokenTypeRepr(const TokenType type)
 {
     switch (type)
     {
-        case TokenType::IDENTIFIER: return "IDENTIFIER";      
-        case TokenType::NUMBER:     return "NUMBER";  
-        case TokenType::ASSIGN:     return "ASSIGN";  
-        case TokenType::PLUS:       return "PLUS";
-        case TokenType::MINUS:      return "MINUS"; 
-        case TokenType::STAR:       return "STAR";
-        case TokenType::SLASH:      return "SLASH"; 
-        case TokenType::ROUNDLP:    return "ROUNDLP";   
-        case TokenType::ROUNDRP:    return "ROUNDRP";   
-        case TokenType::SQUARELP:   return "SQUARELP";    
-        case TokenType::SQUARERP:   return "SQUARERP";    
-        case TokenType::CURLYLP:    return "CURLYLP";   
-        case TokenType::CURLYRP:    return "CURLYRP";   
-        case TokenType::AT:         return "AT";   
-        case TokenType::SEMICOLON:  return "SEMICOLON";   
-        case TokenType::NEWLINE:    return "NEWLINE";   
-        case TokenType::ENDOFFILE:  return "ENDOFFILE";     
+        case TokenType::IDENTIFIER: return "identifier";
+        case TokenType::TASK:       return "task";      
+        case TokenType::NUMBER:     return "number";  
+        case TokenType::ASSIGN:     return "assignment";  
+        case TokenType::PLUS:       return "plus";
+        case TokenType::MINUS:      return "minus"; 
+        case TokenType::STAR:       return "star";
+        case TokenType::SLASH:      return "slash"; 
+        case TokenType::ROUNDLP:    return "left parenthesis";   
+        case TokenType::ROUNDRP:    return "right parenthesis";   
+        case TokenType::SQUARELP:   return "left bracket";    
+        case TokenType::SQUARERP:   return "right bracket";    
+        case TokenType::CURLYLP:    return "left brace";   
+        case TokenType::CURLYRP:    return "right brace";   
+        case TokenType::AT:         return "at sign";   
+        case TokenType::SEMICOLON:  return "semicolon";   
+        case TokenType::NEWLINE:    return "<new line>";   
+        case TokenType::ENDOFFILE:  return "EOF";     
         case TokenType::UNKNOWN:    return "UNKNOWN";   
-        case TokenType::ANY:        return "ANY";
+        case TokenType::ANY:        return "any";
         default:                    return "<INVALID>";
     }
 }
 
-std::string Arcana::Parser::TokenTypeListRepr(const std::vector<TokenType>& type)
+std::string Arcana::Parser::TokenTypeNodeRepr(const std::vector<TokenType>& type)
 {   
     std::stringstream ss;
 
@@ -42,7 +43,22 @@ std::string Arcana::Parser::TokenTypeListRepr(const std::vector<TokenType>& type
     {
         if (i > 0) ss << " or ";
 
-        ss << TokenTypeRepr(type[i]);
+        ss << ANSI_GREEN << TokenTypeRepr(type[i]) << ANSI_RESET;
+    }
+
+    return ss.str();
+}
+
+
+std::string Arcana::Parser::TokenTypeStreamRepr(const std::vector<std::vector<TokenType>>& type)
+{   
+    std::stringstream ss;
+
+    for (uint32_t i = 0; i < type.size(); ++i)
+    {
+        if (i > 0) ss << " or ";
+
+        ss << TokenTypeNodeRepr(type[i]);
     }
 
     return ss.str();
@@ -144,6 +160,17 @@ void Lexer::advance()
             }
         }
 
+        if (c == '#')
+        {
+            do
+            {
+                c = in_.get();
+                ++nlcol_;
+                ++col_;
+            }
+            while (c != '\n' && c != EOF);
+        }
+
         current_ = static_cast<char>(c);
 
         if (current_ == '\n') 
@@ -184,6 +211,7 @@ Token Lexer::identifier()
     std::string lexeme;
     auto tokLine = line_;
     auto tokCol  = col_ - 1;
+    TokenType tt = TokenType::IDENTIFIER; 
 
     while (in_ && (std::isalnum(static_cast<unsigned char>(current_)) || current_ == '_')) 
     {
@@ -191,8 +219,17 @@ Token Lexer::identifier()
         advance();
     }
 
+    std::string lower = lexeme;
+    std::transform(lower.begin(), lower.end(), lower.begin(),
+                [](unsigned char c) { return std::tolower(c); });
+
+    if (lower.compare("task") == 0)
+    {
+        tt = TokenType::TASK;
+    }
+
     // Qui potresti fare lookup per parole chiave e cambiare TokenType
-    return makeToken(TokenType::IDENTIFIER, std::move(lexeme), tokLine, tokCol, lexeme.size());
+    return makeToken(tt, std::move(lexeme), tokLine, tokCol, lexeme.size());
 }
 
 Token Lexer::number() 

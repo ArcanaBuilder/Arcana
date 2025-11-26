@@ -48,7 +48,8 @@ int run(const Arguments& args)
         }
         else
         {
-            ss << "        Found: '" << escaping << "', expected: " << ::Parser::TokenTypeListRepr(found) << std::endl;
+            ss << "        Found:    " << ANSI_RED << escaping << ANSI_RESET << std::endl;
+            ss << "        Expected: " << ::Parser::TokenTypeStreamRepr(found) << std::endl;
         }
         
         std::cerr << ss.str();

@@ -88,7 +88,7 @@ static SemanticStreamer ATTRIBUTE =
 
 static SemanticStreamer BUILTIN_TASK_DECL = 
 {
-    TokenType::IDENTIFIER   |
+    TokenType::TASK         |
     TokenType::IDENTIFIER   |
     TokenType::ROUNDLP      |
     TokenType::ANY          |
@@ -99,7 +99,7 @@ static SemanticStreamer BUILTIN_TASK_DECL =
 
 static SemanticStreamer TASK_DECL = 
 {
-    TokenType::IDENTIFIER   |
+    TokenType::TASK         |
     TokenType::IDENTIFIER   |
     TokenType::ROUNDLP      |
     TokenType::ANY          |
@@ -168,7 +168,7 @@ void Semantic::match(const Token& token, Match& match)
     uint32_t                     position    = 0;
     TokenType                    ttype       = token.type;
     SemanticType                 stype       = SemanticType::UNDEFINED;
-    SemanticNode                 snode;
+    SemanticStream               estream;
     std::set<SemanticType>       new_key_cache;
     SemanticNode::const_iterator found;
     SemanticNode::const_iterator wildcard;
@@ -199,7 +199,7 @@ void Semantic::match(const Token& token, Match& match)
             auto& node     = value[position];
                   found    = std::find(node.begin(), node.end(), ttype);
                   wildcard = std::find(node.begin(), node.end(), TokenType::ANY);
-                  snode    = node;
+                  estream.push_back(node);
 
             if ( (found != node.end()))
             {
@@ -276,7 +276,7 @@ void Semantic::match(const Token& token, Match& match)
     match.type           = stype;
     match.indexes        = _indexes[stype];
     match.Error.token    = token;
-    match.Error.found    = snode;
+    match.Error.estream  = estream;
     match.Error.presence = error;
     
     if (matched) 

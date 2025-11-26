@@ -141,9 +141,9 @@ struct Match
     
     struct
     {
-        Token        token;
-        SemanticNode found;
-        bool         presence;
+        Token          token;
+        SemanticStream estream;
+        bool           presence;
     } Error;
 
     bool isValid () const noexcept { return valid;          }

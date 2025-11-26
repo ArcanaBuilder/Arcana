@@ -74,6 +74,7 @@
 
 #include <stdint.h>
 #include <vector>
+#include <string>
 
 struct Argument
 {

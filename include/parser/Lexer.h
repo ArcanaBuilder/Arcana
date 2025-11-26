@@ -17,6 +17,7 @@ BEGIN_MODULE(Parser)
 enum class TokenType : uint32_t
 {
     IDENTIFIER           =  0,
+    TASK                     ,
     NUMBER                   ,
     ASSIGN                   ,
     PLUS                     ,
@@ -50,7 +51,8 @@ struct Token
 
 
 std::string TokenTypeRepr(const TokenType type);
-std::string TokenTypeListRepr(const std::vector<TokenType>& type);
+std::string TokenTypeNodeRepr(const std::vector<TokenType>& type);
+std::string TokenTypeStreamRepr(const std::vector<std::vector<TokenType>>& type);
 
 
 using Tokens = std::vector<Token>;

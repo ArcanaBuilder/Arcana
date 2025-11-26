@@ -66,7 +66,7 @@ void Parser::Handle_VarAssign(Match& match)
     DMSG( "(VARASSIGN)         " << "Var:    " << var);
     DMSG( "                    " << "Val:    " << value);
 
-    DMSG("");
+    DMSG("------------------------------------------------------------------------");
 }
 
 
@@ -78,7 +78,7 @@ void Parser::Handle_Attribute(Match& match)
     std::string  attr          = input.substr(p1->start, p1->start - p1->end);
     
     DMSG( "(ATTRIBUTE)         " << "Attr:   " << attr);
-    DMSG("");
+    DMSG("------------------------------------------------------------------------");
 }
 
 
@@ -93,7 +93,7 @@ void Parser::Handle_BuiltinTaskDecl(Match& match)
     
     DMSG( "(BUILTIN TASK DECL) " << "Name:   " << task);
     DMSG( "                    " << "Params: " << param);
-    DMSG("");
+    DMSG("------------------------------------------------------------------------");
 }
 
 
@@ -124,7 +124,7 @@ void Parser::Handle_TaskDecl(Match& match)
     {
         DMSG( "                            " << i + 1 << ": " << body[i]);
     }
-    DMSG("");
+    DMSG("------------------------------------------------------------------------");
 }
 
 void Parser::Handle_TaskCall(Match& match)
@@ -138,5 +138,5 @@ void Parser::Handle_TaskCall(Match& match)
     
     DMSG( "(TASK CALL)         " << "Name:   " << task);
     DMSG( "                    " << "Params: " << param);
-    DMSG("");
+    DMSG("------------------------------------------------------------------------");
 }
