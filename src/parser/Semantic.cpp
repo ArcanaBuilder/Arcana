@@ -82,6 +82,7 @@ static SemanticStreamer ATTRIBUTE =
 {
     TokenType::AT           |
     TokenType::IDENTIFIER   |
+    TokenType::ANY          |
     TokenType::NEWLINE
 };
 

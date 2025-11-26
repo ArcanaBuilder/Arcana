@@ -19,7 +19,7 @@ int run(const Arguments& args)
 
     if (args.size() < 2)
     {
-        std::cerr << "Required al least one argument" << std::endl;
+        std::cerr << "Required at least one argument, the arcana-script file!" << std::endl;
         return result;
     }
 

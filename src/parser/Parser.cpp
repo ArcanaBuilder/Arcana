@@ -73,11 +73,14 @@ void Parser::Handle_VarAssign(Match& match)
 void Parser::Handle_Attribute(Match& match)
 {      
     const Index* p1            = match[(size_t) Grammar_ATTRIBUTE::ATTRNAME];
+    const Index* p2            = match[(size_t) Grammar_ATTRIBUTE::ATTROPTION];
     std::string& input         = lexer[p1->token];
 
-    std::string  attr          = input.substr(p1->start, p1->start - p1->end);
+    std::string  attr          = input.substr(p1->start, p1->end - p1->start);
+    std::string  attropt       = input.substr(p2->start, p2->end - p2->start);
     
     DMSG( "(ATTRIBUTE)         " << "Attr:   " << attr);
+    DMSG( "                    " << "Option: " << attropt);
     DMSG("------------------------------------------------------------------------");
 }
 

@@ -201,9 +201,9 @@ Token Lexer::simpleToken(TokenType type)
 {
     char c       = current_;
     auto tokLine = (type == TokenType::NEWLINE) ? line_  - 1 : line_;
-    auto tokCol  = (type == TokenType::NEWLINE) ? nlcol_ - 1 : col_ - 1;
+    auto tokCol  = (type == TokenType::NEWLINE) ? nlcol_ - 1 : col_;
     advance();
-    return makeToken(type, std::string(1, c), tokLine, tokCol, tokCol);
+    return makeToken(type, std::string(1, c), tokLine, tokCol, 1);
 }
 
 Token Lexer::identifier() 

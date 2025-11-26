@@ -45,6 +45,7 @@ enum class Grammar_ATTRIBUTE : uint32_t
 {
     AT                 = 0,         
     ATTRNAME              ,
+    ATTROPTION            ,
     GRAMMAR_END           ,
 };
 

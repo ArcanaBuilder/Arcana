@@ -1,12 +1,19 @@
 #!/usr/bin/arcana
 
 COMPILER = g++
-FLAGS    = -std=c++17 -Os -Wall -Wextra -DDEBUG
+
+@profile Debug
+FLAGS    = -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG
+
+@profile Release
+FLAGS    = -std=c++17 -Os -Wall -Wextra -DRELEASE
+
 TARGET   = app
 MODE     = Release
 
 BUILD    = Build
-SOURCE   = Source/**
+SOURCE   = Source/**.c
+EXCLUDE  = 
 
 COMMANDS = Build Clean Install
 
@@ -26,7 +33,7 @@ task Install(TARGET);
 ###########################
 
 @profile
-task Build() 
+task Build()
 {
     COMPILER FLAGS SOURCE -o TARGET
 }
@@ -35,8 +42,8 @@ task Build()
 # PRE BUILD TASKS
 ###########################
 
-@precompiler
-task Create_Folders()
+@precompiler 
+task Create_Folders() 
 {
     mkdir BUILD
     mkdir test
@@ -47,11 +54,8 @@ task Create_Folders()
 ###########################
 
 @callable
-@postcompiler
-task Say_Something(msg)
-{
-    echo msg
-}
+@postcompiler 1
+task Say_Something(msg) { echo msg }
 
 ###########################
 # POST BUILD TASKS CALL
