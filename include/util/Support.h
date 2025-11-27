@@ -9,6 +9,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <string_view>
 
 #include "Defines.h"
 
@@ -57,7 +58,7 @@ struct ParserError
 {
     Scan::Lexer& lexer;
     
-    void operator () (const Grammar::Match& match) const;
+    Arcana_Result operator () (const Grammar::Match& match) const;
 };
 
 END_MODULE(Support)
@@ -102,6 +103,47 @@ BEGIN_MODULE(Support)
 
 
 ///////////////////////////////////////////////////////////////////////////////
+// PUBLIC AGGREGATES
+///////////////////////////////////////////////////////////////////////////////
+
+
+struct StringViewHash
+{
+    using is_transparent = void;
+
+    std::size_t operator()(std::string_view s) const noexcept;
+};
+
+
+struct StringViewEq
+{
+    using is_transparent = void;
+
+    bool operator() (std::string_view a, std::string_view b) const noexcept;
+};
+
+
+
+struct AstOutput
+{
+    Ast_Result  result;
+    std::string message;
+
+    AstOutput() 
+        :
+        result(Ast_Result::AST_RESULT__OK),
+        message("")
+    {}
+
+    AstOutput(const Ast_Result result, const std::string& message) 
+        :
+        result(result),
+        message(message)
+    {}
+};
+
+
+///////////////////////////////////////////////////////////////////////////////
 // PUBLIC FUNCTIONS
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -117,6 +159,13 @@ Arguments   ParseArgs(int argc, char** argv);
 /// @param s the input string
 /// @return a copy left trimmed of @ref s
 std::string ltrim(const std::string& s);
+
+
+inline char toLowerAscii(char c) noexcept;
+
+
+std::vector<std::string> split(const std::string& s, char sep) noexcept;
+
 
 
 /// @brief Function used to represent a TokenType

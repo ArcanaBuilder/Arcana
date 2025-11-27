@@ -10,6 +10,8 @@
 #include "Defines.h"
 #include "Grammar.h"
 
+#include "Instruction.h"
+
 #include <functional>
 
 
@@ -24,7 +26,8 @@ BEGIN_MODULE(Parsing)
 // CALLBACKs
 ///////////////////////////////////////////////////////////////////////////////
 
-using ErrorCallback = std::function<void (const Grammar::Match&)>;
+using ParsingError  = std::function<Arcana_Result (const Grammar::Match&)>;
+using SemanticError = std::function<Arcana_Result (const Support::AstOutput&)>;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -36,20 +39,25 @@ class Parser
 public:
     Parser(Scan::Lexer& l, Grammar::Engine& e);
 
-    void parse();
-    void AddErrorCallback(const ErrorCallback& ecb);
+    Arcana_Result Parse(Ast::Enviroment& env);
+
+    void          Set_ParsingError_Handler (const ParsingError&  ecb) noexcept { Parsing_Error  = ecb; }
+    void          Set_SemanticError_Handler(const SemanticError& ecb) noexcept { Semantic_Error = ecb; }
 
 private:
-    Scan::Lexer&         lexer;
-    Grammar::Engine&     engine;
-    ErrorCallback        errorcb;
+    Scan::Lexer&           lexer;
+    Grammar::Engine&       engine;
+    Ast::InstructionEngine instr_engine;
 
-    void Handle_VarAssign(Grammar::Match& match);
-    void Handle_Attribute(Grammar::Match& match);
-    void Handle_BuiltinTaskDecl(Grammar::Match& match);
-    void Handle_TaskDecl(Grammar::Match& match);
-    void Handle_TaskCall(Grammar::Match& match);
-    void Handle_Using(Grammar::Match& match);
+    ParsingError           Parsing_Error;
+    SemanticError          Semantic_Error;
+
+    Support::AstOutput Handle_VarAssign(Grammar::Match& match);
+    Support::AstOutput Handle_Attribute(Grammar::Match& match);
+    Support::AstOutput Handle_BuiltinTaskDecl(Grammar::Match& match);
+    Support::AstOutput Handle_TaskDecl(Grammar::Match& match);
+    Support::AstOutput Handle_TaskCall(Grammar::Match& match);
+    Support::AstOutput Handle_Using(Grammar::Match& match);
 
 };
 

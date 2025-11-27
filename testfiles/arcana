@@ -2,7 +2,7 @@
 
 using Defaults.arc;
 
-COMPILER *** g++
+COMPILER = g++
 
 @profile Debug
 FLAGS    = -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG

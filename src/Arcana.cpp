@@ -29,7 +29,7 @@ USE_MODULE(Arcana);
 // PRIVATE PROTOS
 ///////////////////////////////////////////////////////////////////////////////
 
-static ERROR_CODE run(const Support::Arguments& args);
+static Arcana_Result run(const Support::Arguments& args);
 
 
 
@@ -45,7 +45,7 @@ int main(int argc, char** argv)
     if (args.size() < 2)
     {
         ERR("Required at least one argument, the arcana-script file!");
-        return ERROR_CODE__INVALID_ARGS;
+        return Arcana_Result::ARCANA_RESULT__INVALID_ARGS;
     }
 
     return run(args);
@@ -56,16 +56,26 @@ int main(int argc, char** argv)
 // PRIVATE FUNCTIONS
 ///////////////////////////////////////////////////////////////////////////////
 
-static ERROR_CODE run(const Support::Arguments& args)
+static Arcana_Result run(const Support::Arguments& args)
 {   
+    Arcana_Result result = ARCANA_RESULT__OK;
+
     std::ifstream file(args[1].arg);
 
     Scan::Lexer       lexer(file);
     Grammar::Engine   engine;
     Parsing::Parser   parser(lexer, engine);
+    Ast::Enviroment   env;
 
-    parser.AddErrorCallback(Support::ParserError {lexer} );
-    parser.parse();
+    parser.Set_ParsingError_Handler(Support::ParserError {lexer} );
+    
+    result = parser.Parse(env);
 
-    return ERROR_CODE__OK;
+    DBG("############################################");
+    for (const auto& [key, val] : env.ftable)
+    {
+        DBG(key);
+    }
+
+    return result;
 }

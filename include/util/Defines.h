@@ -81,12 +81,22 @@
 #include <stdint.h>
 
 
+enum Arcana_Result : int32_t
+{
+    ARCANA_RESULT__OK               =  0,
+    ARCANA_RESULT__INVALID_ARGS     = -1,
+    ARCANA_RESULT__PARSING_ERROR    = -2,
+};
 
-#define ERROR_CODE__OK                          ( 0)
-#define ERROR_CODE__INVALID_ARGS                (-1)
+enum class Ast_Result : int32_t
+{
+    AST_RESULT__OK                  =  0,
+    
+    AST_RESULT__INVALID_ATTR        = -1,
+    AST_RESULT__INVALID_ATTR_PROP   = -2,
+    AST_RESULT__INVALID_ATTR_TARGET = -3,
+};
 
-
-typedef int32_t ERROR_CODE;
 
 
 #endif /* __ARCANA_DEFINES__H__ */

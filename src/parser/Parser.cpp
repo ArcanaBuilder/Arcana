@@ -12,51 +12,54 @@ Parser::Parser(Scan::Lexer& l, Grammar::Engine& e)
     engine(e)
 {}
 
-
-void Parser::AddErrorCallback(const ErrorCallback& ecb)
+Arcana_Result Parser::Parse(Ast::Enviroment& env)
 {
-    errorcb = std::move(ecb);
-}
-
-void Parser::parse()
-{
-    Scan::Token    token;
-    Grammar::Match match;
+    Scan::Token        token;
+    Grammar::Match     match;
+    Support::AstOutput astout; 
 
     do
     {   
         token = lexer.next();
-
+        
         engine.match(token, match);
-
+        
         if (match.isValid())
         {
             switch (match.type)
             {
-                case Grammar::Rule::VARIABLE_ASSIGN:   Handle_VarAssign(match);       break;
-                case Grammar::Rule::EMPTY_LINE:        /* just ignore this */         break;
-                case Grammar::Rule::ATTRIBUTE:         Handle_Attribute(match);       break;
-                case Grammar::Rule::BUILTIN_TASK_DECL: Handle_BuiltinTaskDecl(match); break;
-                case Grammar::Rule::TASK_DECL:         Handle_TaskDecl(match);        break;
-                case Grammar::Rule::TASK_CALL:         Handle_TaskCall(match);        break;
-                case Grammar::Rule::USING:             Handle_Using(match);           break;
+                case Grammar::Rule::VARIABLE_ASSIGN:   astout = Handle_VarAssign(match);       break;
+                case Grammar::Rule::EMPTY_LINE:        /* just ignore this */                  break;
+                case Grammar::Rule::ATTRIBUTE:         astout = Handle_Attribute(match);       break;
+                case Grammar::Rule::BUILTIN_TASK_DECL: astout = Handle_BuiltinTaskDecl(match); break;
+                case Grammar::Rule::TASK_DECL:         astout = Handle_TaskDecl(match);        break;
+                case Grammar::Rule::TASK_CALL:         astout = Handle_TaskCall(match);        break;
+                case Grammar::Rule::USING:             astout = Handle_Using(match);           break;
 
                 /* how can we reach this case? */
-                case Grammar::Rule::UNDEFINED:                                        break;
+                case Grammar::Rule::UNDEFINED:                                                 break;
+            }
+            
+            if (astout.result != Ast_Result::AST_RESULT__OK)
+            {
+                return Semantic_Error(astout);
             }
         }
 
         if (match.isError())
         {
-            errorcb(match);
-            break;
+            return Parsing_Error(match);
         }
     } 
     while ( token.type != Scan::TokenType::ENDOFFILE );
+
+    env = instr_engine.Generate_Enviroment();
+
+    return ARCANA_RESULT__OK;
 }
 
 
-void Parser::Handle_VarAssign(Grammar::Match& match)
+Arcana::Support::AstOutput Parser::Handle_VarAssign(Grammar::Match& match)
 {
     Point  p1    = match[_I(Grammar::VARIABLE_ASSIGN::VARNAME)];
     Point  p2    = match[_I(Grammar::VARIABLE_ASSIGN::VALUE)];
@@ -69,10 +72,12 @@ void Parser::Handle_VarAssign(Grammar::Match& match)
     DBG( "                    " << "Val:    " << value);
 
     DBG("------------------------------------------------------------------------");
+
+    return Support::AstOutput{};
 }
 
 
-void Parser::Handle_Attribute(Grammar::Match& match)
+Arcana::Support::AstOutput Parser::Handle_Attribute(Grammar::Match& match)
 {      
     Point  p1      = match[_I(Grammar::ATTRIBUTE::ATTRNAME)];
     Point  p2      = match[_I(Grammar::ATTRIBUTE::ATTROPTION)];
@@ -80,14 +85,16 @@ void Parser::Handle_Attribute(Grammar::Match& match)
     Input  input   = lexer[p1->token];
     Lexeme attr    = input.substr(p1->start, p1->end - p1->start);
     Lexeme attropt = input.substr(p2->start, p2->end - p2->start);
-    
+
     DBG( "(ATTRIBUTE)         " << "Attr:   " << attr);
     DBG( "                    " << "Option: " << attropt);
     DBG("------------------------------------------------------------------------");
+
+    return instr_engine.Collect_Attribute(attr, attropt);    
 }
 
 
-void Parser::Handle_BuiltinTaskDecl(Grammar::Match& match)
+Arcana::Support::AstOutput Parser::Handle_BuiltinTaskDecl(Grammar::Match& match)
 {
     Point  p1    = match[_I(Grammar::BUILTIN_TASK_DECL::TASKNAME)];
     Point  p2    = match[_I(Grammar::BUILTIN_TASK_DECL::PARAMS)];
@@ -99,10 +106,14 @@ void Parser::Handle_BuiltinTaskDecl(Grammar::Match& match)
     DBG( "(BUILTIN TASK DECL) " << "Name:   " << task);
     DBG( "                    " << "Params: " << param);
     DBG("------------------------------------------------------------------------");
+
+    Ast::Task::Params params = Support::split(param, ' ');
+
+    return instr_engine.Collect_Task(task, params, {});
 }
 
 
-void Parser::Handle_TaskDecl(Grammar::Match& match)
+Arcana::Support::AstOutput Parser::Handle_TaskDecl(Grammar::Match& match)
 {
     Statement body;
     
@@ -137,9 +148,13 @@ void Parser::Handle_TaskDecl(Grammar::Match& match)
         DBG( "                            " << i + 1 << ": " << body[i]);
     }
     DBG("------------------------------------------------------------------------");
+
+    Ast::Task::Params params = Support::split(param, ' ');
+
+    return instr_engine.Collect_Task(task, params, body);
 }
 
-void Parser::Handle_TaskCall(Grammar::Match& match)
+Arcana::Support::AstOutput Parser::Handle_TaskCall(Grammar::Match& match)
 {
     Point  p1    = match[_I(Grammar::TASK_CALL::TASKNAME)];
     Point  p2    = match[_I(Grammar::TASK_CALL::PARAMS)];
@@ -151,10 +166,14 @@ void Parser::Handle_TaskCall(Grammar::Match& match)
     DBG( "(TASK CALL)         " << "Name:   " << task);
     DBG( "                    " << "Params: " << param);
     DBG("------------------------------------------------------------------------");
+
+    Ast::Task::Params params = Support::split(param, ' ');
+
+    return instr_engine.Collect_TaskCall(task, params);
 }
 
 
-void Parser::Handle_Using(Grammar::Match& match)
+Arcana::Support::AstOutput Parser::Handle_Using(Grammar::Match& match)
 {
     Point  p1     = match[_I(Grammar::USING::SCRIPT)];
     
@@ -163,4 +182,6 @@ void Parser::Handle_Using(Grammar::Match& match)
     
     DBG( "(USING)             " << "Script: " << script);
     DBG("------------------------------------------------------------------------");
+
+    return instr_engine.Collect_Using(script);
 }

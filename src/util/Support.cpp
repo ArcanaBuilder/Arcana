@@ -9,7 +9,7 @@ USE_MODULE(Arcana);
 
 
 
-void Support::ParserError::operator() (const Grammar::Match& match) const
+Arcana_Result Support::ParserError::operator() (const Grammar::Match& match) const
 {
     const auto& [token, found, semtypes, _] = match.Error;
 
@@ -40,8 +40,41 @@ void Support::ParserError::operator() (const Grammar::Match& match) const
     }
     
     std::cerr << ss.str();
+
+    return Arcana_Result::ARCANA_RESULT__PARSING_ERROR;
 }
 
+
+std::size_t Support::StringViewHash::operator() (std::string_view s) const noexcept
+{
+    std::size_t h = 0;
+
+    for (char c : s)
+    {
+        h = h * 131 + Support::toLowerAscii(c); 
+    }
+
+    return h;
+}
+
+
+
+bool Support::StringViewEq::operator() (std::string_view a, std::string_view b) const noexcept
+{
+    if (a.size() != b.size())
+    {
+        return false;
+    }
+
+    for (size_t i = 0; i < a.size(); ++i)
+    {
+        if (Support::toLowerAscii(a[i]) != Support::toLowerAscii(b[i]))
+        {
+            return false;
+        }
+    }
+    return true;
+}
 
 
 
@@ -71,6 +104,44 @@ std::string Support::ltrim(const std::string& s)
 
     return s.substr(pos);
 }
+
+
+inline char Support::toLowerAscii(char c) noexcept
+{
+    if (c >= 'A' && c <= 'Z')
+        return c + ('a' - 'A');
+    return c;
+}
+
+
+std::vector<std::string> Support::split(const std::string& s, char sep) noexcept
+{
+    std::vector<std::string> result;
+    std::size_t i = 0;
+    const std::size_t n = s.size();
+
+    while (i < n)
+    {
+        // salta spazi
+        while (i < n && s[i] == sep)
+            ++i;
+
+        if (i >= n)
+            break;
+
+        // inizio token
+        std::size_t start = i;
+
+        // avanza fino allo spazio
+        while (i < n && s[i] != sep)
+            ++i;
+
+        result.emplace_back(s.substr(start, i - start));
+    }
+
+    return result;
+}
+
 
 
 std::string Support::TokenTypeRepr(const Scan::TokenType type)
