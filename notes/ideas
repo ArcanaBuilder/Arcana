@@ -3,8 +3,8 @@
 
 [FUNCTIONALITY]
 1) add logic that if the variables in the script change that could rebuild the project
-2) add grammar/logic support to handle optional tokens
-3) add grammar/logic support for task dependencies
-4) add grammar/logic support to include other arcana scripts
+2) [OK] add grammar/logic support to handle optional tokens
+3) [OK] add grammar/logic support for task dependencies
+4) [OK] add grammar/logic support to include other arcana scripts
 5) add grammar/logic support to build in multi-thread mode
-6) change MODE variable to attribute @profile <PROFILE NAME>
+6) [OK] change MODE variable to attribute @profile <PROFILE NAME>

@@ -1,14 +1,15 @@
 #include "Parser.h"
-#include "Instruction.h"
+#include "Support.h"
 
 
-USE_MODULE(Arcana::Parser);
+USE_MODULE(Arcana::Parsing);
 
 
-Parser::Parser(Lexer& l, Semantic& s) 
+
+Parser::Parser(Scan::Lexer& l, Grammar::Engine& e) 
     :
     lexer(l),
-    semantic(s)
+    engine(e)
 {}
 
 
@@ -19,28 +20,29 @@ void Parser::AddErrorCallback(const ErrorCallback& ecb)
 
 void Parser::parse()
 {
-    Token token;
-    Match match;
+    Scan::Token    token;
+    Grammar::Match match;
 
     do
     {   
         token = lexer.next();
 
-        semantic.match(token, match);
+        engine.match(token, match);
 
         if (match.isValid())
         {
             switch (match.type)
             {
-                case SemanticType::VARIABLE_ASSIGN:   Handle_VarAssign(match);       break;
-                case SemanticType::EMPTY_LINE:        /* just ignore this */         break;
-                case SemanticType::ATTRIBUTE:         Handle_Attribute(match);       break;
-                case SemanticType::BUILTIN_TASK_DECL: Handle_BuiltinTaskDecl(match); break;
-                case SemanticType::TASK_DECL:         Handle_TaskDecl(match);        break;
-                case SemanticType::TASK_CALL:         Handle_TaskCall(match);        break;
+                case Grammar::Rule::VARIABLE_ASSIGN:   Handle_VarAssign(match);       break;
+                case Grammar::Rule::EMPTY_LINE:        /* just ignore this */         break;
+                case Grammar::Rule::ATTRIBUTE:         Handle_Attribute(match);       break;
+                case Grammar::Rule::BUILTIN_TASK_DECL: Handle_BuiltinTaskDecl(match); break;
+                case Grammar::Rule::TASK_DECL:         Handle_TaskDecl(match);        break;
+                case Grammar::Rule::TASK_CALL:         Handle_TaskCall(match);        break;
+                case Grammar::Rule::USING:             Handle_Using(match);           break;
 
                 /* how can we reach this case? */
-                case SemanticType::UNDEFINED:                                        break;
+                case Grammar::Rule::UNDEFINED:                                        break;
             }
         }
 
@@ -50,96 +52,115 @@ void Parser::parse()
             break;
         }
     } 
-    while ( token.type != TokenType::ENDOFFILE );
+    while ( token.type != Scan::TokenType::ENDOFFILE );
 }
 
 
-void Parser::Handle_VarAssign(Match& match)
+void Parser::Handle_VarAssign(Grammar::Match& match)
 {
-    const Index* p1            = match[(size_t) Grammar_VARIABLE_ASSIGN::VARNAME];
-    const Index* p2            = match[(size_t) Grammar_VARIABLE_ASSIGN::VALUE];
-    std::string& input         = lexer[p1->token];
+    Point  p1    = match[_I(Grammar::VARIABLE_ASSIGN::VARNAME)];
+    Point  p2    = match[_I(Grammar::VARIABLE_ASSIGN::VALUE)];
 
-    std::string  var           = input.substr(p1->start, p1->end - p1->start);
-    std::string  value         = input.substr(p2->start, p2->end - p2->start);
+    Input  input = lexer[p1->token];
+    Lexeme var   = input.substr(p1->start, p1->end - p1->start);
+    Lexeme value = input.substr(p2->start, p2->end - p2->start);
     
-    DMSG( "(VARASSIGN)         " << "Var:    " << var);
-    DMSG( "                    " << "Val:    " << value);
+    DBG( "(VARASSIGN)         " << "Var:    " << var);
+    DBG( "                    " << "Val:    " << value);
 
-    DMSG("------------------------------------------------------------------------");
+    DBG("------------------------------------------------------------------------");
 }
 
 
-void Parser::Handle_Attribute(Match& match)
+void Parser::Handle_Attribute(Grammar::Match& match)
 {      
-    const Index* p1            = match[(size_t) Grammar_ATTRIBUTE::ATTRNAME];
-    const Index* p2            = match[(size_t) Grammar_ATTRIBUTE::ATTROPTION];
-    std::string& input         = lexer[p1->token];
-
-    std::string  attr          = input.substr(p1->start, p1->end - p1->start);
-    std::string  attropt       = input.substr(p2->start, p2->end - p2->start);
+    Point  p1      = match[_I(Grammar::ATTRIBUTE::ATTRNAME)];
+    Point  p2      = match[_I(Grammar::ATTRIBUTE::ATTROPTION)];
     
-    DMSG( "(ATTRIBUTE)         " << "Attr:   " << attr);
-    DMSG( "                    " << "Option: " << attropt);
-    DMSG("------------------------------------------------------------------------");
+    Input  input   = lexer[p1->token];
+    Lexeme attr    = input.substr(p1->start, p1->end - p1->start);
+    Lexeme attropt = input.substr(p2->start, p2->end - p2->start);
+    
+    DBG( "(ATTRIBUTE)         " << "Attr:   " << attr);
+    DBG( "                    " << "Option: " << attropt);
+    DBG("------------------------------------------------------------------------");
 }
 
 
-void Parser::Handle_BuiltinTaskDecl(Match& match)
+void Parser::Handle_BuiltinTaskDecl(Grammar::Match& match)
 {
-    const Index* p1            = match[(size_t) Grammar_BUILTIN_TASK_DECL::TASKNAME];
-    const Index* p2            = match[(size_t) Grammar_BUILTIN_TASK_DECL::PARAMS];
-    std::string& input         = lexer[p1->token];
+    Point  p1    = match[_I(Grammar::BUILTIN_TASK_DECL::TASKNAME)];
+    Point  p2    = match[_I(Grammar::BUILTIN_TASK_DECL::PARAMS)];
 
-    std::string  task          = input.substr(p1->start, p1->end - p1->start);
-    std::string  param         = input.substr(p2->start, p2->end - p2->start);
-    
-    DMSG( "(BUILTIN TASK DECL) " << "Name:   " << task);
-    DMSG( "                    " << "Params: " << param);
-    DMSG("------------------------------------------------------------------------");
+    Input  input = lexer[p1->token];
+    Lexeme task  = input.substr(p1->start, p1->end - p1->start);
+    Lexeme param = input.substr(p2->start, p2->end - p2->start);
+
+    DBG( "(BUILTIN TASK DECL) " << "Name:   " << task);
+    DBG( "                    " << "Params: " << param);
+    DBG("------------------------------------------------------------------------");
 }
 
 
-void Parser::Handle_TaskDecl(Match& match)
+void Parser::Handle_TaskDecl(Grammar::Match& match)
 {
-    std::vector<std::string> body;
+    Statement body;
     
-    const Index* p1            = match[(size_t) Grammar_TASK_DECL::TASKNAME];
-    const Index* p2            = match[(size_t) Grammar_TASK_DECL::PARAMS];
-    std::string  input         = lexer[p1->token];
+    Point  p1    = match[_I(Grammar::TASK_DECL::TASKNAME)];
+    Point  p2    = match[_I(Grammar::TASK_DECL::PARAMS)];
+    Point  bbody = match[_I(Grammar::TASK_DECL::CURLYLP)];
+    Point  ebody = match[_I(Grammar::TASK_DECL::CURLYRP)];
+    Point  any   = match[_I(Grammar::TASK_DECL::INSTRUCTIONS)];
 
-    const Index* bbody         = match[(size_t) Grammar_TASK_DECL::CURLYLP];
-    const Index* ebody         = match[(size_t) Grammar_TASK_DECL::CURLYRP];
+    Input  input = lexer[p1->token];
+    Lexeme task  = input.substr(p1->start, p1->end - p1->start);
+    Lexeme param = input.substr(p2->start, p2->end - p2->start);
 
-    for (size_t i = bbody->token.line; i < ebody->token.line - 1; ++ i)
+    if (bbody->token.line == ebody->token.line)
     {
-        body.push_back(ltrim(lexer[i]));
+        body.push_back(Arcana::Support::ltrim(input.substr(any->start, any->end - any->start)));
+    }
+    else
+    {
+        for (size_t i = bbody->token.line; i < ebody->token.line - 1; ++ i)
+        {
+            body.push_back(Arcana::Support::ltrim(lexer[i]));
+        }
     }
     
-    std::string  task          = input.substr(p1->start, p1->end - p1->start);
-    std::string  param         = input.substr(p2->start, p2->end - p2->start);
-    
-    DMSG( "(TASK DECL)         " << "Name:   " << task);
-    DMSG( "                    " << "Params: " << param);
-    DMSG( "                    " << "Body:");
+    DBG( "(TASK DECL)         " << "Name:   " << task);
+    DBG( "                    " << "Params: " << param);
+    DBG( "                    " << "Body:");
 
     for (size_t i = 0; i < body.size(); ++ i)
     {
-        DMSG( "                            " << i + 1 << ": " << body[i]);
+        DBG( "                            " << i + 1 << ": " << body[i]);
     }
-    DMSG("------------------------------------------------------------------------");
+    DBG("------------------------------------------------------------------------");
 }
 
-void Parser::Handle_TaskCall(Match& match)
+void Parser::Handle_TaskCall(Grammar::Match& match)
 {
-    const Index* p1            = match[(size_t) Grammar_TASK_CALL::TASKNAME];
-    const Index* p2            = match[(size_t) Grammar_TASK_CALL::PARAMS];
-    std::string& input         = lexer[p1->token];
-
-    std::string  task          = input.substr(p1->start, p1->end - p1->start);
-    std::string  param         = input.substr(p2->start, p2->end - p2->start);
+    Point  p1    = match[_I(Grammar::TASK_CALL::TASKNAME)];
+    Point  p2    = match[_I(Grammar::TASK_CALL::PARAMS)];
     
-    DMSG( "(TASK CALL)         " << "Name:   " << task);
-    DMSG( "                    " << "Params: " << param);
-    DMSG("------------------------------------------------------------------------");
+    Input  input = lexer[p1->token];
+    Lexeme task  = input.substr(p1->start, p1->end - p1->start);
+    Lexeme param = input.substr(p2->start, p2->end - p2->start);
+    
+    DBG( "(TASK CALL)         " << "Name:   " << task);
+    DBG( "                    " << "Params: " << param);
+    DBG("------------------------------------------------------------------------");
+}
+
+
+void Parser::Handle_Using(Grammar::Match& match)
+{
+    Point  p1     = match[_I(Grammar::USING::SCRIPT)];
+    
+    Input  input  = lexer[p1->token];
+    Lexeme script = input.substr(p1->start, p1->end - p1->start);
+    
+    DBG( "(USING)             " << "Script: " << script);
+    DBG("------------------------------------------------------------------------");
 }

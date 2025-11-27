@@ -1,6 +1,8 @@
 #!/usr/bin/arcana
 
-COMPILER = g++
+using Defaults.arc;
+
+COMPILER *** g++
 
 @profile Debug
 FLAGS    = -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG
@@ -13,26 +15,27 @@ MODE     = Release
 
 BUILD    = Build
 SOURCE   = Source/**.c
-EXCLUDE  = 
-
-COMMANDS = Build Clean Install
 
 ###########################
 # BUILT-IN TASKS
 ###########################
 
+@public
 @folder
 @file
 task Clean(BUILD);
 
+@public
 @always
+@dependecy Clean Build
 task Install(TARGET);
 
 ###########################
 # OVERRIDED BUILT-IN TASKS
 ###########################
 
-@profile
+@public
+@profile 
 task Build()
 {
     COMPILER FLAGS SOURCE -o TARGET
@@ -53,6 +56,7 @@ task Create_Folders()
 # POST BUILD TASKS
 ###########################
 
+@private
 @callable
 @postcompiler 1
 task Say_Something(msg) { echo msg }

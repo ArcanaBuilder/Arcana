@@ -1,23 +1,36 @@
 #ifndef __ARCANA_LEXER__H__
 #define __ARCANA_LEXER__H__
 
+///////////////////////////////////////////////////////////////////////////////
+// INCLUDES
+///////////////////////////////////////////////////////////////////////////////
+
+#include <set>
+#include <vector>
 #include <sstream>
 #include <istream>
-#include <optional>
 
-#include "Util.h"
-
-
-BEGIN_MODULE(Parser)
+#include "Defines.h"
 
 
+///////////////////////////////////////////////////////////////////////////////
+// MODULE NEMASPACEs
+///////////////////////////////////////////////////////////////////////////////
+
+BEGIN_MODULE(Scan)
 
 
 
+///////////////////////////////////////////////////////////////////////////////
+// PUBLIC ENUMS
+///////////////////////////////////////////////////////////////////////////////
+
+/// @brief Enum used to define lexer tokens
 enum class TokenType : uint32_t
 {
     IDENTIFIER           =  0,
     TASK                     ,
+    USING                    ,
     NUMBER                   ,
     ASSIGN                   ,
     PLUS                     ,
@@ -38,25 +51,30 @@ enum class TokenType : uint32_t
     // SPECIAL TOKENS
     UNKNOWN                  ,
     ANY                      ,
+    OPT_NEWLINE              ,        
 };
 
+
+
+///////////////////////////////////////////////////////////////////////////////
+// PUBLIC STRUCTS
+///////////////////////////////////////////////////////////////////////////////
+
+
+/// @brief Struct used to hold the lexer output
 struct Token 
 {
-    TokenType    type;
-    std::string  lexeme;
-    std::size_t  line;
-    std::size_t  start;
-    std::size_t  end;
+    TokenType    type;         //<! Type of token
+    std::string  lexeme;       //<! lexeme matched   
+    std::size_t  line;         //<! Line of match
+    std::size_t  start;        //<! Lexeme start index match  
+    std::size_t  end;          //<! Lexeme end index match
 };
 
 
-std::string TokenTypeRepr(const TokenType type);
-std::string TokenTypeNodeRepr(const std::vector<TokenType>& type);
-std::string TokenTypeStreamRepr(const std::vector<std::vector<TokenType>>& type);
-
-
-using Tokens = std::vector<Token>;
-
+///////////////////////////////////////////////////////////////////////////////
+// PUBLIC CLASSES
+///////////////////////////////////////////////////////////////////////////////
 
 class Lexer 
 {
@@ -97,7 +115,7 @@ private:
 
 
 
-END_MODULE(Parser)
+END_MODULE(Scan)
 
 
 

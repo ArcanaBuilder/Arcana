@@ -1,5 +1,5 @@
-#ifndef __ARCANA_UTIL__H__
-#define __ARCANA_UTIL__H__
+#ifndef __ARCANA_DEFINES__H__
+#define __ARCANA_DEFINES__H__
 
 
 #define BEGIN_NAMESPACE(ns)                     namespace ns {                 
@@ -12,6 +12,7 @@
 #define USE_MODULE(mod)                         using namespace mod
 
 #define UNUSED(x)                               ((void) x)
+#define _I(enum)                                ((size_t) enum) 
 
 #define ANSI_RESET                              "\x1b[0m"
 
@@ -64,33 +65,28 @@
 #define ANSI_REVERSE                            "\x1b[7m"
 #define ANSI_HIDDEN                             "\x1b[8m"
 
+
+
 #ifdef DEBUG
   #include <iostream>
-  #define DMSG(msg)                             std::cout << "[" << ANSI_BYELLOW << ANSI_DIM << "DEBUG" << ANSI_RESET "] " << ANSI_GRAY << msg << ANSI_RESET << std::endl
+  #define DBG(msg)                              std::cout << "[" << ANSI_BYELLOW << ANSI_DIM << "DEBUG" << ANSI_RESET "] " << ANSI_GRAY << msg << ANSI_RESET << std::endl
 #else
-  #define DMSG(msg)
+  #define DBG(msg)
 #endif
-  #define MSG(msg)                              std::cout << msg << std::endl
+
+#define MSG(msg)                                std::cout << msg << std::endl
+#define ERR(msg)                                std::cerr << "[" << ANSI_BRED << "ERROR" << ANSI_RESET << "] " << msg << std::endl
+
 
 #include <stdint.h>
-#include <vector>
-#include <string>
-
-struct Argument
-{
-    uint32_t pos;
-    char*    arg;
-};
-
-using Arguments = std::vector<Argument>;
-
-
-Arguments ParseArgs(int argc, char** argv);
-
-std::string ltrim(const std::string& s);
-std::string ltrim(const std::string& s);
 
 
 
+#define ERROR_CODE__OK                          ( 0)
+#define ERROR_CODE__INVALID_ARGS                (-1)
 
-#endif /* __ARCANA_UTIL__H__ */
+
+typedef int32_t ERROR_CODE;
+
+
+#endif /* __ARCANA_DEFINES__H__ */

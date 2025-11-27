@@ -2,7 +2,7 @@
 #define __ARCANA_INSTRUCTION__H__
 
 
-#include "Util.h"
+#include "Defines.h"
 
 
 BEGIN_MODULE(Core)

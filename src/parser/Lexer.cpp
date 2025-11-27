@@ -1,68 +1,9 @@
 #include "Lexer.h"
-#include "Semantic.h"
 
 #include <cctype>
 #include <algorithm>
 
-USE_MODULE(Arcana::Parser);
-
-
-std::string Arcana::Parser::TokenTypeRepr(const TokenType type)
-{
-    switch (type)
-    {
-        case TokenType::IDENTIFIER: return "identifier";
-        case TokenType::TASK:       return "task";      
-        case TokenType::NUMBER:     return "number";  
-        case TokenType::ASSIGN:     return "assignment";  
-        case TokenType::PLUS:       return "plus";
-        case TokenType::MINUS:      return "minus"; 
-        case TokenType::STAR:       return "star";
-        case TokenType::SLASH:      return "slash"; 
-        case TokenType::ROUNDLP:    return "left parenthesis";   
-        case TokenType::ROUNDRP:    return "right parenthesis";   
-        case TokenType::SQUARELP:   return "left bracket";    
-        case TokenType::SQUARERP:   return "right bracket";    
-        case TokenType::CURLYLP:    return "left brace";   
-        case TokenType::CURLYRP:    return "right brace";   
-        case TokenType::AT:         return "at sign";   
-        case TokenType::SEMICOLON:  return "semicolon";   
-        case TokenType::NEWLINE:    return "<new line>";   
-        case TokenType::ENDOFFILE:  return "EOF";     
-        case TokenType::UNKNOWN:    return "UNKNOWN";   
-        case TokenType::ANY:        return "any";
-        default:                    return "<INVALID>";
-    }
-}
-
-std::string Arcana::Parser::TokenTypeNodeRepr(const std::vector<TokenType>& type)
-{   
-    std::stringstream ss;
-
-    for (uint32_t i = 0; i < type.size(); ++i)
-    {
-        if (i > 0) ss << " or ";
-
-        ss << ANSI_GREEN << TokenTypeRepr(type[i]) << ANSI_RESET;
-    }
-
-    return ss.str();
-}
-
-
-std::string Arcana::Parser::TokenTypeStreamRepr(const std::vector<std::vector<TokenType>>& type)
-{   
-    std::stringstream ss;
-
-    for (uint32_t i = 0; i < type.size(); ++i)
-    {
-        if (i > 0) ss << " or ";
-
-        ss << TokenTypeNodeRepr(type[i]);
-    }
-
-    return ss.str();
-}
+USE_MODULE(Arcana::Scan);
 
 
 Lexer::Lexer(std::istream& in)
@@ -201,7 +142,7 @@ Token Lexer::simpleToken(TokenType type)
 {
     char c       = current_;
     auto tokLine = (type == TokenType::NEWLINE) ? line_  - 1 : line_;
-    auto tokCol  = (type == TokenType::NEWLINE) ? nlcol_ - 1 : col_;
+    auto tokCol  = (type == TokenType::NEWLINE) ? nlcol_ - 1 : col_ - 1;
     advance();
     return makeToken(type, std::string(1, c), tokLine, tokCol, 1);
 }
@@ -226,6 +167,10 @@ Token Lexer::identifier()
     if (lower.compare("task") == 0)
     {
         tt = TokenType::TASK;
+    }
+    else if (lower.compare("using") == 0)
+    {
+        tt = TokenType::USING;
     }
 
     // Qui potresti fare lookup per parole chiave e cambiare TokenType

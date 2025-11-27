@@ -2,45 +2,60 @@
 #define __ARCANA_PARSER__H__
 
 
+///////////////////////////////////////////////////////////////////////////////
+// INCLUDES
+///////////////////////////////////////////////////////////////////////////////
+
+#include "Lexer.h"
+#include "Defines.h"
+#include "Grammar.h"
+
 #include <functional>
 
-#include "Util.h"
-#include "Lexer.h"
-#include "Semantic.h"
+
+///////////////////////////////////////////////////////////////////////////////
+// MODULE NEMASPACEs
+///////////////////////////////////////////////////////////////////////////////
+
+BEGIN_MODULE(Parsing)
 
 
+///////////////////////////////////////////////////////////////////////////////
+// CALLBACKs
+///////////////////////////////////////////////////////////////////////////////
 
-BEGIN_MODULE(Parser)
+using ErrorCallback = std::function<void (const Grammar::Match&)>;
 
 
-using ErrorCallback = std::function<void (const Match&)>;
-
-
+///////////////////////////////////////////////////////////////////////////////
+// PUBLLIC CLASSES
+///////////////////////////////////////////////////////////////////////////////
 
 class Parser
 {
 public:
-    Parser(Lexer& l, Semantic& s);
+    Parser(Scan::Lexer& l, Grammar::Engine& e);
 
     void parse();
     void AddErrorCallback(const ErrorCallback& ecb);
 
 private:
-    Lexer&         lexer;
-    Semantic&      semantic;
-    ErrorCallback  errorcb;
+    Scan::Lexer&         lexer;
+    Grammar::Engine&     engine;
+    ErrorCallback        errorcb;
 
-    void Handle_VarAssign(Match& match);
-    void Handle_Attribute(Match& match);
-    void Handle_BuiltinTaskDecl(Match& match);
-    void Handle_TaskDecl(Match& match);
-    void Handle_TaskCall(Match& match);
+    void Handle_VarAssign(Grammar::Match& match);
+    void Handle_Attribute(Grammar::Match& match);
+    void Handle_BuiltinTaskDecl(Grammar::Match& match);
+    void Handle_TaskDecl(Grammar::Match& match);
+    void Handle_TaskCall(Grammar::Match& match);
+    void Handle_Using(Grammar::Match& match);
 
 };
 
 
 
-END_MODULE(Parser)
+END_MODULE(Parsing)
 
 
 
