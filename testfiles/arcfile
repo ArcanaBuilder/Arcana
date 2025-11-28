@@ -1,0 +1,67 @@
+#!/usr/bin/arcana
+
+using Defaults.arc;
+
+COMPILER = g++
+
+@profile Debug
+FLAGS    = -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG
+
+@profile Release
+FLAGS    = -std=c++17 -Os -Wall -Wextra -DRELEASE
+
+TARGET   = app
+
+BUILD    = Build
+SOURCE   = Source/**.c
+
+###########################
+# BUILT-IN TASKS
+###########################
+
+@folder
+@file
+@precompiler 1
+task Clean(BUILD);
+
+@public
+@always
+@dependecy Clean Build
+task Install(TARGET);
+
+###########################
+# OVERRIDED BUILT-IN TASKS
+###########################
+
+@public
+@profile Release
+task Build()
+{
+    COMPILER FLAGS SOURCE -o TARGET
+}
+
+###########################
+# PRE BUILD TASKS
+###########################
+
+@precompiler 1
+task Create_Folders() 
+{
+    mkdir BUILD
+    mkdir test
+}
+
+###########################
+# POST BUILD TASKS
+###########################
+
+@private
+@callable
+@postcompiler 1
+task Say_Something(msg) { echo msg }
+
+###########################
+# POST BUILD TASKS CALL
+###########################
+
+Say_Something('All Done!');
