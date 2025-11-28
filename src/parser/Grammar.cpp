@@ -133,6 +133,9 @@ static Rules rule_USING =
 
 
 Engine::Engine() 
+    :
+    _precomp_index(0)
+    _precomp_index(0)
 {
     _rules[Rule::VARIABLE_ASSIGN  ] = rule_VARIABLE_ASSIGNMENT.buffer;
     _rules[Rule::EMPTY_LINE       ] = rule_EMPTY_LINE.buffer;

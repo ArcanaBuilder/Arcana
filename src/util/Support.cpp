@@ -45,6 +45,22 @@ Arcana_Result Support::ParserError::operator() (const Grammar::Match& match) con
 }
 
 
+Arcana_Result Support::SemanticError::operator() (const Support::SemanticOutput& ao, const Grammar::Match& match) const
+{
+    const auto& [token, found, semtypes, _] = match.Error;
+
+    std::stringstream ss;
+
+    ss << "[" << ANSI_BRED << "ERROR" << ANSI_RESET << "] Semantic error on line " << token.line << ": ‘" << lexer[token] << "’" << std::endl;
+    ss << "        " << ao.message << std::endl;
+
+    std::cerr << ss.str();
+
+    return Arcana_Result::ARCANA_RESULT__PARSING_ERROR;
+}
+
+
+
 std::size_t Support::StringViewHash::operator() (std::string_view s) const noexcept
 {
     std::size_t h = 0;
@@ -142,6 +158,129 @@ std::vector<std::string> Support::split(const std::string& s, char sep) noexcept
     return result;
 }
 
+
+
+Support::SplitResult Support::split_quoted(const std::string& s, char sep) noexcept
+{
+    Support::SplitResult res{true, {}, {}};
+
+    std::string current;
+    bool in_quote           = false;
+    bool just_closed_quote  = false;
+
+    const std::size_t n = s.size();
+    for (std::size_t i = 0; i < n; ++i)
+    {
+        char c = s[i];
+
+        // controllo subito dopo una chiusura di quote
+        if (just_closed_quote)
+        {
+            if (c == sep)
+            {
+                just_closed_quote = false;
+                continue; // consumiamo il separatore
+            }
+            else
+            {
+                res.ok    = false;
+                res.tokens.clear();
+                res.error = "missing space after closing quote";
+                return res;
+            }
+        }
+
+        if (!in_quote)
+        {
+            if (c == sep)
+            {
+                if (!current.empty())
+                {
+                    res.tokens.emplace_back(std::move(current));
+                    current.clear();
+                }
+                continue;
+            }
+
+            if (c == '\'')
+            {
+                // quote deve iniziare un token nuovo
+                if (!current.empty())
+                {
+                    res.ok    = false;
+                    res.tokens.clear();
+                    res.error = "quote in the middle of a token";
+                    return res;
+                }
+
+                in_quote = true;
+                continue;
+            }
+
+            current.push_back(c);
+        }
+        else // in_quote == true
+        {
+            if (c == '\'')
+            {
+                // chiusura della quote: token completo
+                res.tokens.emplace_back(std::move(current));
+                current.clear();
+                in_quote          = false;
+                just_closed_quote = true;
+            }
+            else
+            {
+                current.push_back(c);
+            }
+        }
+    }
+
+    if (in_quote)
+    {
+        res.ok    = false;
+        res.tokens.clear();
+        res.error = "unmatched quote";
+        return res;
+    }
+
+    if (!current.empty())
+        res.tokens.emplace_back(std::move(current));
+
+    return res;
+}
+
+
+
+std::optional<long long> Support::to_number(const std::string& s)
+{
+    if (s.empty()) 
+        return std::nullopt;
+
+    long long value = 0;
+
+    for (char c : s)
+    {
+        if (!std::isdigit(static_cast<unsigned char>(c)))
+            return std::nullopt;
+
+        int digit = c - '0';
+
+        if (value > (LLONG_MAX - digit) / 10)
+            return std::nullopt;
+
+        value = value * 10 + digit;
+    }
+
+    return value;
+}
+
+std::string Support::generate_mangling(const std::string& target, const std::string& mangling)
+{
+    std::stringstream ss;
+    ss << target << "@@" << mangling;
+    return ss.str();
+}
 
 
 std::string Support::TokenTypeRepr(const Scan::TokenType type)

@@ -8,8 +8,13 @@
 
 #include <map>
 #include <set>
+#include <cctype>
+#include <string>
 #include <vector>
+#include <climits> 
+#include <optional>
 #include <string_view>
+
 
 #include "Defines.h"
 
@@ -39,6 +44,13 @@ enum class Rule : uint32_t;
 END_MODULE(Grammar)
 
 
+BEGIN_MODULE(Support)
+
+struct SemanticOutput;
+
+END_MODULE(Support)
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // PUBLIC STRUCTS
@@ -61,7 +73,18 @@ struct ParserError
     Arcana_Result operator () (const Grammar::Match& match) const;
 };
 
+
+struct SemanticError
+{
+    Scan::Lexer& lexer;
+    
+    Arcana_Result operator () (const Support::SemanticOutput&, const Grammar::Match&) const;
+};
+
 END_MODULE(Support)
+
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // USINGS
@@ -123,24 +146,34 @@ struct StringViewEq
 };
 
 
-
-struct AstOutput
+struct SemanticOutput
 {
-    Ast_Result  result;
+    Semantic_Result  result;
     std::string message;
 
-    AstOutput() 
+    SemanticOutput() 
         :
-        result(Ast_Result::AST_RESULT__OK),
+        result(Semantic_Result::AST_RESULT__OK),
         message("")
     {}
 
-    AstOutput(const Ast_Result result, const std::string& message) 
+    SemanticOutput(const Semantic_Result result, const std::string& message) 
         :
         result(result),
         message(message)
     {}
 };
+
+
+
+struct SplitResult
+{
+    bool                     ok;
+    std::vector<std::string> tokens;
+    std::string              error;
+};
+
+
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -164,7 +197,15 @@ std::string ltrim(const std::string& s);
 inline char toLowerAscii(char c) noexcept;
 
 
-std::vector<std::string> split(const std::string& s, char sep) noexcept;
+std::vector<std::string> split(const std::string& s, char sep = ' ') noexcept;
+
+SplitResult split_quoted(const std::string& s, char sep = ' ') noexcept;
+
+std::optional<long long> to_number(const std::string& s);
+
+std::string generate_mangling(const std::string& target, const std::string& mangling);
+
+
 
 
 

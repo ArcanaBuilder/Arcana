@@ -9,8 +9,7 @@
 #include "Lexer.h"
 #include "Defines.h"
 #include "Grammar.h"
-
-#include "Instruction.h"
+#include "Semantic.h"
 
 #include <functional>
 
@@ -27,7 +26,7 @@ BEGIN_MODULE(Parsing)
 ///////////////////////////////////////////////////////////////////////////////
 
 using ParsingError  = std::function<Arcana_Result (const Grammar::Match&)>;
-using SemanticError = std::function<Arcana_Result (const Support::AstOutput&)>;
+using AnalisysError = std::function<Arcana_Result (const Support::SemanticOutput&, const Grammar::Match&)>;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -39,25 +38,25 @@ class Parser
 public:
     Parser(Scan::Lexer& l, Grammar::Engine& e);
 
-    Arcana_Result Parse(Ast::Enviroment& env);
+    Arcana_Result Parse(Semantic::Enviroment& env);
 
-    void          Set_ParsingError_Handler (const ParsingError&  ecb) noexcept { Parsing_Error  = ecb; }
-    void          Set_SemanticError_Handler(const SemanticError& ecb) noexcept { Semantic_Error = ecb; }
+    void          Set_ParsingError_Handler (const ParsingError&  ecb) noexcept { Parsing_Error  = std::move(ecb); }
+    void          Set_AnalisysError_Handler(const AnalisysError& ecb) noexcept { Analisys_Error = std::move(ecb); }
 
 private:
-    Scan::Lexer&           lexer;
-    Grammar::Engine&       engine;
-    Ast::InstructionEngine instr_engine;
+    Scan::Lexer&     lexer;
+    Grammar::Engine& engine;
+    Semantic::Engine instr_engine;
 
-    ParsingError           Parsing_Error;
-    SemanticError          Semantic_Error;
+    ParsingError     Parsing_Error;
+    AnalisysError    Analisys_Error;
 
-    Support::AstOutput Handle_VarAssign(Grammar::Match& match);
-    Support::AstOutput Handle_Attribute(Grammar::Match& match);
-    Support::AstOutput Handle_BuiltinTaskDecl(Grammar::Match& match);
-    Support::AstOutput Handle_TaskDecl(Grammar::Match& match);
-    Support::AstOutput Handle_TaskCall(Grammar::Match& match);
-    Support::AstOutput Handle_Using(Grammar::Match& match);
+    Support::SemanticOutput Handle_VarAssign(Grammar::Match& match);
+    Support::SemanticOutput Handle_Attribute(Grammar::Match& match);
+    Support::SemanticOutput Handle_BuiltinTaskDecl(Grammar::Match& match);
+    Support::SemanticOutput Handle_TaskDecl(Grammar::Match& match);
+    Support::SemanticOutput Handle_TaskCall(Grammar::Match& match);
+    Support::SemanticOutput Handle_Using(Grammar::Match& match);
 
 };
 

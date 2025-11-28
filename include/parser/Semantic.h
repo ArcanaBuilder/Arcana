@@ -16,10 +16,10 @@
 // MODULE NAMESPACEs
 ///////////////////////////////////////////////////////////////////////////////
 
-BEGIN_MODULE(Ast)
+BEGIN_MODULE(Semantic)
 
 
-
+struct Rule;
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // BEGIN INNER NAMESPACE Attr
@@ -54,8 +54,27 @@ enum class Type
 enum class Qualificator
 {
     NO_PROPERY       = 0,
-    OPTIONAL_PROPERY    ,
     REQUIRED_PROPERTY   ,
+};
+
+enum class ValType
+{
+    NUMBER           = 0,
+    STRING              ,
+    NONE                ,
+};
+
+enum class Count
+{
+    ZERO             = 0,
+    ONE                 ,
+    UNLIMITED           ,
+};
+
+enum class Target
+{
+    TASK             = 0,
+    VARIABLE            ,
 };
 
 
@@ -66,7 +85,6 @@ enum class Qualificator
 struct Attribute;
 
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // USINGs
 ///////////////////////////////////////////////////////////////////////////////
@@ -74,8 +92,8 @@ struct Attribute;
 
 using Properties = std::vector<std::string>;
 using List       = std::vector<Attribute>;
-using Rules      = std::array<Qualificator, _I(Type::ATTRIBUTE__COUNT)>;
-
+using Targets    = std::vector<Target>;
+using Rules      = std::array<Semantic::Rule, _I(Type::ATTRIBUTE__COUNT)>;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -84,21 +102,46 @@ using Rules      = std::array<Qualificator, _I(Type::ATTRIBUTE__COUNT)>;
 
 struct Attribute
 {
-    Type       type;
-    Properties props;
+    std::string name;
+    Type        type;
+    Properties  props;
 
     Attribute() 
         :
         type(Type::ATTRIBUTE__UNKNOWN)
     {}
 
-    Attribute(const Type t, const Properties& p) 
+    Attribute(const std::string& name, const Type t, const Properties& p) 
         :
+        name(name),
         type(t),
         props(p)
     {}
+
+    bool operator == (const Type t) const { return this->type == t; }
 };
 
+
+#if DEBUG
+inline std::string print_attr(const Type t)
+{
+    switch (t)
+    {
+        case Type::PRECOMPILER:  return "PRECOMPILER";      
+        case Type::POSTCOMPILER: return "POSTCOMPILER";       
+        case Type::BUILTIN:      return "BUILTIN";  
+        case Type::PROFILE:      return "PROFILE";  
+        case Type::PUBLIC:       return "PUBLIC"; 
+        case Type::PRIVATE:      return "PRIVATE";  
+        case Type::FOLDER:       return "FOLDER"; 
+        case Type::FILE:         return "FILE"; 
+        case Type::ALWAYS:       return "ALWAYS"; 
+        case Type::DEPENDECY:    return "DEPENDECY";    
+        case Type::CALLABLE:     return "CALLABLE";    
+        default:                 return "NOT_A_ATTR";
+    }
+}
+#endif
 
 END_NAMESPACE(Attr)
 
@@ -123,10 +166,15 @@ BEGIN_NAMESPACE(Task)
 
 enum class Type
 {
-    BUILTIN         = 0,
-    CUSTOM             ,
+    BUILTIN          = 0,
+    CUSTOM              ,
+};
 
-    TASK__COUNT        ,
+enum class BuiltinTask
+{
+    CLEAN            = 0,
+    INSTALL             ,
+    BUILD               ,
 };
 
 
@@ -136,11 +184,14 @@ enum class Type
 
 using Params = std::vector<std::string>;
 using Instrs = std::vector<std::string>;
+using Types  = std::vector<Type>;
+
 
 
 ///////////////////////////////////////////////////////////////////////////////
 // PUBLIC AGGREGATES
 ///////////////////////////////////////////////////////////////////////////////
+
 
 
 END_NAMESPACE(Task)
@@ -174,9 +225,22 @@ using Usings = std::vector<std::string>;
 
 
 
+
 ///////////////////////////////////////////////////////////////////////////////
 // PUBLIC AGGREGATES
 ///////////////////////////////////////////////////////////////////////////////
+
+
+struct Rule 
+{
+    Attr::Qualificator qual;
+    Attr::ValType      vt;
+    Attr::Count        count;
+    Attr::Targets      targets;
+    Task::Types        task_type;
+
+    bool operator == (const Attr::Qualificator q) const { return this->qual == q; }
+};
 
 
 struct Instruction
@@ -185,6 +249,33 @@ struct Instruction
     virtual ~Instruction() = default;
 
     Attr::List attributes;
+
+#if DEBUG
+    void print() const
+    {
+        this->pre_print();
+        this->do_print();
+    }
+
+protected:
+    virtual void do_print() const = 0;
+
+    void pre_print() const
+    {
+        for (const auto& attr : attributes)
+        {
+            DBG("Attribute {");
+            DBG("  Type:  " << Attr::print_attr(attr.type));
+
+            for (const auto& prop : attr.props)
+            {
+                DBG("  Prop:  " << prop);
+            }
+            DBG("}");
+        }
+    }
+
+#endif
 };
 
 
@@ -200,6 +291,14 @@ struct InstructionAssign : public Instruction
         var_name(var),
         var_value(val)
     {}
+
+#if DEBUG
+    void do_print() const override
+    {
+        DBG("Name:  " << var_name);
+        DBG("Value: " << var_value);
+    }
+#endif
 };
 
 
@@ -219,6 +318,23 @@ struct InstructionTask : public Instruction
         task_params(params),
         task_instrs(instrs)
     {}
+
+#if DEBUG
+    void do_print() const override
+    {
+        DBG("Name:  " << task_name);
+
+        for (const auto& param : task_params)
+        {
+            DBG("Param: " << param);
+        }
+
+        for (const auto& instr : task_instrs)
+        {
+            DBG("Instr: " << instr);
+        }
+    }
+#endif
 };
 
 
@@ -235,6 +351,19 @@ struct InstructionCall : public Instruction
         task_name(name),
         task_params(params)
     {}
+
+#if DEBUG
+    void do_print() const override
+    {
+        DBG("Name:  " << task_name);
+
+        for (const auto& param : task_params)
+        {
+            DBG("Param: " << param);
+        }
+    }
+#endif
+
 };
 
 
@@ -243,33 +372,81 @@ struct Enviroment
 {
     VTable vtable;
     FTable ftable;
+    FTable builtin_ftable;
     CTable ctable;
     Usings usings;
+
+#ifdef DEBUG
+    void print()
+    {
+        DBG("");
+        DBG("########################################################################");
+        DBG("## ENV");
+        DBG("########################################################################");
+        DBG("");
+
+        for (const auto& script : usings)
+        {
+            DBG("------------------------------------------------------------------------");
+            DBG("(USING        ) => " << script);
+        }
+
+        for (const auto& [key, val] : vtable)
+        {
+            DBG("------------------------------------------------------------------------");
+            DBG("(VTABLE        ) => " << key);
+            val.print();
+        }
+
+        for (const auto& [key, val] : builtin_ftable)
+        {
+            DBG("------------------------------------------------------------------------");
+            DBG("(BUILTIN FTABLE) => " << key);
+            val.print();
+        }
+        
+        for (const auto& [key, val] : ftable)
+        {
+            DBG("------------------------------------------------------------------------");
+            DBG("(FTABLE        ) => " << key);
+            val.print();
+        }
+
+        for (const auto& [key, val] : ctable)
+        {
+            DBG("------------------------------------------------------------------------");
+            DBG("(CTABLE        ) => " << key);
+            val.print();
+        }
+    }
+#endif
+
 };
 
 
 
-class InstructionEngine
+class Engine
 {
 public:
-    InstructionEngine();
+    Engine();
 
-    AstOutput Collect_Attribute (const std::string& name, const std::string&  prop);
-    AstOutput Collect_Assignment(const std::string& name, const std::string&  val); 
-    AstOutput Collect_Task      (const std::string& name, const Task::Params& params, const Task::Instrs& instrs); 
-    AstOutput Collect_TaskCall  (const std::string& name, const Task::Params& params); 
-    AstOutput Collect_Using     (const std::string& file); 
+    SemanticOutput Collect_Attribute (const std::string& name, const std::string&  prop);
+    SemanticOutput Collect_Assignment(const std::string& name, const std::string&  val); 
+    SemanticOutput Collect_Task      (const Task::Type t, const std::string& name, const std::string& param, const Task::Instrs& instrs); 
+    SemanticOutput Collect_TaskCall  (const std::string& name, const std::string&  param); 
+    SemanticOutput Collect_Using     (const std::string& file); 
 
     const Enviroment Generate_Enviroment() const noexcept { return _env; }
 
 private:
     Attr::Rules _attr_rules;
     Attr::List  _attr_pending;
+
     Enviroment  _env;
 };
 
 
-END_MODULE(Ast)
+END_MODULE(Semantic)
 
 
 #endif /* __ARCANA_INSTRUCTION__H__ */

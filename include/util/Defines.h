@@ -88,13 +88,17 @@ enum Arcana_Result : int32_t
     ARCANA_RESULT__PARSING_ERROR    = -2,
 };
 
-enum class Ast_Result : int32_t
+enum class Semantic_Result : int32_t
 {
-    AST_RESULT__OK                  =  0,
-    
-    AST_RESULT__INVALID_ATTR        = -1,
-    AST_RESULT__INVALID_ATTR_PROP   = -2,
-    AST_RESULT__INVALID_ATTR_TARGET = -3,
+    AST_RESULT__OK                   =  0,
+     
+    AST_RESULT__INVALID_ATTR         = -1,
+    AST_RESULT__INVALID_ATTR_PROP    = -2,
+    AST_RESULT__INVALID_ATTR_TARGET  = -3,
+    AST_RESULT__ATTR_NOT_ALLOWED     = -4,
+    AST_RESULT__INVALID_BUILTIN_TASK = -5,
+    AST_RESULT__INVALID_ARGUMENTS    = -6,
+    AST_RESULT__INVALID_TASK_CALL    = -7,
 };
 
 

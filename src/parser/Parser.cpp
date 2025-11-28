@@ -12,11 +12,17 @@ Parser::Parser(Scan::Lexer& l, Grammar::Engine& e)
     engine(e)
 {}
 
-Arcana_Result Parser::Parse(Ast::Enviroment& env)
+Arcana_Result Parser::Parse(Semantic::Enviroment& env)
 {
     Scan::Token        token;
     Grammar::Match     match;
-    Support::AstOutput astout; 
+    Support::SemanticOutput astout; 
+
+    DBG("");
+    DBG("########################################################################");
+    DBG("## PARSER");
+    DBG("########################################################################");
+    DBG("");
 
     do
     {   
@@ -40,9 +46,9 @@ Arcana_Result Parser::Parse(Ast::Enviroment& env)
                 case Grammar::Rule::UNDEFINED:                                                 break;
             }
             
-            if (astout.result != Ast_Result::AST_RESULT__OK)
+            if (astout.result != Semantic_Result::AST_RESULT__OK)
             {
-                return Semantic_Error(astout);
+                return Analisys_Error(astout, match);
             }
         }
 
@@ -59,7 +65,7 @@ Arcana_Result Parser::Parse(Ast::Enviroment& env)
 }
 
 
-Arcana::Support::AstOutput Parser::Handle_VarAssign(Grammar::Match& match)
+Arcana::Support::SemanticOutput Parser::Handle_VarAssign(Grammar::Match& match)
 {
     Point  p1    = match[_I(Grammar::VARIABLE_ASSIGN::VARNAME)];
     Point  p2    = match[_I(Grammar::VARIABLE_ASSIGN::VALUE)];
@@ -73,11 +79,11 @@ Arcana::Support::AstOutput Parser::Handle_VarAssign(Grammar::Match& match)
 
     DBG("------------------------------------------------------------------------");
 
-    return Support::AstOutput{};
+    return instr_engine.Collect_Assignment(var, value);    
 }
 
 
-Arcana::Support::AstOutput Parser::Handle_Attribute(Grammar::Match& match)
+Arcana::Support::SemanticOutput Parser::Handle_Attribute(Grammar::Match& match)
 {      
     Point  p1      = match[_I(Grammar::ATTRIBUTE::ATTRNAME)];
     Point  p2      = match[_I(Grammar::ATTRIBUTE::ATTROPTION)];
@@ -94,7 +100,7 @@ Arcana::Support::AstOutput Parser::Handle_Attribute(Grammar::Match& match)
 }
 
 
-Arcana::Support::AstOutput Parser::Handle_BuiltinTaskDecl(Grammar::Match& match)
+Arcana::Support::SemanticOutput Parser::Handle_BuiltinTaskDecl(Grammar::Match& match)
 {
     Point  p1    = match[_I(Grammar::BUILTIN_TASK_DECL::TASKNAME)];
     Point  p2    = match[_I(Grammar::BUILTIN_TASK_DECL::PARAMS)];
@@ -107,13 +113,11 @@ Arcana::Support::AstOutput Parser::Handle_BuiltinTaskDecl(Grammar::Match& match)
     DBG( "                    " << "Params: " << param);
     DBG("------------------------------------------------------------------------");
 
-    Ast::Task::Params params = Support::split(param, ' ');
-
-    return instr_engine.Collect_Task(task, params, {});
+    return instr_engine.Collect_Task(Semantic::Task::Type::BUILTIN, task, param, {});
 }
 
 
-Arcana::Support::AstOutput Parser::Handle_TaskDecl(Grammar::Match& match)
+Arcana::Support::SemanticOutput Parser::Handle_TaskDecl(Grammar::Match& match)
 {
     Statement body;
     
@@ -149,12 +153,10 @@ Arcana::Support::AstOutput Parser::Handle_TaskDecl(Grammar::Match& match)
     }
     DBG("------------------------------------------------------------------------");
 
-    Ast::Task::Params params = Support::split(param, ' ');
-
-    return instr_engine.Collect_Task(task, params, body);
+    return instr_engine.Collect_Task(Semantic::Task::Type::CUSTOM, task, param, body);
 }
 
-Arcana::Support::AstOutput Parser::Handle_TaskCall(Grammar::Match& match)
+Arcana::Support::SemanticOutput Parser::Handle_TaskCall(Grammar::Match& match)
 {
     Point  p1    = match[_I(Grammar::TASK_CALL::TASKNAME)];
     Point  p2    = match[_I(Grammar::TASK_CALL::PARAMS)];
@@ -167,13 +169,11 @@ Arcana::Support::AstOutput Parser::Handle_TaskCall(Grammar::Match& match)
     DBG( "                    " << "Params: " << param);
     DBG("------------------------------------------------------------------------");
 
-    Ast::Task::Params params = Support::split(param, ' ');
-
-    return instr_engine.Collect_TaskCall(task, params);
+    return instr_engine.Collect_TaskCall(task, param);
 }
 
 
-Arcana::Support::AstOutput Parser::Handle_Using(Grammar::Match& match)
+Arcana::Support::SemanticOutput Parser::Handle_Using(Grammar::Match& match)
 {
     Point  p1     = match[_I(Grammar::USING::SCRIPT)];
     

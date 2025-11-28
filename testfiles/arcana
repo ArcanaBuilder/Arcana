@@ -11,7 +11,6 @@ FLAGS    = -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG
 FLAGS    = -std=c++17 -Os -Wall -Wextra -DRELEASE
 
 TARGET   = app
-MODE     = Release
 
 BUILD    = Build
 SOURCE   = Source/**.c
@@ -20,9 +19,9 @@ SOURCE   = Source/**.c
 # BUILT-IN TASKS
 ###########################
 
-@public
 @folder
 @file
+@precompiler 1
 task Clean(BUILD);
 
 @public
@@ -35,7 +34,7 @@ task Install(TARGET);
 ###########################
 
 @public
-@profile 
+@profile Release
 task Build()
 {
     COMPILER FLAGS SOURCE -o TARGET
@@ -45,7 +44,7 @@ task Build()
 # PRE BUILD TASKS
 ###########################
 
-@precompiler 
+@precompiler 1
 task Create_Folders() 
 {
     mkdir BUILD

@@ -65,17 +65,16 @@ static Arcana_Result run(const Support::Arguments& args)
     Scan::Lexer       lexer(file);
     Grammar::Engine   engine;
     Parsing::Parser   parser(lexer, engine);
-    Ast::Enviroment   env;
+    Semantic::Enviroment   env;
 
-    parser.Set_ParsingError_Handler(Support::ParserError {lexer} );
+    parser.Set_ParsingError_Handler (Support::ParserError   {lexer} );
+    parser.Set_AnalisysError_Handler(Support::SemanticError {lexer} );
     
     result = parser.Parse(env);
 
-    DBG("############################################");
-    for (const auto& [key, val] : env.ftable)
-    {
-        DBG(key);
-    }
+#if DEBUG
+    env.print();
+#endif
 
     return result;
 }
