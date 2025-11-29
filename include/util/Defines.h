@@ -66,9 +66,9 @@
 #define ANSI_HIDDEN                             "\x1b[8m"
 
 
+#include <iostream>
 
 #ifdef DEBUG
-  #include <iostream>
   #define DBG(msg)                              std::cout << "[" << ANSI_BYELLOW << ANSI_DIM << "DEBUG" << ANSI_RESET "] " << ANSI_GRAY << msg << ANSI_RESET << std::endl
 #else
   #define DBG(msg)

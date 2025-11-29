@@ -40,9 +40,9 @@ enum class Rule : uint32_t
     VARIABLE_ASSIGN       ,
     EMPTY_LINE            ,
     ATTRIBUTE             ,
-    BUILTIN_TASK_DECL     ,
     TASK_DECL             ,
     TASK_CALL             ,
+    IMPORT                ,
     USING                 ,
 };
 
@@ -71,17 +71,6 @@ enum class ATTRIBUTE : uint32_t
 };
 
 
-enum class BUILTIN_TASK_DECL : uint32_t 
-{
-    RESERVED           = 0,
-    TASKNAME              ,
-    ROUNDLP               ,
-    PARAMS                ,
-    ROUNDRP               ,
-    SEMICOLON             ,
-    GRAMMAR_END           ,
-};
-
 
 enum class TASK_DECL : uint32_t 
 {
@@ -109,12 +98,22 @@ enum class TASK_CALL : uint32_t
 };
 
 
-enum class USING : uint32_t 
+enum class IMPORT : uint32_t 
 {
     RESERVED           = 0, 
     SCRIPT                , 
     GRAMMAR_END           ,
 };
+
+
+enum class USING : uint32_t 
+{
+    RESERVED           = 0, 
+    WHAT                  ,
+    OPT                   , 
+    GRAMMAR_END           ,
+};
+
 
 
 ///////////////////////////////////////////////////////////////////////////////

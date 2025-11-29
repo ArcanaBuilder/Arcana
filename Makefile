@@ -25,8 +25,8 @@ build/%.o: src/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-install:
-	@mv $(TARGET) /usr/bin
+install: clean all
+	@cp $(TARGET) /usr/bin
 
 clean:
 	rm -rf build

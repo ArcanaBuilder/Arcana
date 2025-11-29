@@ -30,6 +30,7 @@ enum class TokenType : uint32_t
 {
     IDENTIFIER           =  0,
     TASK                     ,
+    IMPORT                   ,
     USING                    ,
     NUMBER                   ,
     ASSIGN                   ,

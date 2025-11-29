@@ -19,7 +19,7 @@ using AbstractKeywordMap = std::unordered_map<
 
 
 using AttributeMap   = AbstractKeywordMap<Attr::Type>;
-using BuiltinTaskMap = AbstractKeywordMap<Task::BuiltinTask>;
+using UsingMap       = AbstractKeywordMap<Using>;
 
 
 static const AttributeMap Known_Attributes = 
@@ -37,28 +37,27 @@ static const AttributeMap Known_Attributes =
 };
 
 
-static const BuiltinTaskMap Known_BuiltinTasks = 
+static const UsingMap Known_Usings = 
 {
-    { "clean"     , Task::BuiltinTask::CLEAN    },          
-    { "install"   , Task::BuiltinTask::INSTALL  },          
-    { "build"     , Task::BuiltinTask::BUILD    },                 
-};
+    { "profile"       , Using::PROFILE        },   
+    { "precompiler"   , Using::PRECOMPILER    },          
 
+};
 
 
 
 Engine::Engine()
 {
-    _attr_rules[_I(Attr::Type::PRECOMPILER )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::ValType::NUMBER, Attr::Count::ONE      , { Attr::Target::TASK                         }, { Task::Type::CUSTOM, Task::Type::BUILTIN}  };              
-    _attr_rules[_I(Attr::Type::POSTCOMPILER)] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::ValType::NUMBER, Attr::Count::ONE      , { Attr::Target::TASK,                        }, { Task::Type::CUSTOM, Task::Type::BUILTIN}  };          
-    _attr_rules[_I(Attr::Type::PROFILE     )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::ValType::STRING, Attr::Count::ONE      , { Attr::Target::TASK, Attr::Target::VARIABLE }, { Task::Type::CUSTOM, Task::Type::BUILTIN }  };           
-    _attr_rules[_I(Attr::Type::PUBLIC      )] = { Attr::Qualificator::NO_PROPERY       , Attr::ValType::NONE  , Attr::Count::ZERO     , { Attr::Target::TASK, Attr::Target::VARIABLE }, { Task::Type::CUSTOM, Task::Type::BUILTIN }  };    
-    _attr_rules[_I(Attr::Type::PRIVATE     )] = { Attr::Qualificator::NO_PROPERY       , Attr::ValType::NONE  , Attr::Count::ZERO     , { Attr::Target::TASK, Attr::Target::VARIABLE }, { Task::Type::CUSTOM,                     }  };    
-    _attr_rules[_I(Attr::Type::FOLDER      )] = { Attr::Qualificator::NO_PROPERY       , Attr::ValType::NONE  , Attr::Count::ZERO     , { Attr::Target::TASK,                        }, { Task::Type::CUSTOM, Task::Type::BUILTIN }  };    
-    _attr_rules[_I(Attr::Type::FILE        )] = { Attr::Qualificator::NO_PROPERY       , Attr::ValType::NONE  , Attr::Count::ZERO     , { Attr::Target::TASK,                        }, { Task::Type::CUSTOM, Task::Type::BUILTIN }  };    
-    _attr_rules[_I(Attr::Type::ALWAYS      )] = { Attr::Qualificator::NO_PROPERY       , Attr::ValType::NONE  , Attr::Count::ZERO     , { Attr::Target::TASK,                        }, { Task::Type::CUSTOM, Task::Type::BUILTIN }  };    
-    _attr_rules[_I(Attr::Type::DEPENDECY   )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::ValType::STRING, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        }, { Task::Type::CUSTOM, Task::Type::BUILTIN }  };           
-    _attr_rules[_I(Attr::Type::CALLABLE    )] = { Attr::Qualificator::NO_PROPERY       , Attr::ValType::NONE  , Attr::Count::ZERO     , { Attr::Target::TASK,                        }, { Task::Type::CUSTOM,                     }  };        
+    _attr_rules[_I(Attr::Type::PRECOMPILER )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK                         } };              
+    _attr_rules[_I(Attr::Type::POSTCOMPILER)] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };          
+    _attr_rules[_I(Attr::Type::PROFILE     )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK, Attr::Target::VARIABLE } };           
+    _attr_rules[_I(Attr::Type::PUBLIC      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK, Attr::Target::VARIABLE } };    
+    _attr_rules[_I(Attr::Type::PRIVATE     )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK, Attr::Target::VARIABLE } };    
+    _attr_rules[_I(Attr::Type::FOLDER      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
+    _attr_rules[_I(Attr::Type::FILE        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
+    _attr_rules[_I(Attr::Type::ALWAYS      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
+    _attr_rules[_I(Attr::Type::DEPENDECY   )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } };           
+    _attr_rules[_I(Attr::Type::CALLABLE    )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };        
 }
 
 
@@ -96,15 +95,19 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
             ss << "Attribute " << "‘" << ANSI_BMAGENTA << "@" << name << ANSI_RESET << "’" << " requires one option, not " << props_count;
             return { Semantic_Result::AST_RESULT__INVALID_ATTR_PROP, ss.str() };
         }
+    }
 
-        if (rule.count == Attr::Count::ONE && rule.vt == Attr::ValType::NUMBER)
+    if (attr == Attr::Type::PROFILE)
+    {
+        const auto& profiles = _env.profile.profiles;
+
+        if (std::find(profiles.begin(), profiles.end(), property[0]) == profiles.end())
         {
-            if (!Support::to_number(property[0]))
-            {
-                ss << "Attribute " << "‘" << ANSI_BMAGENTA << "@" << name << ANSI_RESET << "’" << " option must be a positive number";
-                return { Semantic_Result::AST_RESULT__INVALID_ATTR_PROP, ss.str() };
-            }
+            ss << "Profile " << "‘" << ANSI_BMAGENTA << property[0] << ANSI_RESET << "’" << " must be declared via " << ANSI_BMAGENTA << "‘using profile <profilenames>’" << ANSI_RESET;
+            return { Semantic_Result::AST_RESULT__INVALID_ATTR_PROP, ss.str() };
         }
+
+        _env.profile.profiles.insert(property[0]);
     }
 
     _attr_pending.push_back({ 
@@ -151,7 +154,7 @@ SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::st
 } 
 
 
-SemanticOutput Engine::Collect_Task(const Task::Type t, const std::string& name, const std::string& param, const Task::Instrs& instrs)
+SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& param, const Task::Instrs& instrs)
 {
     std::stringstream    ss;
     Support::SplitResult sr;
@@ -165,16 +168,7 @@ SemanticOutput Engine::Collect_Task(const Task::Type t, const std::string& name,
     }
     
     InstructionTask   task { name, sr.tokens, instrs };
-    FTable&           ftable = (t == Task::Type::BUILTIN) ? _env.builtin_ftable : _env.ftable;
-
-    if (t == Task::Type::BUILTIN)
-    {
-        if (auto it = Known_BuiltinTasks.find(name); it == Known_BuiltinTasks.end())
-        {
-            ss << "Unknown Built-In task " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’";
-            return { Semantic_Result::AST_RESULT__INVALID_BUILTIN_TASK, ss.str() };
-        }
-    }
+    FTable&           ftable = _env.ftable;
 
     task.attributes = _attr_pending;
     _attr_pending.clear();
@@ -187,15 +181,6 @@ SemanticOutput Engine::Collect_Task(const Task::Type t, const std::string& name,
         {
             ss << "Attribute " << "‘" << ANSI_BMAGENTA << "@" << attr.name << ANSI_RESET << "’" << " is not valid for tasks";
             return { Semantic_Result::AST_RESULT__INVALID_ATTR_PROP, ss.str() };
-        }
-
-        if (t == Task::Type::BUILTIN)
-        {
-            if (std::find(rule.task_type.begin(), rule.task_type.end(), Task::Type::BUILTIN) == rule.task_type.end())
-            {
-                ss << "Attribute " << "‘" << ANSI_BMAGENTA << "@" << attr.name << ANSI_RESET << "’" << " is not valid for builtin tasks";
-                return { Semantic_Result::AST_RESULT__INVALID_ATTR_PROP, ss.str() };
-            }
         }
     }
 
@@ -229,7 +214,7 @@ SemanticOutput Engine::Collect_TaskCall(const std::string& name, const std::stri
 
     if (_attr_pending.size())
     {
-        ss << "Cannot use any attibutes for task call: " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’";
+        ss << "Cannot use attibutes for task call: " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’";
         return { Semantic_Result::AST_RESULT__ATTR_NOT_ALLOWED, ss.str() };
     }
     
@@ -238,6 +223,14 @@ SemanticOutput Engine::Collect_TaskCall(const std::string& name, const std::stri
     if (task == _env.ftable.end())
     {
         ss << "Cannot call non-existent task: " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’";
+        return { Semantic_Result::AST_RESULT__INVALID_TASK_CALL, ss.str() };
+    }
+
+    const auto& attributes = (*task).second.attributes;
+
+    if (std::find(attributes.begin(), attributes.end(), Attr::Type::CALLABLE) == attributes.end())
+    {
+        ss << "Cannot call task marked: " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’ without the attribute" << ANSI_BMAGENTA << " @callable" << ANSI_RESET;
         return { Semantic_Result::AST_RESULT__INVALID_TASK_CALL, ss.str() };
     }
 
@@ -259,18 +252,36 @@ SemanticOutput Engine::Collect_TaskCall(const std::string& name, const std::stri
 } 
 
 
-SemanticOutput Engine::Collect_Using(const std::string& file)
+SemanticOutput Engine::Collect_Using(const std::string& what, const std::string& opt)
 {
     std::stringstream ss;
+    Attr::Properties  options = Arcana::Support::split(opt);
+    Attr::Type        attr    = Attr::Type::ATTRIBUTE__UNKNOWN;
 
-    if (_attr_pending.size())
+    if (auto it = Known_Attributes.find(what); it != Known_Attributes.end())
     {
-        ss << "Cannot use any attibutes for " << "‘" <<  ANSI_BMAGENTA << "using" << ANSI_RESET << "’ statement"; 
-        return { Semantic_Result::AST_RESULT__ATTR_NOT_ALLOWED, ss.str() };
+        attr = it->second;
     }
 
-    _env.usings.push_back(file);
+    if (attr == Attr::Type::ATTRIBUTE__UNKNOWN)
+    {
+        ss << "Attribute " << "‘" << ANSI_BMAGENTA << what << ANSI_RESET << "’" << " not recognized";
+        return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+    }
+
+    if (auto it = Known_Usings.find(what); it == Known_Usings.end())
+    {
+        ss << "Unknown attribute " << "‘" << ANSI_BMAGENTA << what << ANSI_RESET << "’ for statement " << ANSI_BMAGENTA << "using" << ANSI_RESET ;
+        return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+    }
+
+    if (attr == Attr::Type::PROFILE)
+    {
+        for (const auto& opt : options)
+        {
+            _env.profile.profiles.insert(opt);
+        }
+    }
 
     return SemanticOutput{};
 }
-

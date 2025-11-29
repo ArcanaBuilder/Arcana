@@ -168,6 +168,10 @@ Token Lexer::identifier()
     {
         tt = TokenType::TASK;
     }
+    else if (lower.compare("import") == 0)
+    {
+        tt = TokenType::IMPORT;
+    }
     else if (lower.compare("using") == 0)
     {
         tt = TokenType::USING;

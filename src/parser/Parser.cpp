@@ -1,6 +1,8 @@
 #include "Parser.h"
 #include "Support.h"
 
+#include <fstream>
+
 
 USE_MODULE(Arcana::Parsing);
 
@@ -35,15 +37,22 @@ Arcana_Result Parser::Parse(Semantic::Enviroment& env)
             switch (match.type)
             {
                 case Grammar::Rule::VARIABLE_ASSIGN:   astout = Handle_VarAssign(match);       break;
-                case Grammar::Rule::EMPTY_LINE:        /* just ignore this */                  break;
                 case Grammar::Rule::ATTRIBUTE:         astout = Handle_Attribute(match);       break;
-                case Grammar::Rule::BUILTIN_TASK_DECL: astout = Handle_BuiltinTaskDecl(match); break;
                 case Grammar::Rule::TASK_DECL:         astout = Handle_TaskDecl(match);        break;
                 case Grammar::Rule::TASK_CALL:         astout = Handle_TaskCall(match);        break;
                 case Grammar::Rule::USING:             astout = Handle_Using(match);           break;
 
-                /* how can we reach this case? */
-                case Grammar::Rule::UNDEFINED:                                                 break;
+                default:                                                                       break;
+            }
+
+            if (match.type == Grammar::Rule::IMPORT)
+            {
+                Semantic::Enviroment new_env;
+                Arcana_Result        res = Handle_Import(match, new_env);
+                if (res != ARCANA_RESULT__OK)
+                {
+                    return res;
+                }
             }
             
             if (astout.result != Semantic_Result::AST_RESULT__OK)
@@ -100,23 +109,6 @@ Arcana::Support::SemanticOutput Parser::Handle_Attribute(Grammar::Match& match)
 }
 
 
-Arcana::Support::SemanticOutput Parser::Handle_BuiltinTaskDecl(Grammar::Match& match)
-{
-    Point  p1    = match[_I(Grammar::BUILTIN_TASK_DECL::TASKNAME)];
-    Point  p2    = match[_I(Grammar::BUILTIN_TASK_DECL::PARAMS)];
-
-    Input  input = lexer[p1->token];
-    Lexeme task  = input.substr(p1->start, p1->end - p1->start);
-    Lexeme param = input.substr(p2->start, p2->end - p2->start);
-
-    DBG( "(BUILTIN TASK DECL) " << "Name:   " << task);
-    DBG( "                    " << "Params: " << param);
-    DBG("------------------------------------------------------------------------");
-
-    return instr_engine.Collect_Task(Semantic::Task::Type::BUILTIN, task, param, {});
-}
-
-
 Arcana::Support::SemanticOutput Parser::Handle_TaskDecl(Grammar::Match& match)
 {
     Statement body;
@@ -153,7 +145,7 @@ Arcana::Support::SemanticOutput Parser::Handle_TaskDecl(Grammar::Match& match)
     }
     DBG("------------------------------------------------------------------------");
 
-    return instr_engine.Collect_Task(Semantic::Task::Type::CUSTOM, task, param, body);
+    return instr_engine.Collect_Task(task, param, body);
 }
 
 Arcana::Support::SemanticOutput Parser::Handle_TaskCall(Grammar::Match& match)
@@ -173,15 +165,46 @@ Arcana::Support::SemanticOutput Parser::Handle_TaskCall(Grammar::Match& match)
 }
 
 
-Arcana::Support::SemanticOutput Parser::Handle_Using(Grammar::Match& match)
+Arcana_Result Parser::Handle_Import(Grammar::Match& match, Semantic::Enviroment& new_env)
 {
-    Point  p1     = match[_I(Grammar::USING::SCRIPT)];
+    Point  p1     = match[_I(Grammar::IMPORT::SCRIPT)];
     
     Input  input  = lexer[p1->token];
     Lexeme script = input.substr(p1->start, p1->end - p1->start);
     
-    DBG( "(USING)             " << "Script: " << script);
+    DBG( "(IMPORT)            " << "Script: " << script);
     DBG("------------------------------------------------------------------------");
 
-    return instr_engine.Collect_Using(script);
+    Arcana_Result        result;
+    std::ifstream        file(script);
+    Scan::Lexer          lexer(file);
+    Grammar::Engine      engine;
+    Parsing::Parser      parser(lexer, engine);
+    
+    result = parser.Parse(new_env);
+
+    if (result == Arcana_Result::ARCANA_RESULT__OK)
+    {
+        Semantic::EnvMerge(instr_engine.EnvRef(), new_env);
+    }
+
+    return result;
+}
+
+
+Arcana::Support::SemanticOutput Parser::Handle_Using(Grammar::Match& match)
+{
+    Point  p1     = match[_I(Grammar::USING::WHAT)];
+    Point  p2     = match[_I(Grammar::USING::OPT)];
+    
+    Input  input  = lexer[p1->token];
+
+    Lexeme what   = input.substr(p1->start, p1->end - p1->start);
+    Lexeme opt    = input.substr(p2->start, p2->end - p2->start);
+    
+    DBG( "(USING    )         " << "What:   " << what);
+    DBG( "                    " << "Option: " << opt);
+    DBG("------------------------------------------------------------------------");
+
+    return instr_engine.Collect_Using(what, opt);
 }

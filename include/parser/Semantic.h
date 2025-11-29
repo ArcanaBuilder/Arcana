@@ -57,13 +57,6 @@ enum class Qualificator
     REQUIRED_PROPERTY   ,
 };
 
-enum class ValType
-{
-    NUMBER           = 0,
-    STRING              ,
-    NONE                ,
-};
-
 enum class Count
 {
     ZERO             = 0,
@@ -164,19 +157,6 @@ BEGIN_NAMESPACE(Task)
 // PUBLIC ENUMS
 ///////////////////////////////////////////////////////////////////////////////
 
-enum class Type
-{
-    BUILTIN          = 0,
-    CUSTOM              ,
-};
-
-enum class BuiltinTask
-{
-    CLEAN            = 0,
-    INSTALL             ,
-    BUILD               ,
-};
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // USINGs
@@ -184,8 +164,6 @@ enum class BuiltinTask
 
 using Params = std::vector<std::string>;
 using Instrs = std::vector<std::string>;
-using Types  = std::vector<Type>;
-
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -218,10 +196,9 @@ struct InstructionCall;
 USE_MODULE(Arcana::Support);
 
 
-using VTable = std::map<std::string, InstructionAssign>; 
-using FTable = std::map<std::string, InstructionTask>; 
-using CTable = std::map<std::string, InstructionCall>; 
-using Usings = std::vector<std::string>; 
+using VTable   = std::map<std::string, InstructionAssign>; 
+using FTable   = std::map<std::string, InstructionTask>; 
+using CTable   = std::map<std::string, InstructionCall>; 
 
 
 
@@ -230,14 +207,17 @@ using Usings = std::vector<std::string>;
 // PUBLIC AGGREGATES
 ///////////////////////////////////////////////////////////////////////////////
 
+enum class Using
+{
+    PROFILE             = 0,
+    PRECOMPILER            ,
+};
 
 struct Rule 
 {
     Attr::Qualificator qual;
-    Attr::ValType      vt;
     Attr::Count        count;
     Attr::Targets      targets;
-    Task::Types        task_type;
 
     bool operator == (const Attr::Qualificator q) const { return this->qual == q; }
 };
@@ -245,8 +225,16 @@ struct Rule
 
 struct Instruction
 {
-    Instruction() {}
+    Instruction() = default;
     virtual ~Instruction() = default;
+
+    // copy
+    Instruction(const Instruction & other)            = default;
+    Instruction & operator=(const Instruction & other) = default;
+
+    // move
+    Instruction(Instruction && other) noexcept            = default;
+    Instruction & operator=(Instruction && other) noexcept = default;
 
     Attr::List attributes;
 
@@ -262,12 +250,12 @@ protected:
 
     void pre_print() const
     {
-        for (const auto& attr : attributes)
+        for (const auto & attr : attributes)
         {
             DBG("Attribute {");
             DBG("  Type:  " << Attr::print_attr(attr.type));
 
-            for (const auto& prop : attr.props)
+            for (const auto & prop : attr.props)
             {
                 DBG("  Prop:  " << prop);
             }
@@ -286,11 +274,36 @@ struct InstructionAssign : public Instruction
 
     InstructionAssign() = default;
 
-    InstructionAssign(const std::string& var, const std::string& val) 
+    InstructionAssign(const std::string & var, const std::string & val)
         :
         var_name(var),
         var_value(val)
-    {}
+    {
+    }
+
+    // copy
+    InstructionAssign(const InstructionAssign & other)            = default;
+    InstructionAssign & operator=(const InstructionAssign & other) = default;
+
+    // move
+    InstructionAssign(InstructionAssign && other) noexcept
+        :
+        Instruction(std::move(other)),
+        var_name(std::move(other.var_name)),
+        var_value(std::move(other.var_value))
+    {
+    }
+
+    InstructionAssign & operator=(InstructionAssign && other) noexcept
+    {
+        if (this != &other)
+        {
+            Instruction::operator=(std::move(other));
+            var_name  = std::move(other.var_name);
+            var_value = std::move(other.var_value);
+        }
+        return *this;
+    }
 
 #if DEBUG
     void do_print() const override
@@ -310,26 +323,53 @@ struct InstructionTask : public Instruction
 
     InstructionTask() = default;
 
-    InstructionTask(const std::string&  name, 
-                    const Task::Params& params,
-                    const Task::Instrs& instrs) 
+    InstructionTask(const std::string &  name,
+                    const Task::Params & params,
+                    const Task::Instrs & instrs)
         :
         task_name(name),
         task_params(params),
         task_instrs(instrs)
-    {}
+    {
+    }
+
+    // copy
+    InstructionTask(const InstructionTask & other)            = default;
+    InstructionTask & operator=(const InstructionTask & other) = default;
+
+    // move
+    InstructionTask(InstructionTask && other) noexcept
+        :
+        Instruction(std::move(other)),
+        task_name(std::move(other.task_name)),
+        task_params(std::move(other.task_params)),
+        task_instrs(std::move(other.task_instrs))
+    {
+    }
+
+    InstructionTask & operator=(InstructionTask && other) noexcept
+    {
+        if (this != &other)
+        {
+            Instruction::operator=(std::move(other));
+            task_name   = std::move(other.task_name);
+            task_params = std::move(other.task_params);
+            task_instrs = std::move(other.task_instrs);
+        }
+        return *this;
+    }
 
 #if DEBUG
     void do_print() const override
     {
         DBG("Name:  " << task_name);
 
-        for (const auto& param : task_params)
+        for (const auto & param : task_params)
         {
             DBG("Param: " << param);
         }
 
-        for (const auto& instr : task_instrs)
+        for (const auto & instr : task_instrs)
         {
             DBG("Instr: " << instr);
         }
@@ -352,6 +392,28 @@ struct InstructionCall : public Instruction
         task_params(params)
     {}
 
+    InstructionCall(InstructionCall&& other) noexcept
+        :
+        Instruction(std::move(other)), // importante per la base
+        task_name(std::move(other.task_name)),
+        task_params(std::move(other.task_params))
+    {
+    }
+
+    InstructionCall& operator=(InstructionCall&& other) noexcept
+    {
+        if (this != &other)
+        {
+            Instruction::operator=(std::move(other));
+            task_name  = std::move(other.task_name);
+            task_params = std::move(other.task_params);
+        }
+        return *this;
+    }
+
+    InstructionCall(const InstructionCall&)            = default;
+    InstructionCall& operator=(const InstructionCall&) = default;
+
 #if DEBUG
     void do_print() const override
     {
@@ -368,13 +430,28 @@ struct InstructionCall : public Instruction
 
 
 
+struct Profile
+{
+    std::set<std::string> profiles;
+    std::string           selected;
+
+    void merge(Profile& other)
+    {
+        for (const auto& val : other.profiles)
+            this->profiles.insert(val);
+    }
+};
+
+
+
+
+
 struct Enviroment
 {
-    VTable vtable;
-    FTable ftable;
-    FTable builtin_ftable;
-    CTable ctable;
-    Usings usings;
+    VTable   vtable;
+    FTable   ftable;
+    CTable   ctable;
+    Profile  profile;
 
 #ifdef DEBUG
     void print()
@@ -385,23 +462,17 @@ struct Enviroment
         DBG("########################################################################");
         DBG("");
 
-        for (const auto& script : usings)
+        DBG("------------------------------------------------------------------------");
+        for (const auto& p : profile.profiles)
         {
-            DBG("------------------------------------------------------------------------");
-            DBG("(USING        ) => " << script);
+            DBG("(PROFILE       ) => " << p);
         }
+        DBG("(SEL PROFILE   ) => " << profile.selected);
 
         for (const auto& [key, val] : vtable)
         {
             DBG("------------------------------------------------------------------------");
             DBG("(VTABLE        ) => " << key);
-            val.print();
-        }
-
-        for (const auto& [key, val] : builtin_ftable)
-        {
-            DBG("------------------------------------------------------------------------");
-            DBG("(BUILTIN FTABLE) => " << key);
             val.print();
         }
         
@@ -424,6 +495,21 @@ struct Enviroment
 };
 
 
+inline void EnvMerge(Enviroment& dst, Enviroment& src)
+{
+    for (auto& [k, v] : src.vtable)
+        dst.vtable[k] = std::move(v);
+
+    for (auto& [k, v] : src.ftable)
+        dst.ftable[k] = std::move(v);
+
+    for (auto& [k, v] : src.ctable)
+        dst.ctable[k] = std::move(v);
+
+    dst.profile.merge(src.profile);
+}
+
+
 
 class Engine
 {
@@ -432,11 +518,13 @@ public:
 
     SemanticOutput Collect_Attribute (const std::string& name, const std::string&  prop);
     SemanticOutput Collect_Assignment(const std::string& name, const std::string&  val); 
-    SemanticOutput Collect_Task      (const Task::Type t, const std::string& name, const std::string& param, const Task::Instrs& instrs); 
-    SemanticOutput Collect_TaskCall  (const std::string& name, const std::string&  param); 
-    SemanticOutput Collect_Using     (const std::string& file); 
+    SemanticOutput Collect_Task      (const std::string& name, const std::string& param, const Task::Instrs& instrs); 
+    SemanticOutput Collect_TaskCall  (const std::string& name, const std::string&  param);  
+    SemanticOutput Collect_Using     (const std::string& what, const std::string& opt); 
 
     const Enviroment Generate_Enviroment() const noexcept { return _env; }
+
+    Enviroment&      EnvRef() { return _env; }
 
 private:
     Attr::Rules _attr_rules;

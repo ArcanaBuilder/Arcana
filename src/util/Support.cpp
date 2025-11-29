@@ -4,6 +4,8 @@
 #include "Support.h"
 #include "Grammar.h"
 
+#include <filesystem>
+
 
 USE_MODULE(Arcana);
 
@@ -106,6 +108,15 @@ Support::Arguments Support::ParseArgs(int argc, char** argv)
 
     return args;
 }
+
+
+
+bool Support::file_exists(const std::string& filename)
+{
+    return std::filesystem::exists(filename)
+        && std::filesystem::is_regular_file(filename);
+}
+
 
 
 std::string Support::ltrim(const std::string& s)
@@ -288,7 +299,8 @@ std::string Support::TokenTypeRepr(const Scan::TokenType type)
     switch (type)
     {
         case Scan::TokenType::IDENTIFIER:  return "identifier";
-        case Scan::TokenType::TASK:        return "task";     
+        case Scan::TokenType::TASK:        return "task";    
+        case Scan::TokenType::IMPORT:      return "import";      
         case Scan::TokenType::USING:       return "using";      
         case Scan::TokenType::NUMBER:      return "number";  
         case Scan::TokenType::ASSIGN:      return "assignment";  
@@ -369,9 +381,9 @@ std::string Support::RuleRepr(const Grammar::Rule type)
         case Grammar::Rule::VARIABLE_ASSIGN:   return "Assignment";
         case Grammar::Rule::EMPTY_LINE:        return "Empty Line";
         case Grammar::Rule::ATTRIBUTE:         return "Attribute";
-        case Grammar::Rule::BUILTIN_TASK_DECL: return "Builtin Task Declaration";
         case Grammar::Rule::TASK_DECL:         return "Task Declaration";
         case Grammar::Rule::TASK_CALL:         return "Task Invoke";
+        case Grammar::Rule::IMPORT:            return "Import";
         case Grammar::Rule::USING:             return "Using";
         default:                               return "<INVALID>";
     }

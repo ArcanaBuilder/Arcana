@@ -85,17 +85,6 @@ static Rules rule_ATTRIBUTE =
 };
 
 
-static Rules rule_BUILTIN_TASK_DECL = 
-{
-    Scan::TokenType::TASK         |
-    Scan::TokenType::IDENTIFIER   |
-    Scan::TokenType::ROUNDLP      |
-    Scan::TokenType::ANY          |
-    Scan::TokenType::ROUNDRP      |
-    Scan::TokenType::SEMICOLON    |
-    ( Scan::TokenType::NEWLINE || Scan::TokenType::ENDOFFILE )     
-};
-
 static Rules rule_TASK_DECL = 
 {
     Scan::TokenType::TASK         |
@@ -122,9 +111,18 @@ static Rules rule_TASK_CALL =
 };
 
 
+static Rules rule_IMPORT = 
+{
+    Scan::TokenType::IMPORT       |
+    Scan::TokenType::ANY          |
+    ( Scan::TokenType::NEWLINE || Scan::TokenType::SEMICOLON || Scan::TokenType::ENDOFFILE )  
+};
+
+
 static Rules rule_USING = 
 {
     Scan::TokenType::USING        |
+    Scan::TokenType::IDENTIFIER   |
     Scan::TokenType::ANY          |
     ( Scan::TokenType::NEWLINE || Scan::TokenType::SEMICOLON || Scan::TokenType::ENDOFFILE )  
 };
@@ -137,17 +135,17 @@ Engine::Engine()
     _rules[Rule::VARIABLE_ASSIGN  ] = rule_VARIABLE_ASSIGNMENT.buffer;
     _rules[Rule::EMPTY_LINE       ] = rule_EMPTY_LINE.buffer;
     _rules[Rule::ATTRIBUTE        ] = rule_ATTRIBUTE.buffer;
-    _rules[Rule::BUILTIN_TASK_DECL] = rule_BUILTIN_TASK_DECL.buffer;
     _rules[Rule::TASK_DECL        ] = rule_TASK_DECL.buffer;
     _rules[Rule::TASK_CALL        ] = rule_TASK_CALL.buffer;
+    _rules[Rule::IMPORT           ] = rule_IMPORT.buffer;
     _rules[Rule::USING            ] = rule_USING.buffer;
 
     _index[Rule::VARIABLE_ASSIGN  ] = std::vector<Index>(rule_VARIABLE_ASSIGNMENT.buffer.size());
     _index[Rule::EMPTY_LINE       ] = std::vector<Index>(rule_EMPTY_LINE.buffer.size());
     _index[Rule::ATTRIBUTE        ] = std::vector<Index>(rule_ATTRIBUTE.buffer.size());
-    _index[Rule::BUILTIN_TASK_DECL] = std::vector<Index>(rule_BUILTIN_TASK_DECL.buffer.size());
     _index[Rule::TASK_DECL        ] = std::vector<Index>(rule_TASK_DECL.buffer.size());
     _index[Rule::TASK_CALL        ] = std::vector<Index>(rule_TASK_CALL.buffer.size());
+    _index[Rule::IMPORT           ] = std::vector<Index>(rule_IMPORT.buffer.size());
     _index[Rule::USING            ] = std::vector<Index>(rule_USING.buffer.size());
 }
 

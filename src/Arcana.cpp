@@ -44,8 +44,16 @@ int main(int argc, char** argv)
 
     if (args.size() < 2)
     {
-        ERR("Required at least one argument, the arcana-script file!");
-        return Arcana_Result::ARCANA_RESULT__INVALID_ARGS;
+        if (Support::file_exists("arcfile"))
+        {
+            Support::Argument arc { 1, "arcfile" };
+            args.push_back(arc);
+        }
+        else
+        {
+            ERR("arcfile file not found!");
+            return Arcana_Result::ARCANA_RESULT__INVALID_ARGS;
+        }
     }
 
     return run(args);

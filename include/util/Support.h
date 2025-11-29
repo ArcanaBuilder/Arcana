@@ -61,8 +61,8 @@ BEGIN_MODULE(Support)
 /// @brief structure used to hold command line arguments
 struct Argument
 {
-    uint32_t pos;
-    char*    arg;
+    uint32_t    pos;
+    std::string arg;
 };
 
 
@@ -186,6 +186,10 @@ struct SplitResult
 /// @param[in] argv argument values
 /// @return Arguments instance
 Arguments   ParseArgs(int argc, char** argv);
+
+
+bool file_exists(const std::string& filename);
+
 
 
 /// @brief remove whitespace character for the left of the string
