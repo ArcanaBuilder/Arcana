@@ -1,5 +1,5 @@
-#ifndef __ARCANA_SUPPORT__H__
-#define __ARCANA_SUPPORT__H__
+#ifndef __ARCANA_UTIL_SUPPORT__H__
+#define __ARCANA_UTIL_SUPPORT__H__
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -354,4 +354,4 @@ std::optional<std::string> FindClosest(const std::vector<std::string> & list,
 END_MODULE(Support)
 
 
-#endif /* __ARCANA_SUPPORT__H__ */
+#endif /* __ARCANA_UTIL_SUPPORT__H__ */

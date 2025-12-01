@@ -85,18 +85,16 @@ enum class Type
 {
     PRECOMPILER      = 0,
     POSTCOMPILER        ,
-    BUILTIN             ,
     PROFILE             ,
     PUBLIC              ,
     PRIVATE             ,
-    FOLDER              ,
-    FILE                ,
     ALWAYS              ,
     DEPENDECY           ,
     CALLABLE            ,
     MAP                 ,
     MULTITHREAD         ,
     MAIN                ,
+    INTERPRETER         ,
 
     ATTRIBUTE__UNKNOWN  ,
     ATTRIBUTE__COUNT    ,
@@ -201,27 +199,6 @@ struct Attribute
     bool operator == (const Type t) const { return this->type == t; }
 };
 
-
-#if DEBUG
-inline std::string print_attr(const Type t)
-{
-    switch (t)
-    {
-        case Type::PRECOMPILER:  return "PRECOMPILER";      
-        case Type::POSTCOMPILER: return "POSTCOMPILER";       
-        case Type::BUILTIN:      return "BUILTIN";  
-        case Type::PROFILE:      return "PROFILE";  
-        case Type::PUBLIC:       return "PUBLIC"; 
-        case Type::PRIVATE:      return "PRIVATE";  
-        case Type::FOLDER:       return "FOLDER"; 
-        case Type::FILE:         return "FILE"; 
-        case Type::ALWAYS:       return "ALWAYS"; 
-        case Type::DEPENDECY:    return "DEPENDECY";    
-        case Type::CALLABLE:     return "CALLABLE";    
-        default:                 return "NOT_A_ATTR";
-    }
-}
-#endif
 
 END_NAMESPACE(Attr)
 
@@ -370,6 +347,7 @@ enum class Type
 {
     PROFILES             = 0,
     ORDER                   ,
+    INTERPRETER             ,
 };
 
 
@@ -476,12 +454,14 @@ using Ref  = std::reference_wrapper<T>;
 template<typename T> 
 using CRef = std::reference_wrapper<const T>;
 
-using VTable    = std::map<std::string, InstructionAssign>; 
-using FTable    = std::map<std::string, InstructionTask>; 
-using CTable    = std::map<std::string, InstructionCall>; 
-using FList     = std::vector<InstructionTask>;
-using FListCRef = std::vector<CRef<InstructionTask>>;
-using Order     = std::vector<std::string>;
+using VTable      = std::map<std::string, InstructionAssign>; 
+using FTable      = std::map<std::string, InstructionTask>; 
+using CTable      = std::map<std::string, InstructionCall>; 
+using FList       = std::vector<InstructionTask>;
+using FListCRef   = std::vector<CRef<InstructionTask>>;
+using Order       = std::vector<std::string>;
+using Interpreter = std::string;
+
 
 
 
@@ -539,8 +519,8 @@ struct Instruction
         return std::nullopt;
     }
 
-    Attr::List attributes;
-    FListCRef  dependecies;
+    Attr::List  attributes;
+    FListCRef   dependecies;
 };
 
 
@@ -702,13 +682,17 @@ public:
     const std::optional<std::string> AlignEnviroment() noexcept;
           Arcana_Result              CheckArgs(const Arcana::Support::Arguments& args) noexcept;
           void                       Expand() noexcept;
-
+    
+    Interpreter                      GetInterpreter() noexcept { return default_interpreter; }
+    
 private:
-    VTable   vtable;
-    Profile  profile;
-    Order    preorder;
-    Order    postorder;
+    VTable      vtable;
+    Profile     profile;
+    Order       preorder;
+    Order       postorder;
+    Interpreter default_interpreter;
 };
+
 
 
 inline void EnvMerge(Enviroment& dst, Enviroment& src)

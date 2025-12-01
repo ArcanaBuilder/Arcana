@@ -1,14 +1,14 @@
 CXX      := g++
-CXXFLAGS := -std=c++17 -g3 -O0 -Wall -Wextra -DDEBUG -Iinclude/core -Iinclude/generator -Iinclude/parser -Iinclude/util
+CXXFLAGS := -std=c++17 -g3 -O0 -Wall -Wextra -DDEBUG -Iinclude/common -Iinclude/core -Iinclude/parser -Iinclude/parser/util -Iinclude/core/util
 
 TARGET   := build/bin/arcana
 
-SRCS := \
-    $(wildcard src/*.cpp) \
-    $(wildcard src/core/*.cpp) \
-    $(wildcard src/generator/*.cpp) \
-    $(wildcard src/parser/*.cpp) \
-    $(wildcard src/util/*.cpp)
+SRCS := 								\
+    $(wildcard src/*.cpp) 				\
+    $(wildcard src/core/*.cpp) 			\
+    $(wildcard src/core/util/*.cpp) 	\
+    $(wildcard src/parser/*.cpp) 		\
+    $(wildcard src/parser/util/*.cpp) 
 
 OBJS := $(patsubst src/%.cpp,build/%.o,$(SRCS))
 

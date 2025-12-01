@@ -87,21 +87,21 @@ static const AttributeMap Known_Attributes =
     { "profile"     , Attr::Type::PROFILE      },          
     { "public"      , Attr::Type::PUBLIC       },          
     { "private"     , Attr::Type::PRIVATE      },          
-    { "folder"      , Attr::Type::FOLDER       },          
-    { "file"        , Attr::Type::FILE         },          
     { "always"      , Attr::Type::ALWAYS       },          
     { "dependecy"   , Attr::Type::DEPENDECY    },          
     { "callable"    , Attr::Type::CALLABLE     },    
     { "map"         , Attr::Type::MAP          },    
     { "multithread" , Attr::Type::MULTITHREAD  },     
-    { "main"        , Attr::Type::MAIN         },          
+    { "main"        , Attr::Type::MAIN         },  
+    { "interpreter" , Attr::Type::INTERPRETER  },          
 };
 
 
 static const UsingMap Known_Usings = 
 {
-    { "order"          , { { "precompiler", "postcompiler" },  Using::Type::ORDER    } },          
-    { "profiles"       , { {                               },  Using::Type::PROFILES } },   
+    { "order"          , { { "precompiler", "postcompiler" },  Using::Type::ORDER       } },          
+    { "profiles"       , { {                               },  Using::Type::PROFILES    } },   
+    { "default"        , { { "interpreter"                 },  Using::Type::INTERPRETER } },   
 };
 
 
@@ -128,14 +128,13 @@ Engine::Engine()
     _attr_rules[_I(Attr::Type::PROFILE     )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK, Attr::Target::VARIABLE } };           
     _attr_rules[_I(Attr::Type::PUBLIC      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK, Attr::Target::VARIABLE } };    
     _attr_rules[_I(Attr::Type::PRIVATE     )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK, Attr::Target::VARIABLE } };    
-    _attr_rules[_I(Attr::Type::FOLDER      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
-    _attr_rules[_I(Attr::Type::FILE        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
     _attr_rules[_I(Attr::Type::ALWAYS      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
     _attr_rules[_I(Attr::Type::DEPENDECY   )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } };           
     _attr_rules[_I(Attr::Type::CALLABLE    )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };
     _attr_rules[_I(Attr::Type::MAP         )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };     
     _attr_rules[_I(Attr::Type::MULTITHREAD )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
-    _attr_rules[_I(Attr::Type::MAIN        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };        
+    _attr_rules[_I(Attr::Type::MAIN        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };     
+    _attr_rules[_I(Attr::Type::INTERPRETER )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK,                        } };        
 }
 
 
@@ -218,6 +217,18 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         if (_main_count > 0)
         {
             ss << "Cannot tag multiple tasks with attribute " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’";
+            return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+        }
+
+        _main_count = 1;
+    }
+    // IF THE ATTRIBUTE IS 'INTERPRETER'
+    else if (attr == Attr::Type::INTERPRETER)
+    {
+        // CHECK IF THE INTERPRETER EXISTS
+        if (!Support::file_exists(property[0]))
+        {
+            ss << "Interpreter " << "‘" << ANSI_BMAGENTA << property[0] << ANSI_RESET << "’ is missing or unknown";
             return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
         }
 
@@ -397,7 +408,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
     }
 
     // IF 'ORDER' IS SELECTED
-    if (rule.using_type == Using::Type::ORDER)
+    if (rule.using_type == Using::Type::ORDER || rule.using_type == Using::Type::INTERPRETER)
     {
         // CHECK FOR THE PROPERTIES SIZE
         if (options.size() == 0)
@@ -413,7 +424,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
                 ss1 << ANSI_BMAGENTA << rule.valid_attr[iter] << ANSI_RESET; 
             }
 
-            ss << "Statement " << "‘" << ANSI_BMAGENTA << "using order" << ANSI_RESET << "’ must be followed by " << ss1.str();
+            ss << "Statement " << "‘" << ANSI_BMAGENTA << "using " << what << ANSI_RESET << "’ must be followed by " << ss1.str();
             return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
         }
 
@@ -422,33 +433,55 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
 
         if (attr == rule.valid_attr.end())
         {
-            ss << "Unknown attribute " << "‘" << ANSI_BMAGENTA << options[0] << ANSI_RESET << "’ for statement " << ANSI_BMAGENTA << "using order" << ANSI_RESET ;
+            ss << "Unknown attribute " << "‘" << ANSI_BMAGENTA << options[0] << ANSI_RESET << "’ for statement " << ANSI_BMAGENTA << "using " << what << ANSI_RESET ;
             return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
         }
 
         // GET THE ATTRIBUTE
         attr_type = Known_Attributes.at(options[0]);
         
-        auto& order = (attr_type == Attr::Type::PRECOMPILER) ? _env.preorder : _env.postorder;
-        
-        // CHECK IF THE ATTRIBUTE IS FOLLOWER BY TASKS NAME
-        if (options.size() == 1)
-        {
-            ss << "Statement " << "‘" << ANSI_BMAGENTA << "using order " << options[0] << ANSI_RESET << "’ must be followed by tasks name";
-            return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
-        }
 
-        // GET THE TASKS AND CHECK FOR ERRORS
-        for (uint32_t iter = 1; iter < options.size(); ++iter)
+        if (attr_type == Attr::Type::INTERPRETER)
         {
-            if (std::find(order.begin(), order.end(), options[iter]) == order.end())
+            // CHECK IF THE ATTRIBUTE IS FOLLOWER BY TASKS NAME
+            if (options.size() == 1)
             {
-                order.push_back(options[iter]);
-            }
-            else
-            {
-                ss << "Duplicate item in statement " << "‘" << ANSI_BMAGENTA << "using order" << ANSI_RESET << "’: ‘" << ANSI_BMAGENTA << options[iter] << ANSI_RESET <<"’" << ANSI_RESET ;
+                ss << "Statement " << "‘" << ANSI_BMAGENTA << "using default " << options[0] << ANSI_RESET << "’ must be followed by interpeter path";
                 return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+            }
+
+            // CHECK IF THE INTERPRETER EXISTS
+            if (!Support::file_exists(options[1]))
+            {
+                ss << "Interpreter " << "‘" << ANSI_BMAGENTA << options[1] << ANSI_RESET << "’ is missing or unknown";
+                return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+            }
+
+            _env.default_interpreter = options[1];
+        }
+        else
+        {
+            auto& order = (attr_type == Attr::Type::PRECOMPILER) ? _env.preorder : _env.postorder;
+            
+            // CHECK IF THE ATTRIBUTE IS FOLLOWER BY TASKS NAME
+            if (options.size() == 1)
+            {
+                ss << "Statement " << "‘" << ANSI_BMAGENTA << "using order " << options[0] << ANSI_RESET << "’ must be followed by tasks name";
+                return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+            }
+    
+            // GET THE TASKS AND CHECK FOR ERRORS
+            for (uint32_t iter = 1; iter < options.size(); ++iter)
+            {
+                if (std::find(order.begin(), order.end(), options[iter]) == order.end())
+                {
+                    order.push_back(options[iter]);
+                }
+                else
+                {
+                    ss << "Duplicate item in statement " << "‘" << ANSI_BMAGENTA << "using order" << ANSI_RESET << "’: ‘" << ANSI_BMAGENTA << options[iter] << ANSI_RESET <<"’" << ANSI_RESET ;
+                    return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+                }
             }
         }
     }
@@ -611,6 +644,13 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
             // FOR DEFAULT, THE DECLARATION ORDER IS USED
             flist[iter].get() = Table::TakeValues(ftable, profile.profiles, atype[iter]);
         }
+    }
+
+
+    // CHECK FOR DEFAULT INTERPRETER
+    if (default_interpreter.empty())
+    {
+        default_interpreter = "/bin/bash";
     }
 
     return std::nullopt;

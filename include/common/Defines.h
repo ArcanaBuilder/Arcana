@@ -1,5 +1,5 @@
-#ifndef __ARCANA_DEFINES__H__
-#define __ARCANA_DEFINES__H__
+#ifndef __ARCANA_COMMON_DEFINES__H__
+#define __ARCANA_COMMON_DEFINES__H__
 
 
 
@@ -164,4 +164,4 @@ enum class Semantic_Result : int32_t
 
 
 
-#endif /* __ARCANA_DEFINES__H__ */
+#endif /* __ARCANA_COMMON_DEFINES__H__ */

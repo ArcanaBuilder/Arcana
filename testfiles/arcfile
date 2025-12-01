@@ -1,5 +1,7 @@
 #!/usr/bin/arcana
 
+using default interpreter /bin/bash;
+
 import Defaults.arc;
 
 
@@ -7,7 +9,6 @@ import Defaults.arc;
 # BUILT-IN TASKS
 ###########################
 
-@multithread
 @public
 task Clean() 
 { 
@@ -26,11 +27,12 @@ task Install()
 # OVERRIDED BUILT-IN TASKS
 ###########################
 
+@main
 @public
 @dependecy Compile Link
 task Build() {}
 
-
+@multithread
 task Compile()
 {
     {COMPILER} {FLAGS} {SOURCES} -c {OBJECTS}
@@ -58,11 +60,12 @@ task MakeFolders()
 }
 
 
+@interpreter /bin/python3
 @profile Debug
 @precompiler
 task Message() 
 {
-    echo 'Compiling {TARGET} in Debug Mode'
+print("Compiling {TARGET} in Debug Mode")
 }
 
 

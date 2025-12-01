@@ -146,11 +146,7 @@ Arcana::Support::SemanticOutput Parser::Handle_TaskDecl(Grammar::Match& match)
 
         if (end > start)
         {
-            body.push_back(
-                Arcana::Support::ltrim(
-                    line.substr(start, end - start)
-                )
-            );
+            body.push_back(line.substr(start, end - start));
         }
     }
     else
@@ -163,7 +159,7 @@ Arcana::Support::SemanticOutput Parser::Handle_TaskDecl(Grammar::Match& match)
             std::size_t start = bbody->end;
             if (start < line.size())
             {
-                instr = Arcana::Support::ltrim(line.substr(start));
+                instr = line.substr(start);
                 
                 if (!instr.empty()) body.push_back(instr);
             }
@@ -172,7 +168,7 @@ Arcana::Support::SemanticOutput Parser::Handle_TaskDecl(Grammar::Match& match)
         // task body lines
         for (std::size_t line = line_begin + 1; line < line_end; ++line)
         {
-            instr = Arcana::Support::ltrim(lexer[line - 1]);
+            instr = lexer[line - 1];
 
             if (!instr.empty()) body.push_back(instr);
         }
@@ -183,7 +179,7 @@ Arcana::Support::SemanticOutput Parser::Handle_TaskDecl(Grammar::Match& match)
             std::size_t end = ebody->start;
             if (end > 0)
             {
-                instr = Arcana::Support::ltrim(line.substr(0, end));
+                instr = line.substr(0, end);
 
                 if (!instr.empty()) body.push_back(instr);
             }

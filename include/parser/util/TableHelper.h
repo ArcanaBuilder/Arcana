@@ -1,5 +1,5 @@
-#ifndef __ARCANA_TABLE_HELPER__H__
-#define __ARCANA_TABLE_HELPER__H__
+#ifndef __ARCANA_UTIL_TABLE_HELPER__H__
+#define __ARCANA_UTIL_TABLE_HELPER__H__
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -170,6 +170,47 @@ AlignOnProfile(TABLE& table, const std::string& profile)
         }
     }
 }
+
+
+
+template <typename TABLE>
+std::optional<std::reference_wrapper<typename TABLE::mapped_type>>
+GetValue(TABLE& table, const Arcana::Semantic::Attr::Type attr)
+{
+    for (auto& [k, v] : table)
+    {
+        if (HasAttrOnMapped(v, attr))
+        {
+            return std::ref(v);
+        }
+    }
+
+    return std::nullopt;
+}
+
+
+template <typename TABLE>
+std::optional<std::vector<std::reference_wrapper<typename TABLE::mapped_type>>>
+GetValues(TABLE& table, const Arcana::Semantic::Attr::Type attr)
+{
+    std::vector<std::reference_wrapper<typename TABLE::mapped_type>> vec;
+
+    for (auto& [k, v] : table)
+    {
+        if (HasAttrOnMapped(v, attr))
+        {
+            vec.push_back(std::ref(v));
+        }
+    }
+
+    if (vec.empty())
+    {
+        return std::nullopt;
+    }
+
+    return vec;
+}
+
 
 
 template <typename TABLE>
@@ -487,4 +528,4 @@ TakeValues(TABLE& table, const std::vector<std::string>& profiles, const Arcana:
 END_MODULE(Table)
 
 
-#endif /* __ARCANA_TABLE_HELPER__H__ */
+#endif /* __ARCANA_UTIL_TABLE_HELPER__H__ */

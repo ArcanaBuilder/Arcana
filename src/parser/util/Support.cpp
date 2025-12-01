@@ -24,7 +24,7 @@ Arcana_Result Support::ParserError::operator() (const std::string& ctx, const Gr
     std::string       symbol(token.end, '^');
     std::stringstream ss;
 
-    ss << "[" << ANSI_BRED << "SYNTAX ERROR" << ANSI_RESET << "] In File: ‘" << ANSI_BOLD << ctx << ANSI_RESET << "’, line " << token.line << ": ‘" << lexer[token] << "’" << std::endl;
+    ss << "[" << ANSI_BRED << "SYNTAX ERROR" << ANSI_RESET << "] In file ‘" << ANSI_BOLD << ctx << ANSI_RESET << "’, line " << ANSI_BOLD << token.line << ": ‘" << lexer[token]  << ANSI_RESET << "’" << std::endl;
     ss << ANSI_RED << "               +~~~~~~~~~~~~~~~~~~~~~~~" << s << symbol << ANSI_RESET << std::endl;
 
     escaping = (token.lexeme == "\n") ? "<New Line>" : token.lexeme;
@@ -57,7 +57,7 @@ Arcana_Result Support::SemanticError::operator() (const std::string& ctx, const 
 
     std::stringstream ss;
 
-    ss << "[" << ANSI_BRED << "SEMANTIC ERROR" << ANSI_RESET << "] In File: ‘" << ANSI_BOLD << ctx << ANSI_RESET << "’, line " << token.line << ": ‘" << lexer[token] << "’" << std::endl;
+    ss << "[" << ANSI_BRED << "SEMANTIC ERROR" << ANSI_RESET << "] In file ‘" << ANSI_BOLD << ctx << ANSI_RESET << "’, line " << ANSI_BOLD << token.line << ": ‘" << lexer[token]  << ANSI_RESET << "’" << std::endl;
     ss << "                 " << ao.message << std::endl;
     std::cerr << ss.str();
 
