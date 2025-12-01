@@ -21,17 +21,43 @@
 BEGIN_MODULE(Parsing)
 
 
-///////////////////////////////////////////////////////////////////////////////
-// CALLBACKs
-///////////////////////////////////////////////////////////////////////////////
 
-using ParsingError  = std::function<Arcana_Result (const Grammar::Match&)>;
-using AnalisysError = std::function<Arcana_Result (const Support::SemanticOutput&, const Grammar::Match&)>;
+//    ██████   █████  ██████  ███████ ███████ ██████                          
+//    ██   ██ ██   ██ ██   ██ ██      ██      ██   ██                         
+//    ██████  ███████ ██████  ███████ █████   ██████                          
+//    ██      ██   ██ ██   ██      ██ ██      ██   ██                         
+//    ██      ██   ██ ██   ██ ███████ ███████ ██   ██                         
+//                                                                            
+//                                                                            
+//     ██████  █████  ██      ██      ██████   █████   ██████ ██   ██ ███████ 
+//    ██      ██   ██ ██      ██      ██   ██ ██   ██ ██      ██  ██  ██      
+//    ██      ███████ ██      ██      ██████  ███████ ██      █████   ███████ 
+//    ██      ██   ██ ██      ██      ██   ██ ██   ██ ██      ██  ██       ██ 
+//     ██████ ██   ██ ███████ ███████ ██████  ██   ██  ██████ ██   ██ ███████ 
+//                                                                            
+//                                                                            
+
+using ParsingError  = std::function<Arcana_Result (const std::string& ctx, const Grammar::Match&)>;
+using AnalisysError = std::function<Arcana_Result (const std::string& ctx, const Support::SemanticOutput&, const Grammar::Match&)>;
+using PostProcError = std::function<Arcana_Result (const std::string& ctx, const std::string& err)>;
 
 
-///////////////////////////////////////////////////////////////////////////////
-// PUBLLIC CLASSES
-///////////////////////////////////////////////////////////////////////////////
+
+
+//    ██████   █████  ██████  ███████ ███████ ██████      ██████  ██    ██ ██████  ██      ██  ██████     
+//    ██   ██ ██   ██ ██   ██ ██      ██      ██   ██     ██   ██ ██    ██ ██   ██ ██      ██ ██          
+//    ██████  ███████ ██████  ███████ █████   ██████      ██████  ██    ██ ██████  ██      ██ ██          
+//    ██      ██   ██ ██   ██      ██ ██      ██   ██     ██      ██    ██ ██   ██ ██      ██ ██          
+//    ██      ██   ██ ██   ██ ███████ ███████ ██   ██     ██       ██████  ██████  ███████ ██  ██████     
+//                                                                                                        
+//                                                                                                        
+//     █████   ██████   ██████  ██████  ███████  ██████   █████  ████████ ███████ ███████                 
+//    ██   ██ ██       ██       ██   ██ ██      ██       ██   ██    ██    ██      ██                      
+//    ███████ ██   ███ ██   ███ ██████  █████   ██   ███ ███████    ██    █████   ███████                 
+//    ██   ██ ██    ██ ██    ██ ██   ██ ██      ██    ██ ██   ██    ██    ██           ██                 
+//    ██   ██  ██████   ██████  ██   ██ ███████  ██████  ██   ██    ██    ███████ ███████                 
+//                                                                                                        
+//                                                                                                        
 
 class Parser
 {
@@ -40,8 +66,10 @@ public:
 
     Arcana_Result Parse(Semantic::Enviroment& env);
 
-    void          Set_ParsingError_Handler (const ParsingError&  ecb) noexcept { Parsing_Error  = std::move(ecb); }
-    void          Set_AnalisysError_Handler(const AnalisysError& ecb) noexcept { Analisys_Error = std::move(ecb); }
+    void          Set_ParsingError_Handler    (const ParsingError&  ecb) noexcept { Parsing_Error  = std::move(ecb); }
+    void          Set_AnalisysError_Handler   (const AnalisysError& ecb) noexcept { Analisys_Error = std::move(ecb); }
+    void          Set_PostProcessError_Handler(const PostProcError& ecb) noexcept { PostProc_Error = std::move(ecb); }
+
 
 private:
     Scan::Lexer&     lexer;
@@ -50,6 +78,7 @@ private:
 
     ParsingError     Parsing_Error;
     AnalisysError    Analisys_Error;
+    PostProcError    PostProc_Error;
 
     Support::SemanticOutput Handle_VarAssign(Grammar::Match& match);
     Support::SemanticOutput Handle_Attribute(Grammar::Match& match);

@@ -1,4 +1,4 @@
-using profile Debug Release;
+using profiles Debug Release;
 
 COMPILER = g++
 
@@ -8,7 +8,11 @@ FLAGS    = -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG
 @profile Release
 FLAGS    = -std=c++17 -Os -Wall -Wextra -DRELEASE
 
-TARGET   = app
+TARGET   = arcana
 
-BUILD    = Build
-SOURCE   = Source/**.c
+SOURCES  = {SRCDIR}/**.c
+
+@map SOURCES; OBJECTS = {BUILDDIR}/**.o
+
+BUILDDIR = build
+SRCDIR   = src

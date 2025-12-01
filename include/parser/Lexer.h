@@ -9,6 +9,7 @@
 #include <vector>
 #include <sstream>
 #include <istream>
+#include <fstream>
 
 #include "Defines.h"
 
@@ -21,9 +22,13 @@ BEGIN_MODULE(Scan)
 
 
 
-///////////////////////////////////////////////////////////////////////////////
-// PUBLIC ENUMS
-///////////////////////////////////////////////////////////////////////////////
+//    ██      ███████ ██   ██ ███████ ██████      ███████ ███    ██ ██    ██ ███    ███ ███████ 
+//    ██      ██       ██ ██  ██      ██   ██     ██      ████   ██ ██    ██ ████  ████ ██      
+//    ██      █████     ███   █████   ██████      █████   ██ ██  ██ ██    ██ ██ ████ ██ ███████ 
+//    ██      ██       ██ ██  ██      ██   ██     ██      ██  ██ ██ ██    ██ ██  ██  ██      ██ 
+//    ███████ ███████ ██   ██ ███████ ██   ██     ███████ ██   ████  ██████  ██      ██ ███████ 
+//                                                                                              
+//                                                                                              
 
 /// @brief Enum used to define lexer tokens
 enum class TokenType : uint32_t
@@ -57,9 +62,21 @@ enum class TokenType : uint32_t
 
 
 
-///////////////////////////////////////////////////////////////////////////////
-// PUBLIC STRUCTS
-///////////////////////////////////////////////////////////////////////////////
+
+//    ██████  ██    ██ ██████  ██      ██  ██████     ██      ███████ ██   ██ ███████ ██████  
+//    ██   ██ ██    ██ ██   ██ ██      ██ ██          ██      ██       ██ ██  ██      ██   ██ 
+//    ██████  ██    ██ ██████  ██      ██ ██          ██      █████     ███   █████   ██████  
+//    ██      ██    ██ ██   ██ ██      ██ ██          ██      ██       ██ ██  ██      ██   ██ 
+//    ██       ██████  ██████  ███████ ██  ██████     ███████ ███████ ██   ██ ███████ ██   ██ 
+//                                                                                            
+//                                                                                            
+//     █████   ██████   ██████  ██████  ███████  ██████   █████  ████████ ███████ ███████     
+//    ██   ██ ██       ██       ██   ██ ██      ██       ██   ██    ██    ██      ██          
+//    ███████ ██   ███ ██   ███ ██████  █████   ██   ███ ███████    ██    █████   ███████     
+//    ██   ██ ██    ██ ██    ██ ██   ██ ██      ██    ██ ██   ██    ██    ██           ██     
+//    ██   ██  ██████   ██████  ██   ██ ███████  ██████  ██   ██    ██    ███████ ███████     
+//                                                                                            
+//                                                                                            
 
 
 /// @brief Struct used to hold the lexer output
@@ -73,14 +90,12 @@ struct Token
 };
 
 
-///////////////////////////////////////////////////////////////////////////////
-// PUBLIC CLASSES
-///////////////////////////////////////////////////////////////////////////////
+
 
 class Lexer 
 {
 public:
-    explicit Lexer(std::istream& in);
+    explicit Lexer(const std::string& arcscript);
 
     Token next();
 
@@ -94,16 +109,19 @@ public:
         return lines[token.line - 1];
     }
 
+    inline const std::string& source() const { return arcscript_; }
+
 private:
-    std::istream& in_;
-    std::size_t   line_;
-    std::size_t   col_;
-    std::size_t   nlcol_;
-    char          current_;
-
+    char                     current_;
+    std::size_t              line_;
+    std::size_t              col_;
+    std::size_t              nlcol_;
+    std::ifstream            file_;
+    std::istream&            in_;
+    const std::string&       arcscript_;
     std::vector<std::string> lines;
-    void  load_file_lines(std::istream& in);
 
+    void  load_file_lines(std::istream& in);
     void  advance();
     void  skipWhitespace();
     Token simpleToken(TokenType type);

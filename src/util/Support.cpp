@@ -4,6 +4,10 @@
 #include "Support.h"
 #include "Grammar.h"
 
+#include <limits>
+#include <cstddef>
+#include <variant>
+#include <algorithm>
 #include <filesystem>
 
 
@@ -11,7 +15,7 @@ USE_MODULE(Arcana);
 
 
 
-Arcana_Result Support::ParserError::operator() (const Grammar::Match& match) const
+Arcana_Result Support::ParserError::operator() (const std::string& ctx, const Grammar::Match& match) const
 {
     const auto& [token, found, semtypes, _] = match.Error;
 
@@ -20,9 +24,9 @@ Arcana_Result Support::ParserError::operator() (const Grammar::Match& match) con
     std::string       symbol(token.end, '^');
     std::stringstream ss;
 
-    ss << "[" << ANSI_BRED << "ERROR" << ANSI_RESET << "] Semantic error on line " << token.line << ": ‘" << lexer[token] << "’" << std::endl;
-    ss << ANSI_RED << "        +~~~~~~~~~~~~~~~~~~~~~~~~~" << s << symbol << ANSI_RESET << std::endl;
-    
+    ss << "[" << ANSI_BRED << "SYNTAX ERROR" << ANSI_RESET << "] In File: ‘" << ANSI_BOLD << ctx << ANSI_RESET << "’, line " << token.line << ": ‘" << lexer[token] << "’" << std::endl;
+    ss << ANSI_RED << "               +~~~~~~~~~~~~~~~~~~~~~~~" << s << symbol << ANSI_RESET << std::endl;
+
     escaping = (token.lexeme == "\n") ? "<New Line>" : token.lexeme;
 
     if (token.type == Scan::TokenType::UNKNOWN)
@@ -47,15 +51,26 @@ Arcana_Result Support::ParserError::operator() (const Grammar::Match& match) con
 }
 
 
-Arcana_Result Support::SemanticError::operator() (const Support::SemanticOutput& ao, const Grammar::Match& match) const
+Arcana_Result Support::SemanticError::operator() (const std::string& ctx, const Support::SemanticOutput& ao, const Grammar::Match& match) const
 {
     const auto& [token, found, semtypes, _] = match.Error;
 
     std::stringstream ss;
 
-    ss << "[" << ANSI_BRED << "ERROR" << ANSI_RESET << "] Semantic error on line " << token.line << ": ‘" << lexer[token] << "’" << std::endl;
-    ss << "        " << ao.message << std::endl;
+    ss << "[" << ANSI_BRED << "SEMANTIC ERROR" << ANSI_RESET << "] In File: ‘" << ANSI_BOLD << ctx << ANSI_RESET << "’, line " << token.line << ": ‘" << lexer[token] << "’" << std::endl;
+    ss << "                 " << ao.message << std::endl;
+    std::cerr << ss.str();
 
+    return Arcana_Result::ARCANA_RESULT__PARSING_ERROR;
+}
+
+
+Arcana_Result Support::PostProcError::operator() (const std::string& ctx, const std::string& err) const
+{
+    std::stringstream ss;
+
+    ss << "[" << ANSI_BRED << "SEMANTIC ERROR" << ANSI_RESET << "] In file: ‘" << ANSI_BOLD << ctx << ANSI_RESET << "’" << std::endl;
+    ss << "                 " << err << std::endl;
     std::cerr << ss.str();
 
     return Arcana_Result::ARCANA_RESULT__PARSING_ERROR;
@@ -97,18 +112,51 @@ bool Support::StringViewEq::operator() (std::string_view a, std::string_view b) 
 
 
 
-Support::Arguments Support::ParseArgs(int argc, char** argv)
+std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char** argv)
 {
-    Support::Arguments args;
+    Support::Arguments args{};
 
-    for (uint32_t i = 0; i < (uint32_t) argc; ++i)
+    int i = 1;
+    while (i < argc)
     {
-        args.push_back( Argument{ i, argv[i] } );
+        std::string_view arg = argv[i];
+
+        if (arg == "-s")
+        {
+            if (i + 1 < argc)
+            {
+                args.arcfile = argv[i + 1];
+                i += 2;
+                continue;
+            }
+            else
+            {
+                return "Missing value for option -s";
+            }
+        }
+
+        if (arg == "-d")
+        {
+            args.print_env = true;
+            ++i;
+        }
+
+        if (!args.task.found)
+        {
+            args.task.found = true;
+            args.task.value = argv[i];
+        }
+        else if (!args.profile.found)
+        {
+            args.profile.found = true;
+            args.profile.value = argv[i];
+        }
+
+        ++i;
     }
 
     return args;
 }
-
 
 
 bool Support::file_exists(const std::string& filename)
@@ -131,6 +179,22 @@ std::string Support::ltrim(const std::string& s)
 
     return s.substr(pos);
 }
+
+
+std::string Support::rtrim(const std::string& s)
+{
+    const std::string ws = " \t\r\n\f\v";
+
+    size_t pos = s.find_last_not_of(ws);
+    if (pos == std::string::npos)
+    {
+        return "";
+    }
+
+    return s.substr(0, pos + 1);
+}
+
+
 
 
 inline char Support::toLowerAscii(char c) noexcept
@@ -388,3 +452,74 @@ std::string Support::RuleRepr(const Grammar::Rule type)
         default:                               return "<INVALID>";
     }
 }
+
+
+
+std::size_t Support::levenshtein_distance(const std::string& a,
+                                 const std::string& b) noexcept
+{
+    const std::size_t len1 = a.size();
+    const std::size_t len2 = b.size();
+
+    if (len1 == 0)
+        return len2;
+    if (len2 == 0)
+        return len1;
+
+    std::vector<std::size_t> prev(len2 + 1);
+    std::vector<std::size_t> curr(len2 + 1);
+
+    for (std::size_t j = 0; j <= len2; ++j)
+        prev[j] = j;
+
+    for (std::size_t i = 0; i < len1; ++i)
+    {
+        curr[0] = i + 1;
+
+        for (std::size_t j = 0; j < len2; ++j)
+        {
+            const std::size_t cost = (a[i] == b[j]) ? 0u : 1u;
+
+            const std::size_t del    = prev[j + 1] + 1;   // cancellazione
+            const std::size_t ins    = curr[j] + 1;       // inserzione
+            const std::size_t subst  = prev[j] + cost;    // sostituzione
+
+            curr[j + 1] = std::min({ del, ins, subst });
+        }
+
+        std::swap(prev, curr);
+    }
+
+    return prev[len2];
+}
+
+
+std::optional<std::string> Support::FindClosest(const std::vector<std::string>& list,
+                                                const std::string& target,
+                                                std::size_t max_distance) noexcept
+{
+    std::optional<std::string> best;
+    std::size_t                best_dist = max_distance;
+
+    for (const auto & s : list)
+    {
+        if (s == target)
+            continue;
+
+        const std::size_t d = levenshtein_distance(s, target);
+
+        if (d < best_dist)
+        {
+            best_dist = d;
+            best      = s;
+        }
+    }
+
+    return best;
+}
+
+
+
+
+
+

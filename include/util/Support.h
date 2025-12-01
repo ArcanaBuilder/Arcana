@@ -11,7 +11,9 @@
 #include <cctype>
 #include <string>
 #include <vector>
+#include <limits>
 #include <climits> 
+#include <variant>
 #include <optional>
 #include <string_view>
 
@@ -20,9 +22,27 @@
 
 
 
-///////////////////////////////////////////////////////////////////////////////
-// FORWARDED DECLARATIONS
-///////////////////////////////////////////////////////////////////////////////
+//    ███████ ██    ██ ██████  ██████   ██████  ██████  ████████                                         
+//    ██      ██    ██ ██   ██ ██   ██ ██    ██ ██   ██    ██                                            
+//    ███████ ██    ██ ██████  ██████  ██    ██ ██████     ██                                            
+//         ██ ██    ██ ██      ██      ██    ██ ██   ██    ██                                            
+//    ███████  ██████  ██      ██       ██████  ██   ██    ██                                            
+//                                                                                                       
+//                                                                                                       
+//    ███████  ██████  ██████  ██     ██  █████  ██████  ██████  ███████ ██████                          
+//    ██      ██    ██ ██   ██ ██     ██ ██   ██ ██   ██ ██   ██ ██      ██   ██                         
+//    █████   ██    ██ ██████  ██  █  ██ ███████ ██████  ██   ██ █████   ██   ██                         
+//    ██      ██    ██ ██   ██ ██ ███ ██ ██   ██ ██   ██ ██   ██ ██      ██   ██                         
+//    ██       ██████  ██   ██  ███ ███  ██   ██ ██   ██ ██████  ███████ ██████                          
+//                                                                                                       
+//                                                                                                       
+//    ██████  ███████ ███    ███  ██████  ████████ ███████     ████████ ██    ██ ██████  ███████ ███████ 
+//    ██   ██ ██      ████  ████ ██    ██    ██    ██             ██     ██  ██  ██   ██ ██      ██      
+//    ██████  █████   ██ ████ ██ ██    ██    ██    █████          ██      ████   ██████  █████   ███████ 
+//    ██   ██ ██      ██  ██  ██ ██    ██    ██    ██             ██       ██    ██      ██           ██ 
+//    ██   ██ ███████ ██      ██  ██████     ██    ███████        ██       ██    ██      ███████ ███████ 
+//                                                                                                       
+//                                                                                                       
 
 BEGIN_MODULE(Scan)
 
@@ -52,17 +72,47 @@ END_MODULE(Support)
 
 
 
-///////////////////////////////////////////////////////////////////////////////
-// PUBLIC STRUCTS
-///////////////////////////////////////////////////////////////////////////////
+
+
+//    ███████ ██    ██ ██████  ██████   ██████  ██████  ████████     ██████  ██    ██ ██████  ██      ██  ██████ 
+//    ██      ██    ██ ██   ██ ██   ██ ██    ██ ██   ██    ██        ██   ██ ██    ██ ██   ██ ██      ██ ██      
+//    ███████ ██    ██ ██████  ██████  ██    ██ ██████     ██        ██████  ██    ██ ██████  ██      ██ ██      
+//         ██ ██    ██ ██      ██      ██    ██ ██   ██    ██        ██      ██    ██ ██   ██ ██      ██ ██      
+//    ███████  ██████  ██      ██       ██████  ██   ██    ██        ██       ██████  ██████  ███████ ██  ██████ 
+//                                                                                                               
+//                                                                                                               
+//     █████   ██████   ██████  ██████  ███████  ██████   █████  ████████ ███████ ███████                        
+//    ██   ██ ██       ██       ██   ██ ██      ██       ██   ██    ██    ██      ██                             
+//    ███████ ██   ███ ██   ███ ██████  █████   ██   ███ ███████    ██    █████   ███████                        
+//    ██   ██ ██    ██ ██    ██ ██   ██ ██      ██    ██ ██   ██    ██    ██           ██                        
+//    ██   ██  ██████   ██████  ██   ██ ███████  ██████  ██   ██    ██    ███████ ███████                        
+//                                                                                                               
+//                                                                                                               
 
 BEGIN_MODULE(Support)
 
 /// @brief structure used to hold command line arguments
-struct Argument
+struct Arguments
 {
-    uint32_t    pos;
-    std::string arg;
+    std::string arcfile;
+
+    struct
+    {
+        std::string value;
+        bool        found;
+    } 
+    task,
+    profile;
+
+    bool print_env;
+
+    Arguments() 
+        : 
+        arcfile("arcfile"),
+        task{"", false},
+        profile{"", false},
+        print_env(false)
+    {}
 };
 
 
@@ -70,7 +120,7 @@ struct ParserError
 {
     Scan::Lexer& lexer;
     
-    Arcana_Result operator () (const Grammar::Match& match) const;
+    Arcana_Result operator () (const std::string& ctx, const Grammar::Match& match) const;
 };
 
 
@@ -78,23 +128,44 @@ struct SemanticError
 {
     Scan::Lexer& lexer;
     
-    Arcana_Result operator () (const Support::SemanticOutput&, const Grammar::Match&) const;
+    Arcana_Result operator () (const std::string& ctx, const Support::SemanticOutput&, const Grammar::Match&) const;
 };
 
+
+struct PostProcError
+{
+    Scan::Lexer& lexer;
+    
+    Arcana_Result operator () (const std::string& ctx, const std::string& err) const;
+};
+
+
 END_MODULE(Support)
 
 
 
 
-///////////////////////////////////////////////////////////////////////////////
-// USINGS
-///////////////////////////////////////////////////////////////////////////////
-
-BEGIN_MODULE(Support)
-
-using Arguments         = std::vector<Argument>;
-
-END_MODULE(Support)
+//    ███████ ██    ██ ██████  ██████   ██████  ██████  ████████     ██       ██████   ██████  █████  ██      
+//    ██      ██    ██ ██   ██ ██   ██ ██    ██ ██   ██    ██        ██      ██    ██ ██      ██   ██ ██      
+//    ███████ ██    ██ ██████  ██████  ██    ██ ██████     ██        ██      ██    ██ ██      ███████ ██      
+//         ██ ██    ██ ██      ██      ██    ██ ██   ██    ██        ██      ██    ██ ██      ██   ██ ██      
+//    ███████  ██████  ██      ██       ██████  ██   ██    ██        ███████  ██████   ██████ ██   ██ ███████ 
+//                                                                                                            
+//                                                                                                            
+//     █████  ███    ██ ██████      ██████  ███████ ███    ███  ██████  ████████ ███████                      
+//    ██   ██ ████   ██ ██   ██     ██   ██ ██      ████  ████ ██    ██    ██    ██                           
+//    ███████ ██ ██  ██ ██   ██     ██████  █████   ██ ████ ██ ██    ██    ██    █████                        
+//    ██   ██ ██  ██ ██ ██   ██     ██   ██ ██      ██  ██  ██ ██    ██    ██    ██                           
+//    ██   ██ ██   ████ ██████      ██   ██ ███████ ██      ██  ██████     ██    ███████                      
+//                                                                                                            
+//                                                                                                            
+//    ██    ██ ███████ ██ ███    ██  ██████  ███████                                                          
+//    ██    ██ ██      ██ ████   ██ ██       ██                                                               
+//    ██    ██ ███████ ██ ██ ██  ██ ██   ███ ███████                                                          
+//    ██    ██      ██ ██ ██  ██ ██ ██    ██      ██                                                          
+//     ██████  ███████ ██ ██   ████  ██████  ███████                                                          
+//                                                                                                            
+//                                                                                                            
 
 
 BEGIN_MODULE(Grammar)
@@ -125,10 +196,22 @@ BEGIN_MODULE(Support)
 
 
 
-///////////////////////////////////////////////////////////////////////////////
-// PUBLIC AGGREGATES
-///////////////////////////////////////////////////////////////////////////////
 
+
+//    ███████ ██    ██ ██████  ██████   ██████  ██████  ████████     ██████  ██    ██ ██████  ██      ██  ██████ 
+//    ██      ██    ██ ██   ██ ██   ██ ██    ██ ██   ██    ██        ██   ██ ██    ██ ██   ██ ██      ██ ██      
+//    ███████ ██    ██ ██████  ██████  ██    ██ ██████     ██        ██████  ██    ██ ██████  ██      ██ ██      
+//         ██ ██    ██ ██      ██      ██    ██ ██   ██    ██        ██      ██    ██ ██   ██ ██      ██ ██      
+//    ███████  ██████  ██      ██       ██████  ██   ██    ██        ██       ██████  ██████  ███████ ██  ██████ 
+//                                                                                                               
+//                                                                                                               
+//     █████   ██████   ██████  ██████  ███████  ██████   █████  ████████ ███████ ███████                        
+//    ██   ██ ██       ██       ██   ██ ██      ██       ██   ██    ██    ██      ██                             
+//    ███████ ██   ███ ██   ███ ██████  █████   ██   ███ ███████    ██    █████   ███████                        
+//    ██   ██ ██    ██ ██    ██ ██   ██ ██      ██    ██ ██   ██    ██    ██           ██                        
+//    ██   ██  ██████   ██████  ██   ██ ███████  ██████  ██   ██    ██    ███████ ███████                        
+//                                                                                                               
+//                                                                                                               
 
 struct StringViewHash
 {
@@ -149,7 +232,7 @@ struct StringViewEq
 struct SemanticOutput
 {
     Semantic_Result  result;
-    std::string message;
+    std::string      message;
 
     SemanticOutput() 
         :
@@ -176,16 +259,28 @@ struct SplitResult
 
 
 
-///////////////////////////////////////////////////////////////////////////////
-// PUBLIC FUNCTIONS
-///////////////////////////////////////////////////////////////////////////////
+
+//    ███████ ██    ██ ██████  ██████   ██████  ██████  ████████     ██████  ██    ██ ██████  ██      ██  ██████ 
+//    ██      ██    ██ ██   ██ ██   ██ ██    ██ ██   ██    ██        ██   ██ ██    ██ ██   ██ ██      ██ ██      
+//    ███████ ██    ██ ██████  ██████  ██    ██ ██████     ██        ██████  ██    ██ ██████  ██      ██ ██      
+//         ██ ██    ██ ██      ██      ██    ██ ██   ██    ██        ██      ██    ██ ██   ██ ██      ██ ██      
+//    ███████  ██████  ██      ██       ██████  ██   ██    ██        ██       ██████  ██████  ███████ ██  ██████ 
+//                                                                                                               
+//                                                                                                               
+//    ███████ ██    ██ ███    ██  ██████ ████████ ██  ██████  ███    ██ ███████                                  
+//    ██      ██    ██ ████   ██ ██         ██    ██ ██    ██ ████   ██ ██                                       
+//    █████   ██    ██ ██ ██  ██ ██         ██    ██ ██    ██ ██ ██  ██ ███████                                  
+//    ██      ██    ██ ██  ██ ██ ██         ██    ██ ██    ██ ██  ██ ██      ██                                  
+//    ██       ██████  ██   ████  ██████    ██    ██  ██████  ██   ████ ███████                                  
+//                                                                                                               
+//                                                                                                               
 
 
 /// @brief Parse command line arguments
 /// @param[in] argc argument count
 /// @param[in] argv argument values
 /// @return Arguments instance
-Arguments   ParseArgs(int argc, char** argv);
+std::variant<Support::Arguments, std::string>   ParseArgs(int argc, char** argv);
 
 
 bool file_exists(const std::string& filename);
@@ -198,6 +293,12 @@ bool file_exists(const std::string& filename);
 std::string ltrim(const std::string& s);
 
 
+/// @brief remove whitespace character for the left of the string
+/// @param s the input string
+/// @return a copy left trimmed of @ref s
+std::string rtrim(const std::string& s);
+
+
 inline char toLowerAscii(char c) noexcept;
 
 
@@ -208,9 +309,6 @@ SplitResult split_quoted(const std::string& s, char sep = ' ') noexcept;
 std::optional<long long> to_number(const std::string& s);
 
 std::string generate_mangling(const std::string& target, const std::string& mangling);
-
-
-
 
 
 /// @brief Function used to represent a TokenType
@@ -242,6 +340,15 @@ std::string UniqueNonTerminalRepr(const Grammar::UniqueNonTerminal& type);
 /// @return string representation of Rule
 std::string RuleRepr(const Grammar::Rule type);
 
+
+
+std::size_t levenshtein_distance(const std::string & a,
+                                 const std::string & b) noexcept;
+
+
+std::optional<std::string> FindClosest(const std::vector<std::string> & list,
+                                const std::string & target,
+                                std::size_t max_distance = std::numeric_limits<std::size_t>::max()) noexcept;
 
 
 END_MODULE(Support)

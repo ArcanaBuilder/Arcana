@@ -2,11 +2,13 @@
 // INCLUDES
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "Defines.h"
-#include "Support.h"
 #include "Parser.h"
+#include "Support.h"
+#include "Defines.h"
+#include "Semantic.h"
+#include "TableHelper.h"
 
-#include <fstream>
+#include <variant>
 #include <iostream>
 
 
@@ -40,20 +42,18 @@ static Arcana_Result run(const Support::Arguments& args);
 
 int main(int argc, char** argv) 
 {   
-    Support::Arguments args = Support::ParseArgs(argc, argv);
+    Support::Arguments args;
 
-    if (args.size() < 2)
+    auto res = Support::ParseArgs(argc, argv);
+
+    if (std::holds_alternative<std::string>(res)) 
     {
-        if (Support::file_exists("arcfile"))
-        {
-            Support::Argument arc { 1, "arcfile" };
-            args.push_back(arc);
-        }
-        else
-        {
-            ERR("arcfile file not found!");
-            return Arcana_Result::ARCANA_RESULT__INVALID_ARGS;
-        }
+        ERR(std::get<std::string>(res));
+        return ARCANA_RESULT__PARSING_ERROR;
+    } 
+    else 
+    {
+        args = std::get<Support::Arguments>(res);
     }
 
     return run(args);
@@ -64,25 +64,50 @@ int main(int argc, char** argv)
 // PRIVATE FUNCTIONS
 ///////////////////////////////////////////////////////////////////////////////
 
+
+
 static Arcana_Result run(const Support::Arguments& args)
 {   
     Arcana_Result result = ARCANA_RESULT__OK;
 
-    std::ifstream file(args[1].arg);
+    if (!Support::file_exists(args.arcfile))
+    {
+        ERR("Script arcfile not found!");
+        return Arcana_Result::ARCANA_RESULT__INVALID_ARGS;
+    }
 
-    Scan::Lexer       lexer(file);
-    Grammar::Engine   engine;
-    Parsing::Parser   parser(lexer, engine);
-    Semantic::Enviroment   env;
+    Scan::Lexer          lexer(args.arcfile);
+    Grammar::Engine      engine;
+    Parsing::Parser      parser(lexer, engine);
+    Semantic::Enviroment env;
 
-    parser.Set_ParsingError_Handler (Support::ParserError   {lexer} );
-    parser.Set_AnalisysError_Handler(Support::SemanticError {lexer} );
+    parser.Set_ParsingError_Handler    (Support::ParserError   {lexer} );
+    parser.Set_AnalisysError_Handler   (Support::SemanticError {lexer} );
+    parser.Set_PostProcessError_Handler(Support::PostProcError {lexer} );
     
     result = parser.Parse(env);
 
-#if DEBUG
-    env.print();
-#endif
+    if (result != Arcana_Result::ARCANA_RESULT__OK)
+    {
+        return result;
+    }
+    
+    result = env.CheckArgs(args);
+
+    if (result != Arcana_Result::ARCANA_RESULT__OK)
+    {
+        return result;
+    }
+
+    auto alignment_result = env.AlignEnviroment();
+    
+    if (alignment_result)
+    {
+        ERR(alignment_result.value());
+        return Arcana_Result::ARCANA_RESULT__INVALID_ARGS;
+    }
+    
+    env.Expand();
 
     return result;
 }

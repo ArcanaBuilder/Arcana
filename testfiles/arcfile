@@ -7,19 +7,19 @@ import Defaults.arc;
 # BUILT-IN TASKS
 ###########################
 
+@multithread
 @public
-@precompiler 1
-task Clean(BUILD1 BUILD2)
-{
-    rm BUILD1 BUILD2 
+task Clean() 
+{ 
+    rm -rf {BUILDDIR}
 }
 
 @public
 @always
-@dependecy Clean Build
-task Install(TARGET)
+@dependecy Build Clean
+task Install()
 {
-    mv TARGET /usr/bin/  
+    cp {TARGET} /usr/bin/  
 }
 
 ###########################
@@ -27,31 +27,52 @@ task Install(TARGET)
 ###########################
 
 @public
-task Build()
+@dependecy Compile Link
+task Build() {}
+
+
+task Compile()
 {
-    COMPILER FLAGS SOURCE -o TARGET
+    {COMPILER} {FLAGS} {SOURCES} -c {OBJECTS}
 }
+
+
+task Link()
+{
+    {COMPILER} {FLAGS} {OBJECTS} -o {TARGET}
+}
+
 
 
 ###########################
 # PRE BUILD TASKS
 ###########################
 
-using precompiler Pre_Task2 Pre_Task1;
+using order precompiler Message MakeFolders;
 
 @precompiler
-task Pre_Task1() 
+task MakeFolders() 
 {
-    mkdir BUILD
-    mkdir test
+    cd SRCDIR
+    find . -type d -exec mkdir -p "../{BUILDDIR}"/{} \;
 }
 
+
+@profile Debug
 @precompiler
-task Pre_Task2() 
+task Message() 
 {
-    mkdir BUILD
-    mkdir test
+    echo 'Compiling {TARGET} in Debug Mode'
 }
+
+
+@profile Release
+@precompiler
+task Message() 
+{
+    echo 'Compiling {TARGET} in Release Mode'
+}
+
 
 
 ###########################
@@ -60,7 +81,7 @@ task Pre_Task2()
 
 @private
 @callable
-@postcompiler 1
+@postcompiler
 task Say_Something(msg) { echo msg }
 
 ###########################
