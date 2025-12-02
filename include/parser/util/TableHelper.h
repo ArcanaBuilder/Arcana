@@ -155,7 +155,6 @@ AlignOnProfile(TABLE& table, const std::string& profile)
             continue;
         }
 
-
         auto base_it = table.find(base);
         if (base_it != table.end())
         {

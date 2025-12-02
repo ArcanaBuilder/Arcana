@@ -11,6 +11,9 @@
 #include "Defines.h"
 #include "Semantic.h"
 
+#include <variant>
+#include <unordered_set>
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // module namespace
@@ -37,7 +40,7 @@ USE_MODULE(Arcana);
 //                                                                                                                    
 
 class Job;
-
+class List;
 
 
 
@@ -49,9 +52,9 @@ class Job;
 //                                                                                        
 //                                                                                        
 
-using Inputs  = std::vector<std::string>;
-using Outputs = std::vector<std::string>;
-using JobList = std::vector<Job>;
+
+using GeneratedJobs = std::optional<std::variant<Job, std::vector<Job>>>;
+
 
 
 
@@ -73,24 +76,38 @@ using JobList = std::vector<Job>;
 
 class Job
 {
+    friend class List;
+
 public:
     Job(const Job&) = default;
 
-    static Job FromInstruction(Semantic::Enviroment& environment, const Semantic::Instruction& instruction) noexcept;
-
 private:
     Job();
-
+    static GeneratedJobs FromInstruction(const Semantic::InstructionTask& task) noexcept;
+    
     std::string            name;
-
-    Inputs                 inputs;
-    Outputs                outputs;
-
     Semantic::Task::Instrs instructions;
-    Semantic::Task::Params parameters;
     Semantic::Interpreter  interpreter;
-
     bool                   parallelizable;
+};
+
+
+class List
+{
+public:
+    List(const List&) = default;
+
+    static List              FromEnv(Semantic::Enviroment& environment) noexcept;
+    const  std::vector<Job>& All() const noexcept { return data; }
+
+private:
+    List();
+    void Insert(Job&               j);
+    void Insert(std::vector<Job>& vj);
+    void Insert(GeneratedJobs     gj);
+    
+    std::unordered_set<std::string> index;
+    std::vector<Job>                data;
 };
 
 
@@ -111,9 +128,6 @@ private:
 //    ██       ██████  ██   ████  ██████    ██    ██  ██████  ██   ████ ███████        
 //                                                                                     
 //                                                                                     
-
-JobList FromEnv(Semantic::Enviroment& environment) noexcept;
-
 
 
 END_MODULE(Jobs)

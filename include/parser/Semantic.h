@@ -90,7 +90,6 @@ enum class Type
     PRIVATE             ,
     ALWAYS              ,
     DEPENDECY           ,
-    CALLABLE            ,
     MAP                 ,
     MULTITHREAD         ,
     MAIN                ,
@@ -227,122 +226,20 @@ END_NAMESPACE(Attr)
 
 
 
-
-//    ██ ███    ██ ███    ██ ███████ ██████      ███████ ███████ ███    ███  █████  ███    ██ ████████ ██  ██████       
-//    ██ ████   ██ ████   ██ ██      ██   ██     ██      ██      ████  ████ ██   ██ ████   ██    ██    ██ ██            
-//    ██ ██ ██  ██ ██ ██  ██ █████   ██████      ███████ █████   ██ ████ ██ ███████ ██ ██  ██    ██    ██ ██            
-//    ██ ██  ██ ██ ██  ██ ██ ██      ██   ██          ██ ██      ██  ██  ██ ██   ██ ██  ██ ██    ██    ██ ██            
-//    ██ ██   ████ ██   ████ ███████ ██   ██     ███████ ███████ ██      ██ ██   ██ ██   ████    ██    ██  ██████       
-//                                                                                                                      
-//                                                                                                                      
-//    ███    ██  █████  ███    ███ ███████ ███████ ██████   █████   ██████ ███████     ████████  █████  ███████ ██   ██ 
-//    ████   ██ ██   ██ ████  ████ ██      ██      ██   ██ ██   ██ ██      ██             ██    ██   ██ ██      ██  ██  
-//    ██ ██  ██ ███████ ██ ████ ██ █████   ███████ ██████  ███████ ██      █████          ██    ███████ ███████ █████   
-//    ██  ██ ██ ██   ██ ██  ██  ██ ██           ██ ██      ██   ██ ██      ██             ██    ██   ██      ██ ██  ██  
-//    ██   ████ ██   ██ ██      ██ ███████ ███████ ██      ██   ██  ██████ ███████        ██    ██   ██ ███████ ██   ██ 
-//                                                                                                                      
-//                                                                                                                      
-//    ██████  ███████  ██████  ██ ███    ██                                                                             
-//    ██   ██ ██      ██       ██ ████   ██                                                                             
-//    ██████  █████   ██   ███ ██ ██ ██  ██                                                                             
-//    ██   ██ ██      ██    ██ ██ ██  ██ ██                                                                             
-//    ██████  ███████  ██████  ██ ██   ████                                                                             
-//                                                                                                                      
-//                                                                                                                      
+                                                                                                                    
 
 BEGIN_NAMESPACE(Task)
-
-
-
-//    ███    ██  █████  ███    ███ ███████ ███████ ██████   █████   ██████ ███████     ████████  █████  ███████ ██   ██ 
-//    ████   ██ ██   ██ ████  ████ ██      ██      ██   ██ ██   ██ ██      ██             ██    ██   ██ ██      ██  ██  
-//    ██ ██  ██ ███████ ██ ████ ██ █████   ███████ ██████  ███████ ██      █████          ██    ███████ ███████ █████   
-//    ██  ██ ██ ██   ██ ██  ██  ██ ██           ██ ██      ██   ██ ██      ██             ██    ██   ██      ██ ██  ██  
-//    ██   ████ ██   ██ ██      ██ ███████ ███████ ██      ██   ██  ██████ ███████        ██    ██   ██ ███████ ██   ██ 
-//                                                                                                                      
-//                                                                                                                      
-//    ██    ██ ███████ ██ ███    ██  ██████  ███████                                                                    
-//    ██    ██ ██      ██ ████   ██ ██       ██                                                                         
-//    ██    ██ ███████ ██ ██ ██  ██ ██   ███ ███████                                                                    
-//    ██    ██      ██ ██ ██  ██ ██ ██    ██      ██                                                                    
-//     ██████  ███████ ██ ██   ████  ██████  ███████                                                                    
-//                                                                                                                      
-//                                                                                                                      
-
-using Params = std::vector<std::string>;
+                                                                                                               
 using Instrs = std::vector<std::string>;
-
 
 END_NAMESPACE(Task)
 
 
-//    ██ ███    ██ ███    ██ ███████ ██████      ███████ ███████ ███    ███  █████  ███    ██ ████████ ██  ██████       
-//    ██ ████   ██ ████   ██ ██      ██   ██     ██      ██      ████  ████ ██   ██ ████   ██    ██    ██ ██            
-//    ██ ██ ██  ██ ██ ██  ██ █████   ██████      ███████ █████   ██ ████ ██ ███████ ██ ██  ██    ██    ██ ██            
-//    ██ ██  ██ ██ ██  ██ ██ ██      ██   ██          ██ ██      ██  ██  ██ ██   ██ ██  ██ ██    ██    ██ ██            
-//    ██ ██   ████ ██   ████ ███████ ██   ██     ███████ ███████ ██      ██ ██   ██ ██   ████    ██    ██  ██████       
-//                                                                                                                      
-//                                                                                                                      
-//    ███    ██  █████  ███    ███ ███████ ███████ ██████   █████   ██████ ███████     ████████  █████  ███████ ██   ██ 
-//    ████   ██ ██   ██ ████  ████ ██      ██      ██   ██ ██   ██ ██      ██             ██    ██   ██ ██      ██  ██  
-//    ██ ██  ██ ███████ ██ ████ ██ █████   ███████ ██████  ███████ ██      █████          ██    ███████ ███████ █████   
-//    ██  ██ ██ ██   ██ ██  ██  ██ ██           ██ ██      ██   ██ ██      ██             ██    ██   ██      ██ ██  ██  
-//    ██   ████ ██   ██ ██      ██ ███████ ███████ ██      ██   ██  ██████ ███████        ██    ██   ██ ███████ ██   ██ 
-//                                                                                                                      
-//                                                                                                                      
-//    ███████ ███    ██ ██████                                                                                          
-//    ██      ████   ██ ██   ██                                                                                         
-//    █████   ██ ██  ██ ██   ██                                                                                         
-//    ██      ██  ██ ██ ██   ██                                                                                         
-//    ███████ ██   ████ ██████                                                                                          
-//                                                                                                                      
-//                                                                                                                      
 
-
-
-
-
-//    ██ ███    ██ ███    ██ ███████ ██████      ███████ ███████ ███    ███  █████  ███    ██ ████████ ██  ██████                     
-//    ██ ████   ██ ████   ██ ██      ██   ██     ██      ██      ████  ████ ██   ██ ████   ██    ██    ██ ██                          
-//    ██ ██ ██  ██ ██ ██  ██ █████   ██████      ███████ █████   ██ ████ ██ ███████ ██ ██  ██    ██    ██ ██                          
-//    ██ ██  ██ ██ ██  ██ ██ ██      ██   ██          ██ ██      ██  ██  ██ ██   ██ ██  ██ ██    ██    ██ ██                          
-//    ██ ██   ████ ██   ████ ███████ ██   ██     ███████ ███████ ██      ██ ██   ██ ██   ████    ██    ██  ██████                     
-//                                                                                                                                    
-//                                                                                                                                    
-//    ███    ██  █████  ███    ███ ███████ ███████ ██████   █████   ██████ ███████     ██    ██ ███████ ██ ███    ██  ██████  ███████ 
-//    ████   ██ ██   ██ ████  ████ ██      ██      ██   ██ ██   ██ ██      ██          ██    ██ ██      ██ ████   ██ ██       ██      
-//    ██ ██  ██ ███████ ██ ████ ██ █████   ███████ ██████  ███████ ██      █████       ██    ██ ███████ ██ ██ ██  ██ ██   ███ ███████ 
-//    ██  ██ ██ ██   ██ ██  ██  ██ ██           ██ ██      ██   ██ ██      ██          ██    ██      ██ ██ ██  ██ ██ ██    ██      ██ 
-//    ██   ████ ██   ██ ██      ██ ███████ ███████ ██      ██   ██  ██████ ███████      ██████  ███████ ██ ██   ████  ██████  ███████ 
-//                                                                                                                                    
-//                                                                                                                                    
-//    ██████  ███████  ██████  ██ ███    ██                                                                                           
-//    ██   ██ ██      ██       ██ ████   ██                                                                                           
-//    ██████  █████   ██   ███ ██ ██ ██  ██                                                                                           
-//    ██   ██ ██      ██    ██ ██ ██  ██ ██                                                                                           
-//    ██████  ███████  ██████  ██ ██   ████                                                                                           
-//                                                                                                                                    
-//                                                                                                                                    
+                                                                                                                               
 
 BEGIN_NAMESPACE(Using)
-
-
-
-//    ██ ███    ██  █████  ███    ███ ███████ ███████ ██████   █████   ██████ ███████     ██    ██ ███████ ██ ███    ██  ██████  ███████ 
-//    ██ ████   ██ ██   ██ ████  ████ ██      ██      ██   ██ ██   ██ ██      ██          ██    ██ ██      ██ ████   ██ ██       ██      
-//    ██ ██ ██  ██ ███████ ██ ████ ██ █████   ███████ ██████  ███████ ██      █████       ██    ██ ███████ ██ ██ ██  ██ ██   ███ ███████ 
-//    ██ ██  ██ ██ ██   ██ ██  ██  ██ ██           ██ ██      ██   ██ ██      ██          ██    ██      ██ ██ ██  ██ ██ ██    ██      ██ 
-//    ██ ██   ████ ██   ██ ██      ██ ███████ ███████ ██      ██   ██  ██████ ███████      ██████  ███████ ██ ██   ████  ██████  ███████ 
-//                                                                                                                                       
-//                                                                                                                                       
-//    ███████ ███    ██ ██    ██ ███    ███ ███████                                                                                      
-//    ██      ████   ██ ██    ██ ████  ████ ██                                                                                           
-//    █████   ██ ██  ██ ██    ██ ██ ████ ██ ███████                                                                                      
-//    ██      ██  ██ ██ ██    ██ ██  ██  ██      ██                                                                                      
-//    ███████ ██   ████  ██████  ██      ██ ███████                                                                                      
-//                                                                                                                                       
-//                                                                                                                                       
-
+                                                                                                                              
 enum class Type
 {
     PROFILES             = 0,
@@ -350,21 +247,7 @@ enum class Type
     INTERPRETER             ,
 };
 
-
-//    ██ ███    ██  █████  ███    ███ ███████ ███████ ██████   █████   ██████ ███████     ██    ██ ███████ ██ ███    ██  ██████  ███████  
-//    ██ ████   ██ ██   ██ ████  ████ ██      ██      ██   ██ ██   ██ ██      ██          ██    ██ ██      ██ ████   ██ ██       ██       
-//    ██ ██ ██  ██ ███████ ██ ████ ██ █████   ███████ ██████  ███████ ██      █████       ██    ██ ███████ ██ ██ ██  ██ ██   ███ ███████  
-//    ██ ██  ██ ██ ██   ██ ██  ██  ██ ██           ██ ██      ██   ██ ██      ██          ██    ██      ██ ██ ██  ██ ██ ██    ██      ██  
-//    ██ ██   ████ ██   ██ ██      ██ ███████ ███████ ██      ██   ██  ██████ ███████      ██████  ███████ ██ ██   ████  ██████  ███████  
-//                                                                                                                                        
-//                                                                                                                                        
-//    ██████  ██    ██ ██████  ██      ██  ██████      █████   ██████   ██████  ██████  ███████  ██████   █████  ████████ ███████ ███████ 
-//    ██   ██ ██    ██ ██   ██ ██      ██ ██          ██   ██ ██       ██       ██   ██ ██      ██       ██   ██    ██    ██      ██      
-//    ██████  ██    ██ ██████  ██      ██ ██          ███████ ██   ███ ██   ███ ██████  █████   ██   ███ ███████    ██    █████   ███████ 
-//    ██      ██    ██ ██   ██ ██      ██ ██          ██   ██ ██    ██ ██    ██ ██   ██ ██      ██    ██ ██   ██    ██    ██           ██ 
-//    ██       ██████  ██████  ███████ ██  ██████     ██   ██  ██████   ██████  ██   ██ ███████  ██████  ██   ██    ██    ███████ ███████ 
-//                                                                                                                                        
-//                                                                                                                                        
+                                                                                                                                     
 
 struct Rule
 {
@@ -372,37 +255,7 @@ struct Rule
     Type                     using_type;
 };
 
-
 END_NAMESPACE(Using)
-
-
-//    ██ ███    ██ ███    ██ ███████ ██████      ███████ ███████ ███    ███  █████  ███    ██ ████████ ██  ██████                     
-//    ██ ████   ██ ████   ██ ██      ██   ██     ██      ██      ████  ████ ██   ██ ████   ██    ██    ██ ██                          
-//    ██ ██ ██  ██ ██ ██  ██ █████   ██████      ███████ █████   ██ ████ ██ ███████ ██ ██  ██    ██    ██ ██                          
-//    ██ ██  ██ ██ ██  ██ ██ ██      ██   ██          ██ ██      ██  ██  ██ ██   ██ ██  ██ ██    ██    ██ ██                          
-//    ██ ██   ████ ██   ████ ███████ ██   ██     ███████ ███████ ██      ██ ██   ██ ██   ████    ██    ██  ██████                     
-//                                                                                                                                    
-//                                                                                                                                    
-//    ███    ██  █████  ███    ███ ███████ ███████ ██████   █████   ██████ ███████     ██    ██ ███████ ██ ███    ██  ██████  ███████ 
-//    ████   ██ ██   ██ ████  ████ ██      ██      ██   ██ ██   ██ ██      ██          ██    ██ ██      ██ ████   ██ ██       ██      
-//    ██ ██  ██ ███████ ██ ████ ██ █████   ███████ ██████  ███████ ██      █████       ██    ██ ███████ ██ ██ ██  ██ ██   ███ ███████ 
-//    ██  ██ ██ ██   ██ ██  ██  ██ ██           ██ ██      ██   ██ ██      ██          ██    ██      ██ ██ ██  ██ ██ ██    ██      ██ 
-//    ██   ████ ██   ██ ██      ██ ███████ ███████ ██      ██   ██  ██████ ███████      ██████  ███████ ██ ██   ████  ██████  ███████ 
-//                                                                                                                                    
-//                                                                                                                                    
-//    ███████ ███    ██ ██████                                                                                                        
-//    ██      ████   ██ ██   ██                                                                                                       
-//    █████   ██ ██  ██ ██   ██                                                                                                       
-//    ██      ██  ██ ██ ██   ██                                                                                                       
-//    ███████ ██   ████ ██████                                                                                                        
-//                                                                                                                                    
-//                                                                                                                                    
-
-
-
-
-
-
 
 
 
@@ -491,18 +344,24 @@ struct Rule
 };
 
 
-struct Instruction
+
+struct InstructionAssign
 {
-    Instruction() = default;
-    virtual ~Instruction() = default;
+    std::string var_name;
+    std::string var_value;
+    Attr::List  attributes;
+
+    InstructionAssign() = default;
+
+    InstructionAssign(const std::string& var, const std::string& val)
+        :
+        var_name(var),
+        var_value(val)
+    {}
 
     // copy
-    Instruction(const Instruction & other)            = default;
-    Instruction & operator=(const Instruction & other) = default;
-
-    // move
-    Instruction(Instruction && other) noexcept            = default;
-    Instruction & operator=(Instruction && other) noexcept = default;
+    InstructionAssign(const InstructionAssign& other)             = default;
+    InstructionAssign& operator=(const InstructionAssign & other) = default;
 
     bool hasAttribute(const Attr::Type attr) const
     {
@@ -518,134 +377,56 @@ struct Instruction
 
         return std::nullopt;
     }
-
-    Attr::List  attributes;
-    FListCRef   dependecies;
 };
 
 
-struct InstructionAssign : public Instruction
-{
-    std::string var_name;
-    std::string var_value;
-
-    InstructionAssign() = default;
-
-    InstructionAssign(const std::string & var, const std::string & val)
-        :
-        var_name(var),
-        var_value(val)
-    {
-    }
-
-    // copy
-    InstructionAssign(const InstructionAssign & other)            = default;
-    InstructionAssign & operator=(const InstructionAssign & other) = default;
-
-    // move
-    InstructionAssign(InstructionAssign && other) noexcept
-        :
-        Instruction(std::move(other)),
-        var_name(std::move(other.var_name)),
-        var_value(std::move(other.var_value))
-    {
-    }
-
-    InstructionAssign & operator=(InstructionAssign && other) noexcept
-    {
-        if (this != &other)
-        {
-            Instruction::operator=(std::move(other));
-            var_name  = std::move(other.var_name);
-            var_value = std::move(other.var_value);
-        }
-        return *this;
-    }
-};
-
-
-struct InstructionTask : public Instruction
+struct InstructionTask
 {
     std::string  task_name;
-    Task::Params task_params;
     Task::Instrs task_instrs;
+    FListCRef    dependecies;
+    Attr::List   attributes;
+    Interpreter  interpreter;
 
     InstructionTask() = default;
 
-    InstructionTask(const std::string &  name,
-                    const Task::Params & params,
-                    const Task::Instrs & instrs)
+    InstructionTask(const std::string&  name,
+                    const Task::Instrs& instrs)
         :
         task_name(name),
-        task_params(params),
         task_instrs(instrs)
-    {
-    }
-
-    // copy
-    InstructionTask(const InstructionTask & other)            = default;
-    InstructionTask & operator=(const InstructionTask & other) = default;
-
-    // move
-    InstructionTask(InstructionTask && other) noexcept
-        :
-        Instruction(std::move(other)),
-        task_name(std::move(other.task_name)),
-        task_params(std::move(other.task_params)),
-        task_instrs(std::move(other.task_instrs))
-    {
-    }
-
-    InstructionTask & operator=(InstructionTask && other) noexcept
-    {
-        if (this != &other)
-        {
-            Instruction::operator=(std::move(other));
-            task_name   = std::move(other.task_name);
-            task_params = std::move(other.task_params);
-            task_instrs = std::move(other.task_instrs);
-        }
-        return *this;
-    }
-};
-
-
-struct InstructionCall : public Instruction
-{
-    std::string  task_name;
-    Task::Params task_params;
-
-    InstructionCall() = default;
-
-    InstructionCall(const std::string&  name, 
-                    const Task::Params& params) 
-        :
-        task_name(name),
-        task_params(params)
     {}
 
-    InstructionCall(InstructionCall&& other) noexcept
-        :
-        Instruction(std::move(other)), // importante per la base
-        task_name(std::move(other.task_name)),
-        task_params(std::move(other.task_params))
+    // copy
+    InstructionTask(const InstructionTask& other)             = default;
+    InstructionTask& operator=(const InstructionTask & other) = default;
+
+    bool hasAttribute(const Attr::Type attr) const
     {
+        return (std::find(attributes.begin(), attributes.end(), attr) != attributes.end());
     }
 
-    InstructionCall& operator=(InstructionCall&& other) noexcept
+    const Attr::Properties
+    getProperties(const Attr::Type attr) const
     {
-        if (this != &other)
-        {
-            Instruction::operator=(std::move(other));
-            task_name  = std::move(other.task_name);
-            task_params = std::move(other.task_params);
+        for (const auto& a : attributes)
+            if (a.type == attr)
+                return a.props;
+
+        return {};
+    }
+
+    void removeAttribute(const Attr::Type attr)
+    {
+        for (auto it = attributes.begin(); it != attributes.end(); ++it)
+        {    
+            if (it->type == attr)
+            {
+                attributes.erase(it);
+                return;
+            }
         }
-        return *this;
     }
-
-    InstructionCall(const InstructionCall&)            = default;
-    InstructionCall& operator=(const InstructionCall&) = default;
-
 };
 
 
@@ -664,9 +445,6 @@ struct Profile
 
 
 
-
-
-
 struct Enviroment
 {
     friend class Engine;
@@ -674,8 +452,6 @@ struct Enviroment
 
 public:
     FTable   ftable;
-    CTable   ctable;
-
     FList    pretask;
     FList    posttask;
 
@@ -703,9 +479,6 @@ inline void EnvMerge(Enviroment& dst, Enviroment& src)
     for (auto& [k, v] : src.ftable)
         dst.ftable[k] = std::move(v);
 
-    for (auto& [k, v] : src.ctable)
-        dst.ctable[k] = std::move(v);
-
     dst.profile.merge(src.profile);
 }
 
@@ -715,11 +488,10 @@ class Engine
 public:
     Engine();
 
-    SemanticOutput Collect_Attribute (const std::string& name, const std::string& prop);
-    SemanticOutput Collect_Assignment(const std::string& name, const std::string& val); 
-    SemanticOutput Collect_Task      (const std::string& name, const std::string& param, const Task::Instrs& instrs); 
-    SemanticOutput Collect_TaskCall  (const std::string& name, const std::string& param);  
-    SemanticOutput Collect_Using     (const std::string& what, const std::string& opt); 
+    SemanticOutput Collect_Attribute (const std::string& name, const std::string&  prop);
+    SemanticOutput Collect_Assignment(const std::string& name, const std::string&  val); 
+    SemanticOutput Collect_Task      (const std::string& name, const Task::Instrs& instrs); 
+    SemanticOutput Collect_Using     (const std::string& what, const std::string&  opt); 
 
     Enviroment                       GetEnvironment()  const noexcept { return _env; }
     Enviroment&                      EnvRef()                         { return _env; }

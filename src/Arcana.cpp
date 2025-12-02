@@ -81,7 +81,6 @@ static Arcana_Result run(const Support::Arguments& args)
     Grammar::Engine      engine;
     Parsing::Parser      parser(lexer, engine);
     Semantic::Enviroment env;
-    Jobs::JobList        job_list;
 
     parser.Set_ParsingError_Handler    (Support::ParserError   {lexer} );
     parser.Set_AnalisysError_Handler   (Support::SemanticError {lexer} );
@@ -111,7 +110,7 @@ static Arcana_Result run(const Support::Arguments& args)
     
     env.Expand();
 
-    job_list = Jobs::FromEnv(env);
+    Jobs::List joblist = Jobs::List::FromEnv(env);
 
     return result;
 }

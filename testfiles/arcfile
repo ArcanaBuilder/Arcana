@@ -12,7 +12,7 @@ import Defaults.arc;
 @public
 task Clean() 
 { 
-    rm -rf {BUILDDIR}
+    rm -rf {arc:BUILDDIR}
 }
 
 @public
@@ -20,28 +20,29 @@ task Clean()
 @dependecy Build Clean
 task Install()
 {
-    cp {TARGET} /usr/bin/  
+    cp {arc:TARGET} /usr/bin/  
 }
 
 ###########################
 # OVERRIDED BUILT-IN TASKS
 ###########################
 
-@main
 @public
 @dependecy Compile Link
 task Build() {}
 
-@multithread
+@public
+@main
+@multithreading SOURCES OBJECTS
 task Compile()
 {
-    {COMPILER} {FLAGS} {SOURCES} -c {OBJECTS}
+    {arc:COMPILER} {arc:FLAGS} {arc:1} -c {arc:2}
 }
 
 
 task Link()
 {
-    {COMPILER} {FLAGS} {OBJECTS} -o {TARGET}
+    {arc:COMPILER} {arc:FLAGS} {arc:OBJECTS} -o {arc:TARGET}
 }
 
 
@@ -56,7 +57,7 @@ using order precompiler Message MakeFolders;
 task MakeFolders() 
 {
     cd SRCDIR
-    find . -type d -exec mkdir -p "../{BUILDDIR}"/{} \;
+    find . -type d -exec mkdir -p "../{arc:BUILDDIR}"/{} \;
 }
 
 
@@ -65,7 +66,7 @@ task MakeFolders()
 @precompiler
 task Message() 
 {
-print("Compiling {TARGET} in Debug Mode")
+print("Compiling {arc:TARGET} in Debug Mode")
 }
 
 
@@ -73,7 +74,7 @@ print("Compiling {TARGET} in Debug Mode")
 @precompiler
 task Message() 
 {
-    echo 'Compiling {TARGET} in Release Mode'
+    echo 'Compiling {arc:TARGET} in Release Mode'
 }
 
 
@@ -83,12 +84,9 @@ task Message()
 ###########################
 
 @private
-@callable
+@interpreter /bin/echo
 @postcompiler
-task Say_Something(msg) { echo msg }
-
-###########################
-# POST BUILD TASKS CALL
-###########################
-
-Say_Something('All Done!');
+task Say_Something() 
+{ 
+    "GATOR!"
+}

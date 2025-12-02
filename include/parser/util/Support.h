@@ -104,14 +104,11 @@ struct Arguments
     task,
     profile;
 
-    bool print_env;
-
     Arguments() 
         : 
         arcfile("arcfile"),
         task{"", false},
-        profile{"", false},
-        print_env(false)
+        profile{"", false}
     {}
 };
 
@@ -232,19 +229,40 @@ struct StringViewEq
 struct SemanticOutput
 {
     Semantic_Result  result;
-    std::string      message;
+    std::string      err;
+    std::string      hint;
 
     SemanticOutput() 
         :
         result(Semantic_Result::AST_RESULT__OK),
-        message("")
+        err(""),
+        hint("")
     {}
 
-    SemanticOutput(const Semantic_Result result, const std::string& message) 
+    SemanticOutput(const Semantic_Result result, const std::string& err) 
         :
         result(result),
-        message(message)
+        err(err),
+        hint("")
     {}
+
+    SemanticOutput(const Semantic_Result result, const std::string& err, const std::string& hint) 
+        :
+        result(result),
+        err(err),
+        hint(hint)
+    {}
+
+    SemanticOutput(const Semantic_Result result, const std::string& err, const std::optional<std::string>& opt_hint) 
+        :
+        result(result),
+        err(err)
+    {
+        if (opt_hint)
+        {
+            hint = opt_hint.value();
+        }
+    }
 };
 
 

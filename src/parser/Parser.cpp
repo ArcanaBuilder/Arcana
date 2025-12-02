@@ -49,7 +49,6 @@ Arcana_Result Parser::Parse(Semantic::Enviroment& env)
                 case Grammar::Rule::VARIABLE_ASSIGN:   astout = Handle_VarAssign(match);   match.valid = false;  break;
                 case Grammar::Rule::ATTRIBUTE:         astout = Handle_Attribute(match);   match.valid = false;  break;
                 case Grammar::Rule::TASK_DECL:         astout = Handle_TaskDecl(match);    match.valid = false;  break;
-                case Grammar::Rule::TASK_CALL:         astout = Handle_TaskCall(match);    match.valid = false;  break;
                 case Grammar::Rule::USING:             astout = Handle_Using(match);       match.valid = false;  break;
                 default:                                                                   match.valid = false;  break;
             }
@@ -124,18 +123,17 @@ Arcana::Support::SemanticOutput Parser::Handle_TaskDecl(Grammar::Match& match)
     Statement body;
 
     Point  p1    = match[_I(Grammar::TASK_DECL::TASKNAME)];
-    Point  p2    = match[_I(Grammar::TASK_DECL::PARAMS)];
     Point  bbody = match[_I(Grammar::TASK_DECL::CURLYLP)];
     Point  ebody = match[_I(Grammar::TASK_DECL::CURLYRP)];
 
     Input  header_line = lexer[p1->token];
     Lexeme task        = header_line.substr(p1->start, p1->end - p1->start);
-    Lexeme param       = header_line.substr(p2->start, p2->end - p2->start);
 
     const std::size_t line_begin = bbody->token.line;
     const std::size_t line_end   = ebody->token.line;
 
-
+    std::string instr;
+    
     if (line_begin == line_end)
     {
         // { ... } on the same line
@@ -146,13 +144,13 @@ Arcana::Support::SemanticOutput Parser::Handle_TaskDecl(Grammar::Match& match)
 
         if (end > start)
         {
-            body.push_back(line.substr(start, end - start));
+            instr = line.substr(start, end - start);
+
+            if (!Support::ltrim(instr).empty()) body.push_back(line.substr(start, end - start));
         }
     }
     else
     {
-        std::string instr;
-
         // first line: after '{' until \n
         {
             Input line = lexer[bbody->token];
@@ -161,7 +159,7 @@ Arcana::Support::SemanticOutput Parser::Handle_TaskDecl(Grammar::Match& match)
             {
                 instr = line.substr(start);
                 
-                if (!instr.empty()) body.push_back(instr);
+                if (!instr.empty() && !Support::ltrim(instr).empty()) body.push_back(instr);
             }
         }
 
@@ -181,25 +179,12 @@ Arcana::Support::SemanticOutput Parser::Handle_TaskDecl(Grammar::Match& match)
             {
                 instr = line.substr(0, end);
 
-                if (!instr.empty()) body.push_back(instr);
+                if (!instr.empty() && !Support::ltrim(instr).empty()) body.push_back(instr);
             }
         }
     }
 
-    return instr_engine.Collect_Task(task, param, body);
-}
-
-Arcana::Support::SemanticOutput Parser::Handle_TaskCall(Grammar::Match& match)
-{
-    // EXTRACT THE STRINGS FROM THE INPUT AND PASS THEM INTO THE SEMANTIC ENGINE
-    Point  p1    = match[_I(Grammar::TASK_CALL::TASKNAME)];
-    Point  p2    = match[_I(Grammar::TASK_CALL::PARAMS)];
-    
-    Input  input = lexer[p1->token];
-    Lexeme task  = input.substr(p1->start, p1->end - p1->start);
-    Lexeme param = input.substr(p2->start, p2->end - p2->start);
-    
-    return instr_engine.Collect_TaskCall(task, param);
+    return instr_engine.Collect_Task(task, body);
 }
 
 

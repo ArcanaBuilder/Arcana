@@ -125,24 +125,12 @@ static Rules rule_TASK_DECL =
     Scan::TokenType::TASK         |
     Scan::TokenType::IDENTIFIER   |
     Scan::TokenType::ROUNDLP      |
-    Scan::TokenType::ANY          |
     Scan::TokenType::ROUNDRP      |
     Scan::TokenType::OPT_NEWLINE  |
     Scan::TokenType::CURLYLP      |
     Scan::TokenType::ANY          |
     Scan::TokenType::CURLYRP      |
     ( Scan::TokenType::NEWLINE || Scan::TokenType::SEMICOLON || Scan::TokenType::ENDOFFILE )  
-};
-
-
-static Rules rule_TASK_CALL = 
-{
-    Scan::TokenType::IDENTIFIER   |
-    Scan::TokenType::ROUNDLP      |
-    Scan::TokenType::ANY          |
-    Scan::TokenType::ROUNDRP      |
-    Scan::TokenType::SEMICOLON    |
-    ( Scan::TokenType::NEWLINE || Scan::TokenType::ENDOFFILE )  
 };
 
 
@@ -189,7 +177,6 @@ Engine::Engine()
     _rules[Rule::EMPTY_LINE       ] = rule_EMPTY_LINE.buffer;
     _rules[Rule::ATTRIBUTE        ] = rule_ATTRIBUTE.buffer;
     _rules[Rule::TASK_DECL        ] = rule_TASK_DECL.buffer;
-    _rules[Rule::TASK_CALL        ] = rule_TASK_CALL.buffer;
     _rules[Rule::IMPORT           ] = rule_IMPORT.buffer;
     _rules[Rule::USING            ] = rule_USING.buffer;
 
@@ -197,7 +184,6 @@ Engine::Engine()
     _index[Rule::EMPTY_LINE       ] = std::vector<Index>(rule_EMPTY_LINE.buffer.size());
     _index[Rule::ATTRIBUTE        ] = std::vector<Index>(rule_ATTRIBUTE.buffer.size());
     _index[Rule::TASK_DECL        ] = std::vector<Index>(rule_TASK_DECL.buffer.size());
-    _index[Rule::TASK_CALL        ] = std::vector<Index>(rule_TASK_CALL.buffer.size());
     _index[Rule::IMPORT           ] = std::vector<Index>(rule_IMPORT.buffer.size());
     _index[Rule::USING            ] = std::vector<Index>(rule_USING.buffer.size());
 }

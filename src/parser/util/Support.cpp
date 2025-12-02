@@ -25,7 +25,7 @@ Arcana_Result Support::ParserError::operator() (const std::string& ctx, const Gr
     std::stringstream ss;
 
     ss << "[" << ANSI_BRED << "SYNTAX ERROR" << ANSI_RESET << "] In file ‘" << ANSI_BOLD << ctx << ANSI_RESET << "’, line " << ANSI_BOLD << token.line << ": ‘" << lexer[token]  << ANSI_RESET << "’" << std::endl;
-    ss << ANSI_RED << "               +~~~~~~~~~~~~~~~~~~~~~~~" << s << symbol << ANSI_RESET << std::endl;
+    ss << ANSI_RED << "               +~~~~~~~~~~~~~~~~~~~~~~~~~~~" << s << symbol << ANSI_RESET << std::endl;
 
     escaping = (token.lexeme == "\n") ? "<New Line>" : token.lexeme;
 
@@ -41,7 +41,7 @@ Arcana_Result Support::ParserError::operator() (const std::string& ctx, const Gr
         
         for (const auto& stmt : semtypes)
         {
-            ss << "                  - ‘" << ANSI_CYAN << Support::RuleRepr(stmt) << ANSI_RESET << "’" << std::endl;
+            ss << "                  - " << ANSI_CYAN << Support::RuleRepr(stmt) << ANSI_RESET  << std::endl;
         }
     }
     
@@ -58,7 +58,13 @@ Arcana_Result Support::SemanticError::operator() (const std::string& ctx, const 
     std::stringstream ss;
 
     ss << "[" << ANSI_BRED << "SEMANTIC ERROR" << ANSI_RESET << "] In file ‘" << ANSI_BOLD << ctx << ANSI_RESET << "’, line " << ANSI_BOLD << token.line << ": ‘" << lexer[token]  << ANSI_RESET << "’" << std::endl;
-    ss << "                 " << ao.message << std::endl;
+    ss << "                 " << ao.err << std::endl;
+
+    if (!ao.hint.empty())
+    {
+        ss << "[" << ANSI_BGREEN << "HINT" << ANSI_RESET << "] Did you mean " << ANSI_BCYAN << ao.hint << ANSI_RESET "?" << std::endl;
+    }
+
     std::cerr << ss.str();
 
     return Arcana_Result::ARCANA_RESULT__PARSING_ERROR;
@@ -114,6 +120,7 @@ bool Support::StringViewEq::operator() (std::string_view a, std::string_view b) 
 
 std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char** argv)
 {
+    std::stringstream  ss;
     Support::Arguments args{};
 
     int i = 1;
@@ -134,22 +141,29 @@ std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char*
                 return "Missing value for option -s";
             }
         }
-
-        if (arg == "-d")
+        else if (arg == "-p")
         {
-            args.print_env = true;
-            ++i;
+            if (i + 1 < argc)
+            {
+                args.profile.found = true;
+                args.profile.value = argv[i + 1];
+                i += 2;
+                continue;
+            }
+            else
+            {
+                return "Missing value for option -s";
+            }
         }
-
-        if (!args.task.found)
+        else if (!args.task.found)
         {
             args.task.found = true;
             args.task.value = argv[i];
         }
-        else if (!args.profile.found)
+        else
         {
-            args.profile.found = true;
-            args.profile.value = argv[i];
+            ss << "Unknown parameter " << ANSI_BMAGENTA << argv[i] << ANSI_RESET;
+            return ss.str();
         }
 
         ++i;
@@ -446,7 +460,6 @@ std::string Support::RuleRepr(const Grammar::Rule type)
         case Grammar::Rule::EMPTY_LINE:        return "Empty Line";
         case Grammar::Rule::ATTRIBUTE:         return "Attribute";
         case Grammar::Rule::TASK_DECL:         return "Task Declaration";
-        case Grammar::Rule::TASK_CALL:         return "Task Invoke";
         case Grammar::Rule::IMPORT:            return "Import";
         case Grammar::Rule::USING:             return "Using";
         default:                               return "<INVALID>";
@@ -501,8 +514,12 @@ std::optional<std::string> Support::FindClosest(const std::vector<std::string>& 
     std::optional<std::string> best;
     std::size_t                best_dist = max_distance;
 
-    for (const auto & s : list)
+    for (auto s : list)
     {
+        auto pos = s.find("@@");
+        if (pos != std::string::npos)
+            s = s.substr(0, pos);
+
         if (s == target)
             continue;
 

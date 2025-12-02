@@ -82,18 +82,17 @@ using UsingMap       = AbstractKeywordMap<Using::Rule>;
 
 static const AttributeMap Known_Attributes = 
 {
-    { "precompiler" , Attr::Type::PRECOMPILER  },          
-    { "postcompiler", Attr::Type::POSTCOMPILER },          
-    { "profile"     , Attr::Type::PROFILE      },          
-    { "public"      , Attr::Type::PUBLIC       },          
-    { "private"     , Attr::Type::PRIVATE      },          
-    { "always"      , Attr::Type::ALWAYS       },          
-    { "dependecy"   , Attr::Type::DEPENDECY    },          
-    { "callable"    , Attr::Type::CALLABLE     },    
-    { "map"         , Attr::Type::MAP          },    
-    { "multithread" , Attr::Type::MULTITHREAD  },     
-    { "main"        , Attr::Type::MAIN         },  
-    { "interpreter" , Attr::Type::INTERPRETER  },          
+    { "precompiler"    , Attr::Type::PRECOMPILER  },          
+    { "postcompiler"   , Attr::Type::POSTCOMPILER },          
+    { "profile"        , Attr::Type::PROFILE      },          
+    { "public"         , Attr::Type::PUBLIC       },          
+    { "private"        , Attr::Type::PRIVATE      },          
+    { "always"         , Attr::Type::ALWAYS       },          
+    { "dependecy"      , Attr::Type::DEPENDECY    },          
+    { "map"            , Attr::Type::MAP          },    
+    { "multithreading" , Attr::Type::MULTITHREAD  },     
+    { "main"           , Attr::Type::MAIN         },  
+    { "interpreter"    , Attr::Type::INTERPRETER  },          
 };
 
 
@@ -103,6 +102,40 @@ static const UsingMap Known_Usings =
     { "profiles"       , { {                               },  Using::Type::PROFILES    } },   
     { "default"        , { { "interpreter"                 },  Using::Type::INTERPRETER } },   
 };
+
+
+static const std::vector<std::string> _attributes =
+{
+    "precompiler"   ,
+    "postcompiler"  ,
+    "profile"       ,
+    "public"        ,
+    "private"       ,
+    "always"        ,
+    "dependecy"     ,
+    "map"           ,
+    "multithreading",
+    "main"          ,
+    "interpreter"   ,
+};
+
+static const std::vector<std::string> _usings =
+{
+    "order"   ,
+    "profiles",
+    "default" ,
+};
+
+
+
+
+
+
+#define SEM_OK()                 SemanticOutput{}
+#define SEM_NOK(err)             { Semantic_Result::AST_RESULT__NOK, err       }
+#define SEM_NOK_HINT(err, hint)  { Semantic_Result::AST_RESULT__NOK, err, hint }
+
+
 
 
 
@@ -130,9 +163,8 @@ Engine::Engine()
     _attr_rules[_I(Attr::Type::PRIVATE     )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK, Attr::Target::VARIABLE } };    
     _attr_rules[_I(Attr::Type::ALWAYS      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
     _attr_rules[_I(Attr::Type::DEPENDECY   )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } };           
-    _attr_rules[_I(Attr::Type::CALLABLE    )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };
     _attr_rules[_I(Attr::Type::MAP         )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };     
-    _attr_rules[_I(Attr::Type::MULTITHREAD )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
+    _attr_rules[_I(Attr::Type::MULTITHREAD )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } };    
     _attr_rules[_I(Attr::Type::MAIN        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };     
     _attr_rules[_I(Attr::Type::INTERPRETER )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK,                        } };        
 }
@@ -154,7 +186,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
     if (attr == Attr::Type::ATTRIBUTE__UNKNOWN)
     {
         ss << "Attribute " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’" << " not recognized";
-        return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+        return SEM_NOK_HINT(ss.str(), Support::FindClosest(_attributes, name));
     }
 
     // ITERATE THE RULE OF THE ATTRIBUTE AND CHECK FOR THE CONGRUENCY
@@ -168,12 +200,12 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         if (props_count == 0)
         {
             ss << "Attribute " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’" << " requires at least one option";
-            return { Semantic_Result::AST_RESULT__INVALID_ATTR_PROP, ss.str() };
+            return SEM_NOK(ss.str());
         }
         else if (props_count != 1 && rule.count == Attr::Count::ONE)
         {
             ss << "Attribute " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’" << " requires one option, not " << props_count;
-            return { Semantic_Result::AST_RESULT__INVALID_ATTR_PROP, ss.str() };
+            return SEM_NOK(ss.str());
         }
     }
     else
@@ -182,7 +214,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         if (props_count > 0)
         {
             ss << "Attribute " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’" << " requires no option";
-            return { Semantic_Result::AST_RESULT__INVALID_ATTR_PROP, ss.str() };
+            return SEM_NOK(ss.str());
         }
     }
 
@@ -195,7 +227,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         if (std::find(profiles.begin(), profiles.end(), property[0]) == profiles.end())
         {
             ss << "Profile " << "‘" << ANSI_BMAGENTA << property[0] << ANSI_RESET << "’" << " must be declared via " << ANSI_BMAGENTA << "‘using profile <profilenames>’" << ANSI_RESET;
-            return { Semantic_Result::AST_RESULT__INVALID_ATTR_PROP, ss.str() };
+            return SEM_NOK_HINT(ss.str(), Support::FindClosest(profiles, property[0]));
         }
     }
     // IF THE ATTRBUTE IS 'MAP'
@@ -207,7 +239,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         if (std::find(keys.begin(), keys.end(), property[0]) == keys.end())
         {
             ss << "Invalid mapping " << "‘" << ANSI_BMAGENTA << property[0] << ANSI_RESET << "’" << ": undeclared variable";
-            return { Semantic_Result::AST_RESULT__INVALID_ATTR_PROP, ss.str() };
+            return SEM_NOK_HINT(ss.str(), Support::FindClosest(keys, name));
         }
     }
     // IF THE ATTRIBUTE IS 'MAIN'
@@ -217,7 +249,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         if (_main_count > 0)
         {
             ss << "Cannot tag multiple tasks with attribute " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’";
-            return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+            return SEM_NOK(ss.str());
         }
 
         _main_count = 1;
@@ -229,10 +261,23 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         if (!Support::file_exists(property[0]))
         {
             ss << "Interpreter " << "‘" << ANSI_BMAGENTA << property[0] << ANSI_RESET << "’ is missing or unknown";
-            return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+            return SEM_NOK(ss.str());
         }
+    }
+    // IF THE ATTRIBUTE IS 'MULTITHREAD'
+    else if (attr == Attr::Type::MULTITHREAD)
+    {
+        auto keys = Table::Keys(_env.vtable);
 
-        _main_count = 1;
+        // CHECK IF THE VARS EXISTS
+        for (const auto& var : property)
+        {
+            if (std::find(keys.begin(), keys.end(), var) == keys.end())
+            {
+                ss << "Invalid multithreading for " << "‘" << ANSI_BMAGENTA << var << ANSI_RESET << "’: unknown variable";
+                return SEM_NOK_HINT(ss.str(), Support::FindClosest(keys, name));
+            }
+        }
     }
 
     // ENQUEUE THE ATTRIBUTE
@@ -263,7 +308,7 @@ SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::st
         if (std::find(rule.targets.begin(), rule.targets.end(), Attr::Target::VARIABLE) == rule.targets.end())
         {
             ss << "Attribute " << "‘" << ANSI_BMAGENTA << attr.name << ANSI_RESET << "’" << " is not valid for variable assignment";
-            return { Semantic_Result::AST_RESULT__INVALID_ATTR_PROP, ss.str() };
+            return SEM_NOK(ss.str());
         }
     }
     
@@ -283,21 +328,11 @@ SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::st
 } 
 
 
-SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& param, const Task::Instrs& instrs)
+SemanticOutput Engine::Collect_Task(const std::string& name, const Task::Instrs& instrs)
 {
     std::stringstream    ss;
-    Support::SplitResult sr;
 
-    // GENERATE PARAMS
-    sr = Support::split_quoted(param);
-
-    if (!sr.ok)
-    {
-        ss << "Invalid argument(s) for task " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’";
-        return { Semantic_Result::AST_RESULT__INVALID_ARGUMENTS, ss.str() };
-    }
-    
-    InstructionTask   task { name, sr.tokens, instrs };
+    InstructionTask   task { name,  instrs };
     FTable&           ftable = _env.ftable;
 
     task.attributes = _attr_pending;
@@ -311,7 +346,7 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& 
         if (std::find(rule.targets.begin(), rule.targets.end(), Attr::Target::TASK) == rule.targets.end())
         {
             ss << "Attribute " << "‘" << ANSI_BMAGENTA << attr.name << ANSI_RESET << "’" << " is not valid for tasks";
-            return { Semantic_Result::AST_RESULT__INVALID_ATTR_PROP, ss.str() };
+            return SEM_NOK(ss.str());
         }
     }
 
@@ -326,64 +361,6 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& 
     {
         ftable[name] = task;
     }
-
-    return SemanticOutput{};
-} 
-
-
-SemanticOutput Engine::Collect_TaskCall(const std::string& name, const std::string& param)
-{
-    std::stringstream    ss;
-    Support::SplitResult sr;
-
-    // GENERATE PARAMS
-    sr = Support::split_quoted(param);
-
-    if (!sr.ok)
-    {
-        ss << "Invalid argument(s) for task call " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’";
-        return { Semantic_Result::AST_RESULT__INVALID_ARGUMENTS, ss.str() };
-    }
-
-    // CHECK IF THE TASK CALL IS TAGGED, NOT ADMITTED
-    if (_attr_pending.size())
-    {
-        ss << "Cannot use attibutes for task call: " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’";
-        return { Semantic_Result::AST_RESULT__ATTR_NOT_ALLOWED, ss.str() };
-    }
-    
-    // CHECK IF THE TASK CALL CAN BE PERFORMED: TASK PRESENCE
-    const auto& task = _env.ftable.find(name);
-
-    if (task == _env.ftable.end())
-    {
-        ss << "Cannot call non-existent task: " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’";
-        return { Semantic_Result::AST_RESULT__INVALID_TASK_CALL, ss.str() };
-    }
-
-    // CHECK IF THE OBTAINED TASK IS MARKER 'CALLABLE'
-    const auto& attributes = (*task).second.attributes;
-
-    if (std::find(attributes.begin(), attributes.end(), Attr::Type::CALLABLE) == attributes.end())
-    {
-        ss << "Cannot call task marked: " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’ without the attribute" << ANSI_BMAGENTA << " @callable" << ANSI_RESET;
-        return { Semantic_Result::AST_RESULT__INVALID_TASK_CALL, ss.str() };
-    }
-
-    // CHECK FOR THE PARAM CONGRUENCY
-    const auto expected_count = (*task).second.task_params.size();
-    const auto computed_count = sr.tokens.size();
-
-    if (expected_count != computed_count)
-    {
-        ss << "Cannot call task " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’" << " with a different argument count" << std::endl;
-        ss << "        Expected: " << expected_count << ", found: " << computed_count;
-        return { Semantic_Result::AST_RESULT__INVALID_ARGUMENTS, ss.str() };
-    }
-    
-    InstructionCall call { name, sr.tokens };
-
-    _env.ctable[name] = call;
 
     return SemanticOutput{};
 } 
@@ -404,7 +381,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
     else
     {
         ss << "Unknown " << "‘" << ANSI_BMAGENTA << what << ANSI_RESET << "’ for statement " << ANSI_BMAGENTA << "using" << ANSI_RESET ;
-        return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+        return SEM_NOK_HINT(ss.str(), Support::FindClosest(_usings, what));
     }
 
     // IF 'ORDER' IS SELECTED
@@ -425,7 +402,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
             }
 
             ss << "Statement " << "‘" << ANSI_BMAGENTA << "using " << what << ANSI_RESET << "’ must be followed by " << ss1.str();
-            return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+            return SEM_NOK(ss.str());
         }
 
         // CHECK IF PROPERTY[0] (ATTRIBUTE) IS KNOWN
@@ -434,7 +411,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
         if (attr == rule.valid_attr.end())
         {
             ss << "Unknown attribute " << "‘" << ANSI_BMAGENTA << options[0] << ANSI_RESET << "’ for statement " << ANSI_BMAGENTA << "using " << what << ANSI_RESET ;
-            return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+            return SEM_NOK_HINT(ss.str(), Support::FindClosest(rule.valid_attr, options[0]));
         }
 
         // GET THE ATTRIBUTE
@@ -447,14 +424,14 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
             if (options.size() == 1)
             {
                 ss << "Statement " << "‘" << ANSI_BMAGENTA << "using default " << options[0] << ANSI_RESET << "’ must be followed by interpeter path";
-                return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+                return SEM_NOK(ss.str());
             }
 
             // CHECK IF THE INTERPRETER EXISTS
             if (!Support::file_exists(options[1]))
             {
                 ss << "Interpreter " << "‘" << ANSI_BMAGENTA << options[1] << ANSI_RESET << "’ is missing or unknown";
-                return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+                return SEM_NOK(ss.str());
             }
 
             _env.default_interpreter = options[1];
@@ -467,7 +444,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
             if (options.size() == 1)
             {
                 ss << "Statement " << "‘" << ANSI_BMAGENTA << "using order " << options[0] << ANSI_RESET << "’ must be followed by tasks name";
-                return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+                return SEM_NOK(ss.str());
             }
     
             // GET THE TASKS AND CHECK FOR ERRORS
@@ -480,7 +457,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
                 else
                 {
                     ss << "Duplicate item in statement " << "‘" << ANSI_BMAGENTA << "using order" << ANSI_RESET << "’: ‘" << ANSI_BMAGENTA << options[iter] << ANSI_RESET <<"’" << ANSI_RESET ;
-                    return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+                    return SEM_NOK(ss.str());
                 }
             }
         }
@@ -493,7 +470,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
         if (options.size() == 0)
         {
             ss << "Statement " << "‘" << ANSI_BMAGENTA << "using profiles" << ANSI_RESET << "’ must be followed by profiles name";
-            return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+            return SEM_NOK(ss.str());
         }
 
         // COLLECT THEM AND CHECK FOR ERRORS
@@ -506,7 +483,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
             else
             {
                 ss << "Duplicate item in statement " << "‘" << ANSI_BMAGENTA << "using profiles" << ANSI_RESET << "’: ‘" << ANSI_BMAGENTA << options[iter] << ANSI_RESET <<"’" << ANSI_RESET ;
-                return { Semantic_Result::AST_RESULT__INVALID_ATTR, ss.str() };
+                return SEM_NOK(ss.str());
             }
         }
     }
@@ -544,6 +521,20 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
             ERR("Requested task " << ANSI_BMAGENTA << args.task.value << ANSI_RESET << " does not have " << ANSI_BMAGENTA << "public" << ANSI_RESET << " attribute");
             return Arcana_Result::ARCANA_RESULT__INVALID_ARGS;
         }
+        
+        // TOOGLE ATTRIBUTE 'MAIN' IF TASK IS SPECIFIED
+        auto old_main_task = Table::GetValue(ftable, Attr::Type::MAIN);
+        
+        if (old_main_task)
+        {
+            old_main_task.value().get().removeAttribute(Attr::Type::MAIN);
+        }
+
+        task.value().get().attributes.push_back({
+            "main",
+            Attr::Type::MAIN, 
+            {}
+        });
     }
 
     // IF A PROFILE IS PASSED VIA CLI
@@ -599,15 +590,19 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
     // FOR EACH TASK 
     for (auto& ref : tasks)
     {
+#warning Add the error for @dependecy for recursive dep 
         auto& task = ref.get();
         auto props = task.getProperties(Attr::Type::DEPENDECY);
 
         // CHECK IF THE DEPENDECY IS CONGRUENT, OTHERWISE RAISE AN ERROR
-        for (auto& p : props->get())
+        for (auto& p : props)
         {
             if (ftable.find(p) == ftable.end())
             {
-                ss << "Invalid dependecy ‘" << ANSI_BMAGENTA << p << ANSI_RESET << "’ for task " << ANSI_BMAGENTA << task.task_name << ANSI_RESET;
+                auto closest = Support::FindClosest(Table::Keys(ftable), p);
+
+                ss << "Invalid dependecy ‘" << ANSI_BMAGENTA << p << ANSI_RESET << "’ for task " << ANSI_BMAGENTA << task.task_name << ANSI_RESET << std::endl;
+                if (closest) ss << "[" << ANSI_BGREEN << "HINT" << ANSI_RESET << "]  Did you mean " << ANSI_BCYAN << closest.value() << ANSI_RESET << "?";
                 return ss.str();
             }
 
@@ -619,6 +614,7 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
     // ALIGN THE PRECOMPILER AND POSTCOMPLER TASKS
     for (uint32_t iter = 0; iter < orders.size(); ++iter)
     {
+#warning Add the support for @always tasks
         if (orders[iter].get().size() > 0)
         {
             // FOR EACH MARKED TASK
@@ -646,11 +642,46 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
         }
     }
 
-
-    // CHECK FOR DEFAULT INTERPRETER
+    // CHECK FOR INTERPRETERS
     if (default_interpreter.empty())
     {
         default_interpreter = "/bin/bash";
+    }
+
+    for (auto& [_, task] : ftable)
+    {
+        if (task.hasAttribute(Attr::Type::INTERPRETER))
+        {
+            task.interpreter = task.getProperties(Attr::Type::INTERPRETER).at(0);
+        }
+        else
+        {
+            task.interpreter = default_interpreter;
+        }
+    }
+
+    for (auto& task : pretask)
+    {
+        if (task.hasAttribute(Attr::Type::INTERPRETER))
+        {
+            task.interpreter = task.getProperties(Attr::Type::INTERPRETER).at(0);
+        }
+        else
+        {
+            task.interpreter = default_interpreter;
+        }
+    }
+
+    for (auto& task : posttask)
+    {
+        if (task.hasAttribute(Attr::Type::INTERPRETER))
+        {
+            task.interpreter = task.getProperties(Attr::Type::INTERPRETER).at(0);
+        }
+        else
+        {
+            task.interpreter = default_interpreter;
+        }
     }
 
     return std::nullopt;
@@ -659,6 +690,8 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
 
 void Enviroment::Expand() noexcept
 {
+#warning Handle the @map expansion 
+
     // LAMBDA USED TO EXPAND A STATEMENT
     auto expand_one = [this](std::string& stmt, std::vector<std::string>& vars) noexcept
     {
@@ -667,11 +700,11 @@ void Enviroment::Expand() noexcept
 
         for (const auto& var : vars)
         {
-            std::regex re("(^|\\{)" + var + "($|\\})");
+            std::regex re("(^|\\{arc:)" + var + "($|\\})");
             for (std::sregex_iterator it(stmt.begin(), stmt.end(), re); it != std::sregex_iterator(); ++it)
             {   
                 std::size_t start = it->position();
-                matches.push_back({var, start, start + var.size() + 2});
+                matches.push_back({var, start, start + var.size() + 6});
             }
         }
 
@@ -726,15 +759,6 @@ void Enviroment::Expand() noexcept
         for (auto& instr : task.task_instrs) 
         {
             expand_one(instr, var_keys);
-        }
-    }
-
-    // ITERATE THE CTABLE AND TRY TO EXPAND
-    for (auto& [name, call] : ctable)
-    {
-        for (auto& p : call.task_params) 
-        {
-            expand_one(p, var_keys);
         }
     }
 

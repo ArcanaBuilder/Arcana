@@ -67,7 +67,6 @@ enum class Rule : uint32_t
     EMPTY_LINE            ,
     ATTRIBUTE             ,
     TASK_DECL             ,
-    TASK_CALL             ,
     IMPORT                ,
     USING                 ,
 };
@@ -103,7 +102,6 @@ enum class TASK_DECL : uint32_t
     RESERVED           = 0,
     TASKNAME              ,
     ROUNDLP               ,
-    PARAMS                ,
     ROUNDRP               ,
     NEWLINE               ,
     CURLYLP               ,
@@ -111,18 +109,6 @@ enum class TASK_DECL : uint32_t
     CURLYRP               ,
     GRAMMAR_END           ,
 };
-
-
-enum class TASK_CALL : uint32_t 
-{
-    TASKNAME           = 0, 
-    ROUNDLP               , 
-    PARAMS                , 
-    ROUNDRP               , 
-    SEMICOLON             , 
-    GRAMMAR_END           ,
-};
-
 
 enum class IMPORT : uint32_t 
 {

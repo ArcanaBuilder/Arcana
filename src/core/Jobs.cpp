@@ -5,44 +5,105 @@ USE_MODULE(Arcana::Jobs);
 
 
 Job::Job() 
+    :
+    name(""),
+    parallelizable(false)
 {}
 
 
-Job Job::FromInstruction(Semantic::Enviroment& environment, const Semantic::Instruction& instruction) noexcept
+GeneratedJobs Job::FromInstruction(const Semantic::InstructionTask& task) noexcept
 {
-    Job new_job {};
-
-    if (auto task = dynamic_cast<const Semantic::InstructionTask*>(&instruction); task)
+    auto get_job = [] (const Semantic::InstructionTask& task) noexcept -> GeneratedJobs
     {
-        new_job.name         = task->task_name;
-        new_job.interpreter  = environment.GetInterpreter();
-        new_job.parameters   = task->task_params;
-        new_job.instructions = task->task_instrs;
-        
-        if (task->hasAttribute(Semantic::Attr::Type::INTERPRETER))
+        Job new_job {};
+
+        new_job.name         = task.task_name;
+        new_job.interpreter  = task.interpreter;
+        new_job.instructions = task.task_instrs;
+
+        if (!new_job.instructions.size())
         {
-            new_job.interpreter = task->getProperties(Semantic::Attr::Type::INTERPRETER).value().get()[0];
+            return std::nullopt;
         }
-    }
-    else if (auto call = dynamic_cast<const Semantic::InstructionCall*>(&instruction); call)
-    {
-        DBG("CALL");
-    }
 
-    return new_job;
+        return new_job;
+    };
+
+    return std::nullopt;
 }
 
 
 
-JobList Jobs::FromEnv(Semantic::Enviroment& environment) noexcept
+
+
+
+List::List()
+{}
+
+
+void List::Insert(Job& j)
 {
-    JobList jobs {};
+    auto [it, inserted] = index.insert(j.name);
+    if (inserted)
+    {
+        data.push_back(j);
+    }
+}
+
+
+void List::Insert(std::vector<Job>& vj)
+{
+    for (const auto& j : vj)
+    {
+        Insert(j);
+    }
+}
+
+
+void List::Insert(GeneratedJobs gj)
+{
+    if (!gj)
+    {
+        return;
+    }
+
+    std::visit
+    (
+        [&] (auto&& value) { Insert(value); }, 
+        *gj
+    );
+}
+
+
+List List::FromEnv(Semantic::Enviroment& environment) noexcept
+{
+    List jobs{};
+
+    for (const auto& pre_task : environment.pretask)
+    {
+        jobs.Insert(Job::FromInstruction(pre_task));
+    }
 
     auto main_task = Table::GetValue(environment.ftable, Semantic::Attr::Type::MAIN);
 
     if (main_task)
     {
-        jobs.push_back(Job::FromInstruction(environment, main_task.value()));
+        jobs.Insert(Job::FromInstruction(main_task.value()));
+    }
+
+    auto always = Table::GetValues(environment.ftable, Semantic::Attr::Type::ALWAYS);
+
+    if (always)
+    {
+        for (const auto& task : always.value())
+        {
+            jobs.Insert(Job::FromInstruction(task));
+        }
+    }
+
+    for (const auto& post_task : environment.posttask)
+    {
+        jobs.Insert(Job::FromInstruction(post_task));
     }
 
     return jobs;
