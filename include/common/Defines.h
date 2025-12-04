@@ -110,15 +110,11 @@
 
 #include <iostream>
 
-#ifdef DEBUG
-  #define DBG(msg)                              std::cout << "[" << ANSI_BYELLOW << ANSI_DIM << "DEBUG" << ANSI_RESET "] " << ANSI_GRAY << msg << ANSI_RESET << std::endl
-#else
-  #define DBG(msg)
-#endif
 
-#define MSG(msg)                                std::cout << msg << std::endl
-#define ERR(msg)                                std::cerr << "[" << ANSI_BRED << "ERROR" << ANSI_RESET << "] " << msg << std::endl
-#define HINT(msg)                               std::cout << "[" << ANSI_BGREEN << "HINT" << ANSI_RESET << "]  " << msg << std::endl
+#define DBG(msg)                              std::cout << "[" << ANSI_BYELLOW << ANSI_DIM << "DEBUG" << ANSI_RESET "] " << ANSI_GRAY << msg << ANSI_RESET << std::endl
+#define MSG(msg)                              std::cout << msg << std::endl
+#define ERR(msg)                              std::cerr << "[" << ANSI_BRED << "ERROR" << ANSI_RESET << "] " << msg << std::endl
+#define HINT(msg)                             std::cout << "[" << ANSI_BGREEN << "HINT" << ANSI_RESET << "]  " << msg << std::endl
 
 
 

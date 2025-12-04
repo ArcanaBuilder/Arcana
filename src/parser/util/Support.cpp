@@ -152,8 +152,14 @@ std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char*
             }
             else
             {
-                return "Missing value for option -s";
+                return "Missing value for option -p";
             }
+        }
+        else if (arg == "--debug-jobs")
+        {
+            args.debug_jobs = true;
+            ++i;
+            continue;
         }
         else if (!args.task.found)
         {

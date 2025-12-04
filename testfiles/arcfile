@@ -17,7 +17,7 @@ task Clean()
 
 @public
 @always
-@dependecy Build Clean
+@dependecy Clean Build
 task Install()
 {
     cp {arc:TARGET} /usr/bin/  
@@ -33,16 +33,16 @@ task Build() {}
 
 @public
 @main
-@multithreading SOURCES OBJECTS
+@multithreading
 task Compile()
 {
-    {arc:COMPILER} {arc:FLAGS} {arc:1} -c {arc:2}
+    {arc:COMPILER} {arc:FLAGS} {arc:list:SOURCES} -c {arc:list:OBJECTS}
 }
 
 
 task Link()
 {
-    {arc:COMPILER} {arc:FLAGS} {arc:OBJECTS} -o {arc:TARGET}
+    {arc:COMPILER} {arc:FLAGS} {arc:inline:OBJECTS} -o {arc:TARGET}
 }
 
 
@@ -56,7 +56,7 @@ using order precompiler Message MakeFolders;
 @precompiler
 task MakeFolders() 
 {
-    cd SRCDIR
+    cd {arc:SRCDIR}
     find . -type d -exec mkdir -p "../{arc:BUILDDIR}"/{} \;
 }
 

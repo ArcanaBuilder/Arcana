@@ -10,6 +10,7 @@
 #include <vector>
 #include <variant>
 #include <algorithm>
+#include <filesystem>
 
 #include "Defines.h"
 #include "Grammar.h"
@@ -310,6 +311,7 @@ using CRef = std::reference_wrapper<const T>;
 using VTable      = std::map<std::string, InstructionAssign>; 
 using FTable      = std::map<std::string, InstructionTask>; 
 using CTable      = std::map<std::string, InstructionCall>; 
+using VList       = std::vector<InstructionAssign>;
 using FList       = std::vector<InstructionTask>;
 using FListCRef   = std::vector<CRef<InstructionTask>>;
 using Order       = std::vector<std::string>;
@@ -351,6 +353,8 @@ struct InstructionAssign
     std::string var_value;
     Attr::List  attributes;
 
+    std::vector<std::string> glob_expansion;
+
     InstructionAssign() = default;
 
     InstructionAssign(const std::string& var, const std::string& val)
@@ -368,14 +372,14 @@ struct InstructionAssign
         return (std::find(attributes.begin(), attributes.end(), attr) != attributes.end());
     }
 
-    std::optional<std::reference_wrapper<const Attr::Properties>>
+    const Attr::Properties
     getProperties(const Attr::Type attr) const
     {
         for (const auto& a : attributes)
             if (a.type == attr)
-                return std::cref(a.props);
+                return a.props;
 
-        return std::nullopt;
+        return {};
     }
 };
 
@@ -451,18 +455,18 @@ struct Enviroment
     friend inline void EnvMerge(Enviroment& dst, Enviroment& src);
 
 public:
+    VTable   vtable;
     FTable   ftable;
     FList    pretask;
     FList    posttask;
 
     const std::optional<std::string> AlignEnviroment() noexcept;
           Arcana_Result              CheckArgs(const Arcana::Support::Arguments& args) noexcept;
-          void                       Expand() noexcept;
+    const std::optional<std::string> Expand() noexcept;
     
     Interpreter                      GetInterpreter() noexcept { return default_interpreter; }
     
 private:
-    VTable      vtable;
     Profile     profile;
     Order       preorder;
     Order       postorder;

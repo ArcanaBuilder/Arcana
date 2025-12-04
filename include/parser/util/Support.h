@@ -104,11 +104,14 @@ struct Arguments
     task,
     profile;
 
+    bool debug_jobs;
+
     Arguments() 
         : 
         arcfile("arcfile"),
         task{"", false},
-        profile{"", false}
+        profile{"", false},
+        debug_jobs(false)
     {}
 };
 

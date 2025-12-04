@@ -13,6 +13,9 @@
 #include <iostream>
 
 
+#include "Debug.h"
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // USING
 ///////////////////////////////////////////////////////////////////////////////
@@ -81,6 +84,7 @@ static Arcana_Result run(const Support::Arguments& args)
     Grammar::Engine      engine;
     Parsing::Parser      parser(lexer, engine);
     Semantic::Enviroment env;
+    Jobs::List           joblist;
 
     parser.Set_ParsingError_Handler    (Support::ParserError   {lexer} );
     parser.Set_AnalisysError_Handler   (Support::SemanticError {lexer} );
@@ -108,9 +112,27 @@ static Arcana_Result run(const Support::Arguments& args)
         return Arcana_Result::ARCANA_RESULT__INVALID_ARGS;
     }
     
-    env.Expand();
+    auto expand_result = env.Expand();
 
-    Jobs::List joblist = Jobs::List::FromEnv(env);
+    if (expand_result)
+    {
+        ERR(expand_result.value());
+        return Arcana_Result::ARCANA_RESULT__INVALID_ARGS;
+    }
+
+    const auto& jobs_result = Jobs::List::FromEnv(env, joblist);
+
+    if (!jobs_result.ok)
+    {
+        ERR(jobs_result.msg);
+        return Arcana_Result::ARCANA_RESULT__INVALID_ARGS;
+    }
+
+    if (args.debug_jobs)
+    {
+        Debug::DebugJobsList(joblist);
+        return ARCANA_RESULT__OK;
+    }
 
     return result;
 }

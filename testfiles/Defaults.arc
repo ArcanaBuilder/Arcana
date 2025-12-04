@@ -10,9 +10,9 @@ FLAGS    = -std=c++17 -Os -Wall -Wextra -DRELEASE
 
 TARGET   = arcana
 
-SOURCES  = {SRCDIR}/**.c
+SOURCES  = {arc:SRCDIR}/**.cpp
 
-@map SOURCES; OBJECTS = {BUILDDIR}/**.o
+@map SOURCES; OBJECTS = {arc:BUILDDIR}/**.o
 
 BUILDDIR = build
 SRCDIR   = src

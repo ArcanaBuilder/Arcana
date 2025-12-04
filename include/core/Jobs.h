@@ -44,18 +44,6 @@ class List;
 
 
 
-//         ██  ██████  ██████  ███████     ██    ██ ███████ ██ ███    ██  ██████  ███████ 
-//         ██ ██    ██ ██   ██ ██          ██    ██ ██      ██ ████   ██ ██       ██      
-//         ██ ██    ██ ██████  ███████     ██    ██ ███████ ██ ██ ██  ██ ██   ███ ███████ 
-//    ██   ██ ██    ██ ██   ██      ██     ██    ██      ██ ██ ██  ██ ██ ██    ██      ██ 
-//     █████   ██████  ██████  ███████      ██████  ███████ ██ ██   ████  ██████  ███████ 
-//                                                                                        
-//                                                                                        
-
-
-using GeneratedJobs = std::optional<std::variant<Job, std::vector<Job>>>;
-
-
 
 
 //         ██  ██████  ██████  ███████     ██████  ██    ██ ██████  ██      ██  ██████    
@@ -74,17 +62,18 @@ using GeneratedJobs = std::optional<std::variant<Job, std::vector<Job>>>;
 //                                                                                        
 
 
-class Job
+struct ExpansionError
 {
-    friend class List;
+    bool        ok;
+    std::string msg;
+    std::string hint;
 
-public:
-    Job(const Job&) = default;
+    ExpansionError() : ok(false) {}
+};
 
-private:
-    Job();
-    static GeneratedJobs FromInstruction(const Semantic::InstructionTask& task) noexcept;
-    
+
+struct Job
+{
     std::string            name;
     Semantic::Task::Instrs instructions;
     Semantic::Interpreter  interpreter;
@@ -95,39 +84,20 @@ private:
 class List
 {
 public:
+    List()            = default;
     List(const List&) = default;
 
-    static List              FromEnv(Semantic::Enviroment& environment) noexcept;
+    static ExpansionError    FromEnv(Semantic::Enviroment& environment, List& out) noexcept;
     const  std::vector<Job>& All() const noexcept { return data; }
 
 private:
-    List();
-    void Insert(Job&               j);
+    void Insert(const std::optional<Job>& j);
     void Insert(std::vector<Job>& vj);
-    void Insert(GeneratedJobs     gj);
     
     std::unordered_set<std::string> index;
     std::vector<Job>                data;
 };
-
-
-
-
-
-//         ██  ██████  ██████  ███████     ██████  ██    ██ ██████  ██      ██  ██████ 
-//         ██ ██    ██ ██   ██ ██          ██   ██ ██    ██ ██   ██ ██      ██ ██      
-//         ██ ██    ██ ██████  ███████     ██████  ██    ██ ██████  ██      ██ ██      
-//    ██   ██ ██    ██ ██   ██      ██     ██      ██    ██ ██   ██ ██      ██ ██      
-//     █████   ██████  ██████  ███████     ██       ██████  ██████  ███████ ██  ██████ 
-//                                                                                     
-//                                                                                     
-//    ███████ ██    ██ ███    ██  ██████ ████████ ██  ██████  ███    ██ ███████        
-//    ██      ██    ██ ████   ██ ██         ██    ██ ██    ██ ████   ██ ██             
-//    █████   ██    ██ ██ ██  ██ ██         ██    ██ ██    ██ ██ ██  ██ ███████        
-//    ██      ██    ██ ██  ██ ██ ██         ██    ██ ██    ██ ██  ██ ██      ██        
-//    ██       ██████  ██   ████  ██████    ██    ██  ██████  ██   ████ ███████        
-//                                                                                     
-//                                                                                     
+                                                                                   
 
 
 END_MODULE(Jobs)

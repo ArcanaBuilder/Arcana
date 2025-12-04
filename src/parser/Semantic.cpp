@@ -164,7 +164,7 @@ Engine::Engine()
     _attr_rules[_I(Attr::Type::ALWAYS      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
     _attr_rules[_I(Attr::Type::DEPENDECY   )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } };           
     _attr_rules[_I(Attr::Type::MAP         )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };     
-    _attr_rules[_I(Attr::Type::MULTITHREAD )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } };    
+    _attr_rules[_I(Attr::Type::MULTITHREAD )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
     _attr_rules[_I(Attr::Type::MAIN        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };     
     _attr_rules[_I(Attr::Type::INTERPRETER )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK,                        } };        
 }
@@ -264,21 +264,6 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
             return SEM_NOK(ss.str());
         }
     }
-    // IF THE ATTRIBUTE IS 'MULTITHREAD'
-    else if (attr == Attr::Type::MULTITHREAD)
-    {
-        auto keys = Table::Keys(_env.vtable);
-
-        // CHECK IF THE VARS EXISTS
-        for (const auto& var : property)
-        {
-            if (std::find(keys.begin(), keys.end(), var) == keys.end())
-            {
-                ss << "Invalid multithreading for " << "‘" << ANSI_BMAGENTA << var << ANSI_RESET << "’: unknown variable";
-                return SEM_NOK_HINT(ss.str(), Support::FindClosest(keys, name));
-            }
-        }
-    }
 
     // ENQUEUE THE ATTRIBUTE
     _attr_pending.push_back({ 
@@ -349,6 +334,19 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const Task::Instrs&
             return SEM_NOK(ss.str());
         }
     }
+
+    if (task.hasAttribute(Attr::Type::DEPENDECY))
+    {
+        auto& properties = task.getProperties(Attr::Type::DEPENDECY);
+
+        if (std::find(properties.begin(), properties.end(), name) != properties.end())
+        {
+            ss << "Attribute " << ANSI_BMAGENTA << "@dependency" << ANSI_RESET << " with property " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’ cannot be auto referencing";
+            return SEM_NOK(ss.str());
+        }
+
+    }
+
 
     // GENERATE A MANGLING IF THE ASSIGNMENT IS TAGGED WITH THE ATTRIBUTE PROFILE
     const auto& attr = std::find(task.attributes.begin(), task.attributes.end(), Attr::Type::PROFILE);
@@ -536,6 +534,16 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
             {}
         });
     }
+    else
+    {
+        auto main_task = Table::GetValues(ftable, profile.profiles, Attr::Type::MAIN);
+
+        if (!main_task.size())
+        {
+            ERR("No main task specified, make it explicit in the arcfile with the @main attribute or pass a task on the command line");
+            return Arcana_Result::ARCANA_RESULT__INVALID_ARGS;
+        }
+    }
 
     // IF A PROFILE IS PASSED VIA CLI
     if (args.profile.found)
@@ -590,20 +598,36 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
     // FOR EACH TASK 
     for (auto& ref : tasks)
     {
-#warning Add the error for @dependecy for recursive dep 
         auto& task = ref.get();
         auto props = task.getProperties(Attr::Type::DEPENDECY);
 
         // CHECK IF THE DEPENDECY IS CONGRUENT, OTHERWISE RAISE AN ERROR
         for (auto& p : props)
         {
-            if (ftable.find(p) == ftable.end())
+            auto it = ftable.find(p);
+
+            if (it == ftable.end())
             {
                 auto closest = Support::FindClosest(Table::Keys(ftable), p);
 
                 ss << "Invalid dependecy ‘" << ANSI_BMAGENTA << p << ANSI_RESET << "’ for task " << ANSI_BMAGENTA << task.task_name << ANSI_RESET << std::endl;
                 if (closest) ss << "[" << ANSI_BGREEN << "HINT" << ANSI_RESET << "]  Did you mean " << ANSI_BCYAN << closest.value() << ANSI_RESET << "?";
                 return ss.str();
+            }
+            else
+            {   
+                auto& ref_task = ftable[it->first];
+
+                if (ref_task.hasAttribute(Attr::Type::DEPENDECY))
+                {
+                    auto& ref_task_props = ref_task.getProperties(Attr::Type::DEPENDECY);
+
+                    if (std::find(ref_task_props.begin(), ref_task_props.end(), task.task_name) != ref_task_props.end())
+                    {
+                        ss << "Detected recursive dependecy for tasks " << ANSI_BMAGENTA << ref_task.task_name << ANSI_RESET << " and " << ANSI_BMAGENTA << task.task_name << ANSI_RESET;
+                        return ss.str();
+                    }
+                }
             }
 
             // ENQUEUE THE DEPENDECY IN ORDER
@@ -614,7 +638,6 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
     // ALIGN THE PRECOMPILER AND POSTCOMPLER TASKS
     for (uint32_t iter = 0; iter < orders.size(); ++iter)
     {
-#warning Add the support for @always tasks
         if (orders[iter].get().size() > 0)
         {
             // FOR EACH MARKED TASK
@@ -632,6 +655,16 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
                 {
                     ss << "Task ‘" << ANSI_BMAGENTA << task << ANSI_RESET << "’ is not marked with attribute " << ANSI_BMAGENTA << arepr[iter] << ANSI_RESET << " or does not exists";
                     return ss.str();
+                }
+            }
+
+            auto result = Table::TakeValues(ftable, profile.profiles, atype[iter]);
+
+            for (const auto& task : result)
+            {
+                if (task.hasAttribute(Attr::Type::ALWAYS))
+                {
+                    flist[iter].get().push_back(task);
                 }
             }
         }
@@ -688,10 +721,8 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
 }
 
 
-void Enviroment::Expand() noexcept
+const std::optional<std::string> Enviroment::Expand() noexcept
 {
-#warning Handle the @map expansion 
-
     // LAMBDA USED TO EXPAND A STATEMENT
     auto expand_one = [this](std::string& stmt, std::vector<std::string>& vars) noexcept
     {
@@ -700,7 +731,7 @@ void Enviroment::Expand() noexcept
 
         for (const auto& var : vars)
         {
-            std::regex re("(^|\\{arc:)" + var + "($|\\})");
+            std::regex re("(\\{arc:)" + var + "(\\})");
             for (std::sregex_iterator it(stmt.begin(), stmt.end(), re); it != std::sregex_iterator(); ++it)
             {   
                 std::size_t start = it->position();
@@ -740,7 +771,7 @@ void Enviroment::Expand() noexcept
     // FOR EACH KEY IN VTABLE
     auto var_keys = Table::Keys(vtable);
     
-    if (var_keys.empty()) return;
+    if (var_keys.empty()) return std::nullopt;
 
     // SORT BY VARIABLE NAME LENGTH
     std::sort(var_keys.begin(), var_keys.end(), [] (const std::string& a, const std::string& b) {
@@ -779,4 +810,18 @@ void Enviroment::Expand() noexcept
             expand_one(instr, var_keys);
         }
     }
+
+    // HANDLE GLOB EXPANSION
+    if (auto res = Table::ExpandGlob(vtable); !res.empty())
+    {
+        return res;
+    }
+
+    // HANDLE MAPPED VARS EXPANSION
+    if (auto res = Table::Map(vtable); !res.empty())
+    {
+        return res;
+    }
+
+    return std::nullopt;
 }
