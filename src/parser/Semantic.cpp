@@ -5,6 +5,8 @@
 
 #include <regex>
 #include <memory>
+#include <thread>
+#include <charconv>
 #include <algorithm>
 #include <unordered_map>
 
@@ -13,20 +15,13 @@ USE_MODULE(Arcana::Semantic);
 
 
 
-//    ███████ ███████ ███    ███  █████  ███    ██ ████████ ██  ██████     ██████  ██████  ██ ██    ██  █████  ████████ ███████     
-//    ██      ██      ████  ████ ██   ██ ████   ██    ██    ██ ██          ██   ██ ██   ██ ██ ██    ██ ██   ██    ██    ██          
-//    ███████ █████   ██ ████ ██ ███████ ██ ██  ██    ██    ██ ██          ██████  ██████  ██ ██    ██ ███████    ██    █████       
-//         ██ ██      ██  ██  ██ ██   ██ ██  ██ ██    ██    ██ ██          ██      ██   ██ ██  ██  ██  ██   ██    ██    ██          
-//    ███████ ███████ ██      ██ ██   ██ ██   ████    ██    ██  ██████     ██      ██   ██ ██   ████   ██   ██    ██    ███████     
-//                                                                                                                                  
-//                                                                                                                                  
-//    ████████ ██    ██ ██████  ███████ ███████                                                                                     
-//       ██     ██  ██  ██   ██ ██      ██                                                                                          
-//       ██      ████   ██████  █████   ███████                                                                                     
-//       ██       ██    ██      ██           ██                                                                                     
-//       ██       ██    ██      ███████ ███████                                                                                     
-//                                                                                                                                  
-//                                                                                                                                  
+//    ███████╗████████╗██████╗ ██╗   ██╗ ██████╗████████╗███████╗
+//    ██╔════╝╚══██╔══╝██╔══██╗██║   ██║██╔════╝╚══██╔══╝██╔════╝
+//    ███████╗   ██║   ██████╔╝██║   ██║██║        ██║   ███████╗
+//    ╚════██║   ██║   ██╔══██╗██║   ██║██║        ██║   ╚════██║
+//    ███████║   ██║   ██║  ██║╚██████╔╝╚██████╗   ██║   ███████║
+//    ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝  ╚═════╝   ╚═╝   ╚══════╝
+//                                                                                                                                                                                                
                                                                                                       
 
 struct ExpandMatch
@@ -42,20 +37,14 @@ struct ExpandMatch
 
 
 
-//    ███████ ███████ ███    ███  █████  ███    ██ ████████ ██  ██████     ██████  ██████  ██ ██    ██  █████  ████████ ███████     
-//    ██      ██      ████  ████ ██   ██ ████   ██    ██    ██ ██          ██   ██ ██   ██ ██ ██    ██ ██   ██    ██    ██          
-//    ███████ █████   ██ ████ ██ ███████ ██ ██  ██    ██    ██ ██          ██████  ██████  ██ ██    ██ ███████    ██    █████       
-//         ██ ██      ██  ██  ██ ██   ██ ██  ██ ██    ██    ██ ██          ██      ██   ██ ██  ██  ██  ██   ██    ██    ██          
-//    ███████ ███████ ██      ██ ██   ██ ██   ████    ██    ██  ██████     ██      ██   ██ ██   ████   ██   ██    ██    ███████     
-//                                                                                                                                  
-//                                                                                                                                  
-//    ██    ██ ███████ ██ ███    ██  ██████  ███████                                                                                
-//    ██    ██ ██      ██ ████   ██ ██       ██                                                                                     
-//    ██    ██ ███████ ██ ██ ██  ██ ██   ███ ███████                                                                                
-//    ██    ██      ██ ██ ██  ██ ██ ██    ██      ██                                                                                
-//     ██████  ███████ ██ ██   ████  ██████  ███████                                                                                
-//                                                                                                                                  
-//                                                                                                                                  
+//    ██╗   ██╗███████╗██╗███╗   ██╗ ██████╗ ███████╗
+//    ██║   ██║██╔════╝██║████╗  ██║██╔════╝ ██╔════╝
+//    ██║   ██║███████╗██║██╔██╗ ██║██║  ███╗███████╗
+//    ██║   ██║╚════██║██║██║╚██╗██║██║   ██║╚════██║
+//    ╚██████╔╝███████║██║██║ ╚████║╚██████╔╝███████║
+//     ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
+//                                                   
+
 
 template < typename T >
 using AbstractKeywordMap = std::unordered_map<
@@ -72,13 +61,14 @@ using UsingMap       = AbstractKeywordMap<Using::Rule>;
 
 
 
-//    ███████ ███████ ███    ███  █████  ███    ██ ████████ ██  ██████     ██████  ██    ██ ██      ███████ ███████ 
-//    ██      ██      ████  ████ ██   ██ ████   ██    ██    ██ ██          ██   ██ ██    ██ ██      ██      ██      
-//    ███████ █████   ██ ████ ██ ███████ ██ ██  ██    ██    ██ ██          ██████  ██    ██ ██      █████   ███████ 
-//         ██ ██      ██  ██  ██ ██   ██ ██  ██ ██    ██    ██ ██          ██   ██ ██    ██ ██      ██           ██ 
-//    ███████ ███████ ██      ██ ██   ██ ██   ████    ██    ██  ██████     ██   ██  ██████  ███████ ███████ ███████ 
-//                                                                                                                  
-//                                                                                                                  
+//    ██████╗ ██╗   ██╗██╗     ███████╗███████╗
+//    ██╔══██╗██║   ██║██║     ██╔════╝██╔════╝
+//    ██████╔╝██║   ██║██║     █████╗  ███████╗
+//    ██╔══██╗██║   ██║██║     ██╔══╝  ╚════██║
+//    ██║  ██║╚██████╔╝███████╗███████╗███████║
+//    ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝╚══════╝
+//                                                                                                                                                            
+
 
 static const AttributeMap Known_Attributes = 
 {         
@@ -94,11 +84,14 @@ static const AttributeMap Known_Attributes =
 };
 
 
+
 static const UsingMap Known_Usings = 
 {        
-    { "profiles"       , { {                               },  Using::Type::PROFILES    } },   
-    { "default"        , { { "interpreter"                 },  Using::Type::INTERPRETER } },   
+    { "profiles"       , { {               },  Using::Type::PROFILES    } },   
+    { "default"        , { { "interpreter" },  Using::Type::INTERPRETER } },   
+    { "threads"        , { {               },  Using::Type::THREADS     } },   
 };
+
 
 
 static const std::vector<std::string> _attributes =
@@ -114,6 +107,8 @@ static const std::vector<std::string> _attributes =
     "interpreter"   ,
 };
 
+
+
 static const std::vector<std::string> _usings =
 {
     "profiles",
@@ -123,6 +118,14 @@ static const std::vector<std::string> _usings =
 
 
 
+
+//    ███╗   ███╗ █████╗  ██████╗██████╗  ██████╗ ███████╗
+//    ████╗ ████║██╔══██╗██╔════╝██╔══██╗██╔═══██╗██╔════╝
+//    ██╔████╔██║███████║██║     ██████╔╝██║   ██║███████╗
+//    ██║╚██╔╝██║██╔══██║██║     ██╔══██╗██║   ██║╚════██║
+//    ██║ ╚═╝ ██║██║  ██║╚██████╗██║  ██║╚██████╔╝███████║
+//    ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝
+//                                                        
 
 
 #define SEM_OK()                 SemanticOutput{}
@@ -136,13 +139,13 @@ static const std::vector<std::string> _usings =
 
 
 
-//    ███████ ███████ ███    ███  █████  ███    ██ ████████ ██  ██████     ██ ███    ███ ██████  ██      
-//    ██      ██      ████  ████ ██   ██ ████   ██    ██    ██ ██          ██ ████  ████ ██   ██ ██      
-//    ███████ █████   ██ ████ ██ ███████ ██ ██  ██    ██    ██ ██          ██ ██ ████ ██ ██████  ██      
-//         ██ ██      ██  ██  ██ ██   ██ ██  ██ ██    ██    ██ ██          ██ ██  ██  ██ ██      ██      
-//    ███████ ███████ ██      ██ ██   ██ ██   ████    ██    ██  ██████     ██ ██      ██ ██      ███████ 
-//                                                                                                       
-// 
+//     ██████╗██╗      █████╗ ███████╗███████╗    ██╗███╗   ███╗██████╗ ██╗     
+//    ██╔════╝██║     ██╔══██╗██╔════╝██╔════╝    ██║████╗ ████║██╔══██╗██║     
+//    ██║     ██║     ███████║███████╗███████╗    ██║██╔████╔██║██████╔╝██║     
+//    ██║     ██║     ██╔══██║╚════██║╚════██║    ██║██║╚██╔╝██║██╔═══╝ ██║     
+//    ╚██████╗███████╗██║  ██║███████║███████║    ██║██║ ╚═╝ ██║██║     ███████╗
+//     ╚═════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝    ╚═╝╚═╝     ╚═╝╚═╝     ╚══════╝
+//                                                                              
 
 
 Engine::Engine()
@@ -160,6 +163,7 @@ Engine::Engine()
     _attr_rules[_I(Attr::Type::MAIN        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };     
     _attr_rules[_I(Attr::Type::INTERPRETER )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK,                        } };        
 }
+
 
 
 SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::string&  prop)
@@ -268,6 +272,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
 }
 
 
+
 SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::string&  val)
 {
     std::stringstream ss;
@@ -303,6 +308,7 @@ SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::st
 
     return SemanticOutput{};
 } 
+
 
 
 SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& inputs, const Task::Instrs& instrs)
@@ -356,6 +362,7 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& 
 
     return SemanticOutput{};
 } 
+
 
 
 SemanticOutput Engine::Collect_Using(const std::string& what, const std::string& opt)
@@ -445,6 +452,32 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
                 return SEM_NOK(ss.str());
             }
         }
+    }
+
+    // IF 'THREADS' IS SELECTED
+    else if (rule.using_type == Using::Type::THREADS)
+    {
+        // CHECK FOR THE SIZE
+        if (options.size() != 1)
+        {
+            ss << "Statement " << "‘" << ANSI_BMAGENTA << "using multithread" << ANSI_RESET << "’ must be followed maximum threads allowed";
+            return SEM_NOK(ss.str());
+        }
+
+        // CHECK IF ITS A NUMBER
+        int max_threads = 0;
+        const char* begin = options[0].data();
+        const char* end   = options[0].data() + options[0].size();
+
+        auto [ptr, ec] = std::from_chars(begin, end, max_threads);
+
+        if (ec != std::errc{} || ptr != end || max_threads <= 0)
+        {
+            ss << "Invalid value for multithread: " << ANSI_BMAGENTA  << options[0] << ANSI_RESET << ". Expected a positive integer.";
+            return SEM_NOK(ss.str());
+        }
+
+        _env.max_threads = max_threads;
     }
 
     return SemanticOutput{};
@@ -544,6 +577,7 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
 }
 
 
+
 const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
 {
     std::stringstream ss;
@@ -609,6 +643,7 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
 
     return std::nullopt;
 }
+
 
 
 const std::optional<std::string> Enviroment::Expand() noexcept
@@ -715,6 +750,12 @@ const std::optional<std::string> Enviroment::Expand() noexcept
     if (auto res = Table::Map(vtable); !res.empty())
     {
         return res;
+    }
+
+    // HANDLE MAX THREADS   
+    if (max_threads == 0)
+    {
+        max_threads = std::thread::hardware_concurrency();
     }
 
     return std::nullopt;

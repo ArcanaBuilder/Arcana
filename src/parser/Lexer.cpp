@@ -7,14 +7,13 @@
 USE_MODULE(Arcana::Scan);
 
 
-//    ██      ███████ ██   ██ ███████ ██████      ██ ███    ███ ██████  ██      
-//    ██      ██       ██ ██  ██      ██   ██     ██ ████  ████ ██   ██ ██      
-//    ██      █████     ███   █████   ██████      ██ ██ ████ ██ ██████  ██      
-//    ██      ██       ██ ██  ██      ██   ██     ██ ██  ██  ██ ██      ██      
-//    ███████ ███████ ██   ██ ███████ ██   ██     ██ ██      ██ ██      ███████ 
+//     ██████╗██╗      █████╗ ███████╗███████╗    ██╗███╗   ███╗██████╗ ██╗     
+//    ██╔════╝██║     ██╔══██╗██╔════╝██╔════╝    ██║████╗ ████║██╔══██╗██║     
+//    ██║     ██║     ███████║███████╗███████╗    ██║██╔████╔██║██████╔╝██║     
+//    ██║     ██║     ██╔══██║╚════██║╚════██║    ██║██║╚██╔╝██║██╔═══╝ ██║     
+//    ╚██████╗███████╗██║  ██║███████║███████║    ██║██║ ╚═╝ ██║██║     ███████╗
+//     ╚═════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝    ╚═╝╚═╝     ╚═╝╚═╝     ╚══════╝
 //                                                                              
-//                                                                              
-
 
 Lexer::Lexer(const std::string& arcscript)
     : 
@@ -29,6 +28,7 @@ Lexer::Lexer(const std::string& arcscript)
     load_file_lines(in_);
     advance();
 }
+
 
 
 Token Lexer::next() 
@@ -92,6 +92,8 @@ void Lexer::load_file_lines(std::istream& in)
     return;
 }
 
+
+
 void Lexer::advance() 
 {
     // ADVANCE THE ISTREAM POINTER
@@ -153,6 +155,8 @@ void Lexer::advance()
     }
 }
 
+
+
 void Lexer::skipWhitespace() 
 {
     // RUN ADVANCE UNTIL CURRRENT CHAR ISNT EOF, NEW LINE OR SPACE
@@ -161,6 +165,8 @@ void Lexer::skipWhitespace()
         advance();
     }
 }
+
+
 
 Token Lexer::simpleToken(TokenType type) 
 {
@@ -171,6 +177,8 @@ Token Lexer::simpleToken(TokenType type)
     advance();
     return makeToken(type, std::string(1, c), tokLine, tokCol, 1);
 }
+
+
 
 Token Lexer::identifier() 
 {
@@ -208,6 +216,8 @@ Token Lexer::identifier()
     return makeToken(tt, std::move(lexeme), tokLine, tokCol, lexeme.size());
 }
 
+
+
 Token Lexer::number() 
 {
     // GENERATE NUMERIC TOKEN 
@@ -223,6 +233,8 @@ Token Lexer::number()
 
     return makeToken(TokenType::NUMBER, std::move(lexeme), tokLine, tokCol, lexeme.size());
 }
+
+
 
 Token Lexer::makeToken(TokenType type, std::string lexeme,
                        std::size_t line, std::size_t start, std::size_t end) 

@@ -24,27 +24,13 @@
 
 
 
-//    ████████  █████  ██████  ██      ███████ ██   ██ ███████ ██      ██████  ███████ ██████            
-//       ██    ██   ██ ██   ██ ██      ██      ██   ██ ██      ██      ██   ██ ██      ██   ██           
-//       ██    ███████ ██████  ██      █████   ███████ █████   ██      ██████  █████   ██████            
-//       ██    ██   ██ ██   ██ ██      ██      ██   ██ ██      ██      ██      ██      ██   ██           
-//       ██    ██   ██ ██████  ███████ ███████ ██   ██ ███████ ███████ ██      ███████ ██   ██           
-//                                                                                                       
-//                                                                                                       
-//    ███████  ██████  ██████  ██     ██  █████  ██████  ██████  ███████ ██████                          
-//    ██      ██    ██ ██   ██ ██     ██ ██   ██ ██   ██ ██   ██ ██      ██   ██                         
-//    █████   ██    ██ ██████  ██  █  ██ ███████ ██████  ██   ██ █████   ██   ██                         
-//    ██      ██    ██ ██   ██ ██ ███ ██ ██   ██ ██   ██ ██   ██ ██      ██   ██                         
-//    ██       ██████  ██   ██  ███ ███  ██   ██ ██   ██ ██████  ███████ ██████                          
-//                                                                                                       
-//                                                                                                       
-//    ██████  ███████ ███    ███  ██████  ████████ ███████     ████████ ██    ██ ██████  ███████ ███████ 
-//    ██   ██ ██      ████  ████ ██    ██    ██    ██             ██     ██  ██  ██   ██ ██      ██      
-//    ██████  █████   ██ ████ ██ ██    ██    ██    █████          ██      ████   ██████  █████   ███████ 
-//    ██   ██ ██      ██  ██  ██ ██    ██    ██    ██             ██       ██    ██      ██           ██ 
-//    ██   ██ ███████ ██      ██  ██████     ██    ███████        ██       ██    ██      ███████ ███████ 
-//                                                                                                       
-//                                                                                                                                                                                                                                 
+//    ███████╗ ██████╗ ██████╗ ██╗    ██╗ █████╗ ██████╗ ██████╗ ███████╗
+//    ██╔════╝██╔═══██╗██╔══██╗██║    ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝
+//    █████╗  ██║   ██║██████╔╝██║ █╗ ██║███████║██████╔╝██║  ██║███████╗
+//    ██╔══╝  ██║   ██║██╔══██╗██║███╗██║██╔══██║██╔══██╗██║  ██║╚════██║
+//    ██║     ╚██████╔╝██║  ██║╚███╔███╔╝██║  ██║██║  ██║██████╔╝███████║
+//    ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
+//                                                                                                                                                                                                                                                                                                       
 
 
 BEGIN_MODULE(Semantic::Attr)
@@ -56,122 +42,102 @@ END_MODULE(Semantic::Attr)
 
 
 
-///////////////////////////////////////////////////////////////////////////////
-// MODULE NEMASPACEs
-///////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
 
 BEGIN_MODULE(Table)
 
 
 
 
-//    ████████  █████  ██████  ██      ███████ ██   ██ ███████ ██      ██████  ███████ ██████                                   
-//       ██    ██   ██ ██   ██ ██      ██      ██   ██ ██      ██      ██   ██ ██      ██   ██                                  
-//       ██    ███████ ██████  ██      █████   ███████ █████   ██      ██████  █████   ██████                                   
-//       ██    ██   ██ ██   ██ ██      ██      ██   ██ ██      ██      ██      ██      ██   ██                                  
-//       ██    ██   ██ ██████  ███████ ███████ ██   ██ ███████ ███████ ██      ███████ ██   ██                                  
-//                                                                                                                              
-//                                                                                                                              
-//    ██████  ██    ██ ██████  ██      ██  ██████     ███████ ██    ██ ███    ██  ██████ ████████ ██  ██████  ███    ██ ███████ 
-//    ██   ██ ██    ██ ██   ██ ██      ██ ██          ██      ██    ██ ████   ██ ██         ██    ██ ██    ██ ████   ██ ██      
-//    ██████  ██    ██ ██████  ██      ██ ██          █████   ██    ██ ██ ██  ██ ██         ██    ██ ██    ██ ██ ██  ██ ███████ 
-//    ██      ██    ██ ██   ██ ██      ██ ██          ██      ██    ██ ██  ██ ██ ██         ██    ██ ██    ██ ██  ██ ██      ██ 
-//    ██       ██████  ██████  ███████ ██  ██████     ██       ██████  ██   ████  ██████    ██    ██  ██████  ██   ████ ███████ 
-//                                                                                                                              
-//                                                                                                                              
-
+//    ██████╗ ██████╗ ██╗██╗   ██╗ █████╗ ████████╗███████╗    ███████╗██╗   ██╗███╗   ██╗ ██████╗███████╗
+//    ██╔══██╗██╔══██╗██║██║   ██║██╔══██╗╚══██╔══╝██╔════╝    ██╔════╝██║   ██║████╗  ██║██╔════╝██╔════╝
+//    ██████╔╝██████╔╝██║██║   ██║███████║   ██║   █████╗      █████╗  ██║   ██║██╔██╗ ██║██║     ███████╗
+//    ██╔═══╝ ██╔══██╗██║╚██╗ ██╔╝██╔══██║   ██║   ██╔══╝      ██╔══╝  ██║   ██║██║╚██╗██║██║     ╚════██║
+//    ██║     ██║  ██║██║ ╚████╔╝ ██║  ██║   ██║   ███████╗    ██║     ╚██████╔╝██║ ╚████║╚██████╗███████║
+//    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚══════╝    ╚═╝      ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝╚══════╝
+//                                                                                                        
 
 
 template <typename T>
-inline bool HasAttrOnMapped(const T& value, const Arcana::Semantic::Attr::Type attr)
+inline static bool HasAttrOnMapped(const T& value, const Arcana::Semantic::Attr::Type attr)
 {
     return value.hasAttribute(attr);
 }
 
-template <typename T>
-inline bool HasAttrOnMapped(T* ptr, const Arcana::Semantic::Attr::Type attr)
-{
-    return ptr && ptr->hasAttribute(attr);
-}
+
 
 template <typename T>
-inline bool HasAttrOnMapped(const std::shared_ptr<T>& ptr, const Arcana::Semantic::Attr::Type attr)
-{
-    return ptr && ptr->hasAttribute(attr);
-}
-
-template <typename T>
-inline bool HasAttrOnMapped(const std::unique_ptr<T>& ptr, const Arcana::Semantic::Attr::Type attr)
+inline static bool HasAttrOnMapped(T* ptr, const Arcana::Semantic::Attr::Type attr)
 {
     return ptr && ptr->hasAttribute(attr);
 }
 
 
 
-template <typename TABLE>
-std::vector<typename TABLE::key_type>
-Keys(const TABLE& table)
+template <typename T>
+inline static bool HasAttrOnMapped(const std::shared_ptr<T>& ptr, const Arcana::Semantic::Attr::Type attr)
 {
-    std::vector<typename TABLE::key_type> keys;
+    return ptr && ptr->hasAttribute(attr);
+}
 
-    for (const auto& [k, v] : table)
+
+
+template <typename T>
+inline static bool HasAttrOnMapped(const std::unique_ptr<T>& ptr, const Arcana::Semantic::Attr::Type attr)
+{
+    return ptr && ptr->hasAttribute(attr);
+}
+
+
+
+static std::optional<std::filesystem::path>
+extract_base_dir(const std::string& pattern)
+{
+    // trova il primo carattere "glob"
+    const std::string glob_chars = "*?[";
+    std::size_t pos = pattern.find_first_of(glob_chars);
+
+    std::string base = pattern;
+    if (pos != std::string::npos)
     {
-        keys.push_back(k);
-    }
-
-    return keys;
-}
-
-
-template <typename TABLE>
-void
-AlignOnProfile(TABLE& table, const std::string& profile)
-{
-    using Key = typename TABLE::key_type;
-
-    std::vector<Key> mangled_keys;
-    mangled_keys.reserve(table.size());
-
-    for (const auto& [k, v] : table)
-    {
-        auto pos = k.find("@@");
+        // taglia alla directory che precede il primo glob
+        pos = pattern.rfind('/', pos);
         if (pos != std::string::npos)
-            mangled_keys.push_back(k);
-    }
-
-    for (const auto& mk : mangled_keys)
-    {
-        auto it = table.find(mk);
-
-        if (it == table.end()) continue;
-
-        const Key& key = it->first;
-        const auto pos = key.find("@@");
-        if (pos == std::string::npos) continue;
-
-        const std::string base     = key.substr(0, pos);
-        const std::string prof_key = key.substr(pos + 2);
-
-        if (prof_key != profile)
-        {
-            table.erase(it);
-            continue;
-        }
-
-        auto base_it = table.find(base);
-        if (base_it != table.end())
-        {
-            base_it->second = std::move(it->second);
-            table.erase(it);
-        }
+            base = pattern.substr(0, pos);
         else
-        {
-            auto node = table.extract(it);
-            node.key() = base;
-            table.insert(std::move(node));
-        }
+            base.clear();
     }
+    else
+    {
+        return std::nullopt;
+    }
+
+    if (base.empty())
+        return std::filesystem::current_path();
+
+    return std::filesystem::path(base);
 }
+
+
+
+
+
+
+
+
+
+//    ██████╗ ███████╗███████╗██╗  ██╗     ██████╗ ██████╗  ██████╗ ██╗   ██╗██████╗ 
+//    ██╔══██╗██╔════╝██╔════╝██║ ██╔╝    ██╔════╝ ██╔══██╗██╔═══██╗██║   ██║██╔══██╗
+//    ██████╔╝█████╗  █████╗  █████╔╝     ██║  ███╗██████╔╝██║   ██║██║   ██║██████╔╝
+//    ██╔═══╝ ██╔══╝  ██╔══╝  ██╔═██╗     ██║   ██║██╔══██╗██║   ██║██║   ██║██╔═══╝ 
+//    ██║     ███████╗███████╗██║  ██╗    ╚██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║     
+//    ╚═╝     ╚══════╝╚══════╝╚═╝  ╚═╝     ╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     
+//                                                                                   
 
 
 
@@ -189,6 +155,7 @@ GetValue(TABLE& table, const Arcana::Semantic::Attr::Type attr)
 
     return std::nullopt;
 }
+
 
 
 template <typename TABLE>
@@ -244,6 +211,7 @@ GetValue(TABLE& table, const typename TABLE::key_type& key, const std::vector<st
 }
 
 
+
 template <typename TABLE>
 std::optional<std::reference_wrapper<typename TABLE::mapped_type>>
 GetValue(TABLE& table, const typename TABLE::key_type& key, const std::vector<std::string>& profiles, const Arcana::Semantic::Attr::Type attr)
@@ -267,6 +235,7 @@ GetValue(TABLE& table, const typename TABLE::key_type& key, const std::vector<st
 
     return std::nullopt;
 }
+
 
 
 template <typename TABLE>
@@ -295,6 +264,7 @@ GetValue(TABLE& table, const typename TABLE::key_type& key, const std::string& p
 }
 
 
+
 template <typename TABLE>
 std::optional<std::reference_wrapper<typename TABLE::mapped_type>>
 GetValue(TABLE& table, const typename TABLE::key_type& key, const std::string& profile, const Arcana::Semantic::Attr::Type attr)
@@ -318,6 +288,7 @@ GetValue(TABLE& table, const typename TABLE::key_type& key, const std::string& p
 }
 
 
+
 template <typename TABLE>
 std::vector<std::reference_wrapper<typename TABLE::mapped_type>>
 GetValues(TABLE& table, const std::string& profile, const Arcana::Semantic::Attr::Type attr)
@@ -336,6 +307,7 @@ GetValues(TABLE& table, const std::string& profile, const Arcana::Semantic::Attr
 
     return vec;
 }
+
 
 
 template <typename TABLE>
@@ -360,6 +332,14 @@ GetValues(TABLE& table, const std::vector<std::string>& profiles, const Arcana::
 
 
 
+
+//    ████████╗ █████╗ ██╗  ██╗███████╗     ██████╗ ██████╗  ██████╗ ██╗   ██╗██████╗ 
+//    ╚══██╔══╝██╔══██╗██║ ██╔╝██╔════╝    ██╔════╝ ██╔══██╗██╔═══██╗██║   ██║██╔══██╗
+//       ██║   ███████║█████╔╝ █████╗      ██║  ███╗██████╔╝██║   ██║██║   ██║██████╔╝
+//       ██║   ██╔══██║██╔═██╗ ██╔══╝      ██║   ██║██╔══██╗██║   ██║██║   ██║██╔═══╝ 
+//       ██║   ██║  ██║██║  ██╗███████╗    ╚██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║     
+//       ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝     ╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     
+//                                                                                    
 
 
 
@@ -389,6 +369,7 @@ TakeValue(TABLE& table, const typename TABLE::key_type& key, const std::string& 
 
     return std::nullopt;
 }
+
 
 
 template <typename TABLE>
@@ -422,6 +403,7 @@ TakeValue(TABLE& table, const typename TABLE::key_type& key, const std::vector<s
 }
 
 
+
 template <typename TABLE>
 std::optional<typename TABLE::mapped_type>
 TakeValue(TABLE& table, const typename TABLE::key_type& key, const std::string& profile, const Arcana::Semantic::Attr::Type attr)
@@ -448,6 +430,7 @@ TakeValue(TABLE& table, const typename TABLE::key_type& key, const std::string& 
 
     return std::nullopt;
 }
+
 
 
 template <typename TABLE>
@@ -481,6 +464,7 @@ TakeValue(TABLE& table, const typename TABLE::key_type& key, const std::vector<s
 }
 
 
+
 template <typename TABLE>
 std::vector<typename TABLE::mapped_type>
 TakeValues(TABLE& table, const std::string& profile, const Arcana::Semantic::Attr::Type attr)
@@ -501,6 +485,7 @@ TakeValues(TABLE& table, const std::string& profile, const Arcana::Semantic::Att
 
     return vec;
 }
+
 
 
 template <typename TABLE>
@@ -526,33 +511,17 @@ TakeValues(TABLE& table, const std::vector<std::string>& profiles, const Arcana:
 
 
 
-static std::optional<std::filesystem::path>
-extract_base_dir(const std::string& pattern)
-{
-    // trova il primo carattere "glob"
-    const std::string glob_chars = "*?[";
-    std::size_t pos = pattern.find_first_of(glob_chars);
 
-    std::string base = pattern;
-    if (pos != std::string::npos)
-    {
-        // taglia alla directory che precede il primo glob
-        pos = pattern.rfind('/', pos);
-        if (pos != std::string::npos)
-            base = pattern.substr(0, pos);
-        else
-            base.clear();
-    }
-    else
-    {
-        return std::nullopt;
-    }
 
-    if (base.empty())
-        return std::filesystem::current_path();
 
-    return std::filesystem::path(base);
-}
+//    ██████╗ ██╗   ██╗██████╗ ██╗     ██╗ ██████╗    ███████╗██╗   ██╗███╗   ██╗ ██████╗███████╗
+//    ██╔══██╗██║   ██║██╔══██╗██║     ██║██╔════╝    ██╔════╝██║   ██║████╗  ██║██╔════╝██╔════╝
+//    ██████╔╝██║   ██║██████╔╝██║     ██║██║         █████╗  ██║   ██║██╔██╗ ██║██║     ███████╗
+//    ██╔═══╝ ██║   ██║██╔══██╗██║     ██║██║         ██╔══╝  ██║   ██║██║╚██╗██║██║     ╚════██║
+//    ██║     ╚██████╔╝██████╔╝███████╗██║╚██████╗    ██║     ╚██████╔╝██║ ╚████║╚██████╗███████║
+//    ╚═╝      ╚═════╝ ╚═════╝ ╚══════╝╚═╝ ╚═════╝    ╚═╝      ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝╚══════╝
+//                                                                                               
+
 
 inline std::string
 ExpandGlob(Semantic::VTable& vtable)
@@ -707,6 +676,73 @@ Map(Semantic::VTable& vtable)
     }
 
     return "";
+}
+
+
+template <typename TABLE>
+std::vector<typename TABLE::key_type>
+Keys(const TABLE& table)
+{
+    std::vector<typename TABLE::key_type> keys;
+
+    for (const auto& [k, v] : table)
+    {
+        keys.push_back(k);
+    }
+
+    return keys;
+}
+
+
+
+template <typename TABLE>
+void
+AlignOnProfile(TABLE& table, const std::string& profile)
+{
+    using Key = typename TABLE::key_type;
+
+    std::vector<Key> mangled_keys;
+    mangled_keys.reserve(table.size());
+
+    for (const auto& [k, v] : table)
+    {
+        auto pos = k.find("@@");
+        if (pos != std::string::npos)
+            mangled_keys.push_back(k);
+    }
+
+    for (const auto& mk : mangled_keys)
+    {
+        auto it = table.find(mk);
+
+        if (it == table.end()) continue;
+
+        const Key& key = it->first;
+        const auto pos = key.find("@@");
+        if (pos == std::string::npos) continue;
+
+        const std::string base     = key.substr(0, pos);
+        const std::string prof_key = key.substr(pos + 2);
+
+        if (prof_key != profile)
+        {
+            table.erase(it);
+            continue;
+        }
+
+        auto base_it = table.find(base);
+        if (base_it != table.end())
+        {
+            base_it->second = std::move(it->second);
+            table.erase(it);
+        }
+        else
+        {
+            auto node = table.extract(it);
+            node.key() = base;
+            table.insert(std::move(node));
+        }
+    }
 }
 
 

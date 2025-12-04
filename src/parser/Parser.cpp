@@ -8,13 +8,13 @@ USE_MODULE(Arcana::Parsing);
 
 
 
-//    ██████   █████  ██████  ███████ ███████ ██████      ██ ███    ███ ██████  ██      
-//    ██   ██ ██   ██ ██   ██ ██      ██      ██   ██     ██ ████  ████ ██   ██ ██      
-//    ██████  ███████ ██████  ███████ █████   ██████      ██ ██ ████ ██ ██████  ██      
-//    ██      ██   ██ ██   ██      ██ ██      ██   ██     ██ ██  ██  ██ ██      ██      
-//    ██      ██   ██ ██   ██ ███████ ███████ ██   ██     ██ ██      ██ ██      ███████ 
-//                                                                                      
-//                                                                                      
+//     ██████╗██╗      █████╗ ███████╗███████╗    ██╗███╗   ███╗██████╗ ██╗     
+//    ██╔════╝██║     ██╔══██╗██╔════╝██╔════╝    ██║████╗ ████║██╔══██╗██║     
+//    ██║     ██║     ███████║███████╗███████╗    ██║██╔████╔██║██████╔╝██║     
+//    ██║     ██║     ██╔══██║╚════██║╚════██║    ██║██║╚██╔╝██║██╔═══╝ ██║     
+//    ╚██████╗███████╗██║  ██║███████║███████║    ██║██║ ╚═╝ ██║██║     ███████╗
+//     ╚═════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝    ╚═╝╚═╝     ╚═╝╚═╝     ╚══════╝
+//                                                                                                                                                                
 
 
 Parser::Parser(Scan::Lexer& l, Grammar::Engine& e) 
@@ -22,6 +22,7 @@ Parser::Parser(Scan::Lexer& l, Grammar::Engine& e)
     lexer(l),
     engine(e)
 {}
+
 
 
 Arcana_Result Parser::Parse(Semantic::Enviroment& env)
@@ -89,6 +90,7 @@ Arcana_Result Parser::Parse(Semantic::Enviroment& env)
 }
 
 
+
 Arcana::Support::SemanticOutput Parser::Handle_VarAssign(Grammar::Match& match)
 {
     // EXTRACT THE STRINGS FROM THE INPUT AND PASS THEM INTO THE SEMANTIC ENGINE
@@ -103,6 +105,7 @@ Arcana::Support::SemanticOutput Parser::Handle_VarAssign(Grammar::Match& match)
 }
 
 
+
 Arcana::Support::SemanticOutput Parser::Handle_Attribute(Grammar::Match& match)
 {      
     // EXTRACT THE STRINGS FROM THE INPUT AND PASS THEM INTO THE SEMANTIC ENGINE
@@ -115,6 +118,7 @@ Arcana::Support::SemanticOutput Parser::Handle_Attribute(Grammar::Match& match)
 
     return instr_engine.Collect_Attribute(attr, attropt);    
 }
+
 
 
 Arcana::Support::SemanticOutput Parser::Handle_TaskDecl(Grammar::Match& match)
@@ -190,6 +194,7 @@ Arcana::Support::SemanticOutput Parser::Handle_TaskDecl(Grammar::Match& match)
 }
 
 
+
 Arcana_Result Parser::Handle_Import(Grammar::Match& match, Semantic::Enviroment& new_env)
 {
     // EXTRACT THE STRINGS FROM THE INPUT AND PASS THEM INTO THE IMPORT PARSER
@@ -217,6 +222,7 @@ Arcana_Result Parser::Handle_Import(Grammar::Match& match, Semantic::Enviroment&
 
     return result;
 }
+
 
 
 Arcana::Support::SemanticOutput Parser::Handle_Using(Grammar::Match& match)

@@ -15,6 +15,69 @@ USE_MODULE(Arcana);
 
 
 
+
+//    ██████╗ ██████╗ ██╗██╗   ██╗ █████╗ ████████╗███████╗    ███████╗██╗   ██╗███╗   ██╗ ██████╗███████╗
+//    ██╔══██╗██╔══██╗██║██║   ██║██╔══██╗╚══██╔══╝██╔════╝    ██╔════╝██║   ██║████╗  ██║██╔════╝██╔════╝
+//    ██████╔╝██████╔╝██║██║   ██║███████║   ██║   █████╗      █████╗  ██║   ██║██╔██╗ ██║██║     ███████╗
+//    ██╔═══╝ ██╔══██╗██║╚██╗ ██╔╝██╔══██║   ██║   ██╔══╝      ██╔══╝  ██║   ██║██║╚██╗██║██║     ╚════██║
+//    ██║     ██║  ██║██║ ╚████╔╝ ██║  ██║   ██║   ███████╗    ██║     ╚██████╔╝██║ ╚████║╚██████╗███████║
+//    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚══════╝    ╚═╝      ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝╚══════╝
+//                                                                                                        
+
+
+std::size_t levenshtein_distance(const std::string& a,
+                                 const std::string& b) noexcept
+{
+    const std::size_t len1 = a.size();
+    const std::size_t len2 = b.size();
+
+    if (len1 == 0)
+        return len2;
+    if (len2 == 0)
+        return len1;
+
+    std::vector<std::size_t> prev(len2 + 1);
+    std::vector<std::size_t> curr(len2 + 1);
+
+    for (std::size_t j = 0; j <= len2; ++j)
+        prev[j] = j;
+
+    for (std::size_t i = 0; i < len1; ++i)
+    {
+        curr[0] = i + 1;
+
+        for (std::size_t j = 0; j < len2; ++j)
+        {
+            const std::size_t cost = (a[i] == b[j]) ? 0u : 1u;
+
+            const std::size_t del    = prev[j + 1] + 1;   // cancellazione
+            const std::size_t ins    = curr[j] + 1;       // inserzione
+            const std::size_t subst  = prev[j] + cost;    // sostituzione
+
+            curr[j + 1] = std::min({ del, ins, subst });
+        }
+
+        std::swap(prev, curr);
+    }
+
+    return prev[len2];
+}
+
+
+
+
+
+                                                                                             
+//    ███████╗████████╗██████╗ ██╗   ██╗ ██████╗████████╗███████╗    ███████╗██╗   ██╗███╗   ██╗ ██████╗███████╗
+//    ██╔════╝╚══██╔══╝██╔══██╗██║   ██║██╔════╝╚══██╔══╝██╔════╝    ██╔════╝██║   ██║████╗  ██║██╔════╝██╔════╝
+//    ███████╗   ██║   ██████╔╝██║   ██║██║        ██║   ███████╗    █████╗  ██║   ██║██╔██╗ ██║██║     ███████╗
+//    ╚════██║   ██║   ██╔══██╗██║   ██║██║        ██║   ╚════██║    ██╔══╝  ██║   ██║██║╚██╗██║██║     ╚════██║
+//    ███████║   ██║   ██║  ██║╚██████╔╝╚██████╗   ██║   ███████║    ██║     ╚██████╔╝██║ ╚████║╚██████╗███████║
+//    ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝  ╚═════╝   ╚═╝   ╚══════╝    ╚═╝      ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝╚══════╝
+//                                                                                                              
+
+
+
 Arcana_Result Support::ParserError::operator() (const std::string& ctx, const Grammar::Match& match) const
 {
     const auto& [token, found, semtypes, _] = match.Error;
@@ -118,6 +181,19 @@ bool Support::StringViewEq::operator() (std::string_view a, std::string_view b) 
 
 
 
+
+
+
+//    ██████╗ ██╗   ██╗██████╗ ██╗     ██╗ ██████╗    ███████╗██╗   ██╗███╗   ██╗ ██████╗███████╗
+//    ██╔══██╗██║   ██║██╔══██╗██║     ██║██╔════╝    ██╔════╝██║   ██║████╗  ██║██╔════╝██╔════╝
+//    ██████╔╝██║   ██║██████╔╝██║     ██║██║         █████╗  ██║   ██║██╔██╗ ██║██║     ███████╗
+//    ██╔═══╝ ██║   ██║██╔══██╗██║     ██║██║         ██╔══╝  ██║   ██║██║╚██╗██║██║     ╚════██║
+//    ██║     ╚██████╔╝██████╔╝███████╗██║╚██████╗    ██║     ╚██████╔╝██║ ╚████║╚██████╗███████║
+//    ╚═╝      ╚═════╝ ╚═════╝ ╚══════╝╚═╝ ╚═════╝    ╚═╝      ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝╚══════╝
+//  
+
+
+
 std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char** argv)
 {
     std::stringstream  ss;
@@ -179,6 +255,7 @@ std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char*
 }
 
 
+
 bool Support::file_exists(const std::string& filename)
 {
     return std::filesystem::exists(filename)
@@ -201,6 +278,7 @@ std::string Support::ltrim(const std::string& s)
 }
 
 
+
 std::string Support::rtrim(const std::string& s)
 {
     const std::string ws = " \t\r\n\f\v";
@@ -216,13 +294,13 @@ std::string Support::rtrim(const std::string& s)
 
 
 
-
 inline char Support::toLowerAscii(char c) noexcept
 {
     if (c >= 'A' && c <= 'Z')
         return c + ('a' - 'A');
     return c;
 }
+
 
 
 std::vector<std::string> Support::split(const std::string& s, char sep) noexcept
@@ -370,12 +448,15 @@ std::optional<long long> Support::to_number(const std::string& s)
     return value;
 }
 
+
+
 std::string Support::generate_mangling(const std::string& target, const std::string& mangling)
 {
     std::stringstream ss;
     ss << target << "@@" << mangling;
     return ss.str();
 }
+
 
 
 std::string Support::TokenTypeRepr(const Scan::TokenType type)
@@ -409,6 +490,8 @@ std::string Support::TokenTypeRepr(const Scan::TokenType type)
     }
 }
 
+
+
 std::string Support::TerminalRepr(const Grammar::Terminal& type)
 {   
     std::stringstream ss;
@@ -424,6 +507,7 @@ std::string Support::TerminalRepr(const Grammar::Terminal& type)
 }
 
 
+
 std::string Support::NonTerminalRepr(const Grammar::NonTerminal& type)
 {   
     std::stringstream ss;
@@ -437,6 +521,8 @@ std::string Support::NonTerminalRepr(const Grammar::NonTerminal& type)
 
     return ss.str();
 }
+
+
 
 std::string Support::UniqueNonTerminalRepr(const Grammar::UniqueNonTerminal& type)
 {
@@ -472,45 +558,6 @@ std::string Support::RuleRepr(const Grammar::Rule type)
     }
 }
 
-
-
-std::size_t Support::levenshtein_distance(const std::string& a,
-                                 const std::string& b) noexcept
-{
-    const std::size_t len1 = a.size();
-    const std::size_t len2 = b.size();
-
-    if (len1 == 0)
-        return len2;
-    if (len2 == 0)
-        return len1;
-
-    std::vector<std::size_t> prev(len2 + 1);
-    std::vector<std::size_t> curr(len2 + 1);
-
-    for (std::size_t j = 0; j <= len2; ++j)
-        prev[j] = j;
-
-    for (std::size_t i = 0; i < len1; ++i)
-    {
-        curr[0] = i + 1;
-
-        for (std::size_t j = 0; j < len2; ++j)
-        {
-            const std::size_t cost = (a[i] == b[j]) ? 0u : 1u;
-
-            const std::size_t del    = prev[j + 1] + 1;   // cancellazione
-            const std::size_t ins    = curr[j] + 1;       // inserzione
-            const std::size_t subst  = prev[j] + cost;    // sostituzione
-
-            curr[j + 1] = std::min({ del, ins, subst });
-        }
-
-        std::swap(prev, curr);
-    }
-
-    return prev[len2];
-}
 
 
 std::optional<std::string> Support::FindClosest(const std::vector<std::string>& list,

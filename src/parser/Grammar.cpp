@@ -6,20 +6,13 @@ USE_MODULE(Arcana::Grammar);
 
 
 
-//     ██████  ██████   █████  ███    ███ ███    ███  █████  ██████      ██ ████████ ███████ ███    ███ ███████     
-//    ██       ██   ██ ██   ██ ████  ████ ████  ████ ██   ██ ██   ██     ██    ██    ██      ████  ████ ██          
-//    ██   ███ ██████  ███████ ██ ████ ██ ██ ████ ██ ███████ ██████      ██    ██    █████   ██ ████ ██ ███████     
-//    ██    ██ ██   ██ ██   ██ ██  ██  ██ ██  ██  ██ ██   ██ ██   ██     ██    ██    ██      ██  ██  ██      ██     
-//     ██████  ██   ██ ██   ██ ██      ██ ██      ██ ██   ██ ██   ██     ██    ██    ███████ ██      ██ ███████     
-//                                                                                                                  
-//                                                                                                                  
-//    ███████ ████████ ██████  ██    ██  ██████ ████████                                                            
-//    ██         ██    ██   ██ ██    ██ ██         ██                                                               
-//    ███████    ██    ██████  ██    ██ ██         ██                                                               
-//         ██    ██    ██   ██ ██    ██ ██         ██                                                               
-//    ███████    ██    ██   ██  ██████   ██████    ██                                                               
-//                                                                                                                  
-//                                                                                                                  
+//    ███████╗████████╗██████╗ ██╗   ██╗ ██████╗████████╗███████╗
+//    ██╔════╝╚══██╔══╝██╔══██╗██║   ██║██╔════╝╚══██╔══╝██╔════╝
+//    ███████╗   ██║   ██████╔╝██║   ██║██║        ██║   ███████╗
+//    ╚════██║   ██║   ██╔══██╗██║   ██║██║        ██║   ╚════██║
+//    ███████║   ██║   ██║  ██║╚██████╔╝╚██████╗   ██║   ███████║
+//    ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝  ╚═════╝   ╚═╝   ╚══════╝
+//                                                                                                                                                                               
 
 
 struct Rules
@@ -30,6 +23,8 @@ struct Rules
 
     NonTerminal    buffer;
 };
+
+
 
 Rules operator | (Scan::TokenType lhs, Scan::TokenType rhs) 
 {
@@ -42,6 +37,8 @@ Rules operator | (Scan::TokenType lhs, Scan::TokenType rhs)
     return b;
 }
 
+
+
 Rules operator || (Scan::TokenType lhs, Scan::TokenType rhs) 
 {
     Rules b;
@@ -50,6 +47,7 @@ Rules operator || (Scan::TokenType lhs, Scan::TokenType rhs)
     b.buffer.push_back(node);
     return b;
 }
+
 
 
 Rules& Rules::operator | (const Scan::TokenType type)
@@ -67,6 +65,7 @@ Rules& Rules::operator | (const Rules& streamer)
 }
 
 
+
 Rules& Rules::operator || (const Scan::TokenType type)
 {
     buffer.back().push_back(type);
@@ -78,20 +77,13 @@ Rules& Rules::operator || (const Scan::TokenType type)
 
 
 
-//     ██████  ██████   █████  ███    ███ ███    ███  █████  ██████      
-//    ██       ██   ██ ██   ██ ████  ████ ████  ████ ██   ██ ██   ██     
-//    ██   ███ ██████  ███████ ██ ████ ██ ██ ████ ██ ███████ ██████      
-//    ██    ██ ██   ██ ██   ██ ██  ██  ██ ██  ██  ██ ██   ██ ██   ██     
-//     ██████  ██   ██ ██   ██ ██      ██ ██      ██ ██   ██ ██   ██     
-//                                                                       
-//                                                                       
-//    ██████  ██    ██ ██      ███████ ███████                           
-//    ██   ██ ██    ██ ██      ██      ██                                
-//    ██████  ██    ██ ██      █████   ███████                           
-//    ██   ██ ██    ██ ██      ██           ██                           
-//    ██   ██  ██████  ███████ ███████ ███████                           
-//                                                                       
-//                                                                       
+//    ██████╗ ██╗   ██╗██╗     ███████╗███████╗
+//    ██╔══██╗██║   ██║██║     ██╔════╝██╔════╝
+//    ██████╔╝██║   ██║██║     █████╗  ███████╗
+//    ██╔══██╗██║   ██║██║     ██╔══╝  ╚════██║
+//    ██║  ██║╚██████╔╝███████╗███████╗███████║
+//    ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝╚══════╝
+//                                                                                                                 
 
 
 
@@ -105,10 +97,12 @@ static Rules rule_VARIABLE_ASSIGNMENT =
 };
 
 
+
 static Rules rule_EMPTY_LINE = 
 {
     ( Scan::TokenType::NEWLINE || Scan::TokenType::ENDOFFILE )
 };
+
 
 
 static Rules rule_ATTRIBUTE = 
@@ -118,6 +112,7 @@ static Rules rule_ATTRIBUTE =
     Scan::TokenType::ANY          |
     ( Scan::TokenType::NEWLINE || Scan::TokenType::SEMICOLON )
 };
+
 
 
 static Rules rule_TASK_DECL = 
@@ -135,12 +130,14 @@ static Rules rule_TASK_DECL =
 };
 
 
+
 static Rules rule_IMPORT = 
 {
     Scan::TokenType::IMPORT       |
     Scan::TokenType::ANY          |
     ( Scan::TokenType::NEWLINE || Scan::TokenType::SEMICOLON || Scan::TokenType::ENDOFFILE )  
 };
+
 
 
 static Rules rule_USING = 
@@ -156,20 +153,14 @@ static Rules rule_USING =
 
 
 
-//     ██████  ██████   █████  ███    ███ ███    ███  █████  ██████                     
-//    ██       ██   ██ ██   ██ ████  ████ ████  ████ ██   ██ ██   ██                    
-//    ██   ███ ██████  ███████ ██ ████ ██ ██ ████ ██ ███████ ██████                     
-//    ██    ██ ██   ██ ██   ██ ██  ██  ██ ██  ██  ██ ██   ██ ██   ██                    
-//     ██████  ██   ██ ██   ██ ██      ██ ██      ██ ██   ██ ██   ██                    
-//                                                                                      
-//                                                                                      
-//    ███████ ███    ██  ██████  ██ ███    ██ ███████     ██ ███    ███ ██████  ██      
-//    ██      ████   ██ ██       ██ ████   ██ ██          ██ ████  ████ ██   ██ ██      
-//    █████   ██ ██  ██ ██   ███ ██ ██ ██  ██ █████       ██ ██ ████ ██ ██████  ██      
-//    ██      ██  ██ ██ ██    ██ ██ ██  ██ ██ ██          ██ ██  ██  ██ ██      ██      
-//    ███████ ██   ████  ██████  ██ ██   ████ ███████     ██ ██      ██ ██      ███████ 
-//                                                                                      
-//                                                                                      
+
+//     ██████╗██╗      █████╗ ███████╗███████╗    ██╗███╗   ███╗██████╗ ██╗     
+//    ██╔════╝██║     ██╔══██╗██╔════╝██╔════╝    ██║████╗ ████║██╔══██╗██║     
+//    ██║     ██║     ███████║███████╗███████╗    ██║██╔████╔██║██████╔╝██║     
+//    ██║     ██║     ██╔══██║╚════██║╚════██║    ██║██║╚██╔╝██║██╔═══╝ ██║     
+//    ╚██████╗███████╗██║  ██║███████║███████║    ██║██║ ╚═╝ ██║██║     ███████╗
+//     ╚═════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝    ╚═╝╚═╝     ╚═╝╚═╝     ╚══════╝
+//                                                                                                                                                                  
 
 
 Engine::Engine()
@@ -188,6 +179,7 @@ Engine::Engine()
     _index[Rule::IMPORT           ] = std::vector<Index>(rule_IMPORT.buffer.size());
     _index[Rule::USING            ] = std::vector<Index>(rule_USING.buffer.size());
 }
+
 
 
 void Engine::match(const Scan::Token& token, Match& match)
@@ -421,6 +413,7 @@ void Engine::match(const Scan::Token& token, Match& match)
 }
 
 
+
 void Engine::_collect_input(const Scan::Token& token, const Scan::TokenType tt, const Rule st, const uint32_t pos)
 {
     // OBTAIN THE REF FROM THE INDEXES VECTORS
@@ -457,6 +450,7 @@ void Engine::_collect_input(const Scan::Token& token, const Scan::TokenType tt, 
     
     return;
 }
+
 
 
 void Engine::_reset()

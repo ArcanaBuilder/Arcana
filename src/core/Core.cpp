@@ -1,4 +1,6 @@
 #include "Core.h"
+#include "Cache.h"
+#include "Semantic.h"
 
 #include <mutex>
 
@@ -6,13 +8,20 @@ USE_MODULE(Arcana);
 
 
 
+//    ██████╗ ██████╗ ██╗██╗   ██╗ █████╗ ████████╗███████╗███████╗
+//    ██╔══██╗██╔══██╗██║██║   ██║██╔══██╗╚══██╔══╝██╔════╝██╔════╝
+//    ██████╔╝██████╔╝██║██║   ██║███████║   ██║   █████╗  ███████╗
+//    ██╔═══╝ ██╔══██╗██║╚██╗ ██╔╝██╔══██║   ██║   ██╔══╝  ╚════██║
+//    ██║     ██║  ██║██║ ╚████╔╝ ██║  ██║   ██║   ███████╗███████║
+//    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚══════╝╚══════╝
+//                                                                 
 
-
-static Core::InstructionResult run_instruction(const std::string& interpreter, const std::string& command, 
-                                               const Core::RunOptions& opt) noexcept
+static Core::InstructionResult run_instruction(const std::string& interpreter, const std::string& command) noexcept
 {
     Core::InstructionResult  res {};
     res.command = command;
+
+#warning Use Cache module here!  
 
     std::string full_cmd = interpreter + " -c \"" + command + "\"";
     int ret = std::system(full_cmd.c_str());
@@ -40,12 +49,13 @@ static Core::Result run_job(const Jobs::Job& job, const Core::RunOptions& opt) n
 
     if (!job.parallelizable)
     {
-        // esecuzione sequenziale delle istruzioni
+        // LINEAR EXECUTION OF JOB: NO MT
         for (const auto &cmd : job.instructions)
         {
-            auto r = run_instruction(job.interpreter, cmd, opt);
+            auto r = run_instruction(job.interpreter, cmd);
             result.results.push_back(r);
 
+            // ON ERROR JUST QUIT
             if (r.exit_code != 0)
             {
                 result.ok          = false;
@@ -60,26 +70,30 @@ static Core::Result run_job(const Jobs::Job& job, const Core::RunOptions& opt) n
     }
     else
     {
-        // esecuzione parallela delle istruzioni del job
+        // PARALLEL JOB EXEUTION: MT
         std::vector<std::thread> threads;
         std::mutex               mutex;
 
         result.results.resize(job.instructions.size());
 
-        auto worker = [&](std::size_t idx)
+        // LABDA USED AS WORKER THREAD BODY
+        auto worker = [&] (std::size_t idx)
         {
-            const auto &cmd = job.instructions[idx];
-            auto r          = run_instruction(job.interpreter, cmd, opt);
+            const auto& cmd = job.instructions[idx];
+            auto        r   = run_instruction(job.interpreter, cmd);
 
+            // BE SURE TO USE A MUTEX TO WRITE IN THE RESULT ARRAY
             std::lock_guard<std::mutex> lock(mutex);
             result.results[idx] = r;
         };
 
+        // GENRATE A VECTOR OF EACH INSTRCTUION
         for (std::size_t i = 0; i < job.instructions.size(); ++i)
         {
             threads.emplace_back(worker, i);
 
-            // opzionale: limita il numero di thread contemporanei
+            // IF THE MAX THRAD IS REACHED, JUST JOIN ALL THREAD IN THE VECTOR,
+            // THEN CONTINUE 
             if (threads.size() >= opt.max_parallelism)
             {
                 for (auto &t : threads)
@@ -91,12 +105,13 @@ static Core::Result run_job(const Jobs::Job& job, const Core::RunOptions& opt) n
             }
         }
 
+        // IF THE VECTOR IS NOT EMPTY, JUST JOIN THEM
         for (auto &t : threads)
         {
             t.join();
         }
 
-        // valuta il risultato complessivo
+        // CHECK ALL RESULTS IN ORDER TO DISCOVER ERRORS
         for (const auto &r : result.results)
         {
             if (r.exit_code != 0)
@@ -118,15 +133,26 @@ static Core::Result run_job(const Jobs::Job& job, const Core::RunOptions& opt) n
 
 
 
+//    ██████╗ ██╗   ██╗██████╗ ██╗     ██╗ ██████╗███████╗
+//    ██╔══██╗██║   ██║██╔══██╗██║     ██║██╔════╝██╔════╝
+//    ██████╔╝██║   ██║██████╔╝██║     ██║██║     ███████╗
+//    ██╔═══╝ ██║   ██║██╔══██╗██║     ██║██║     ╚════██║
+//    ██║     ╚██████╔╝██████╔╝███████╗██║╚██████╗███████║
+//    ╚═╝      ╚═════╝ ╚═════╝ ╚══════╝╚═╝ ╚═════╝╚══════╝
+//                                                        
+
+
 std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::RunOptions& opt) noexcept
 {
     std::vector<Core::Result> results;
 
     results.reserve(jobs.All().size());
 
-    for (const auto &job : jobs.All())
+    // RUN EACH JOB 
+    for (auto &job : jobs.All())
     {
         DBG("Running job: " << job.name);
+
         auto r = run_job(job, opt);
         results.push_back(r);
 

@@ -1,8 +1,10 @@
 #!/usr/bin/arcana
 
-using default interpreter /bin/bash;
-
 import Vars.arc;
+
+using default interpreter /bin/bash;
+using threads 8;
+
 
 ###########################
 # PRIVATE TASKS
@@ -63,6 +65,7 @@ task Install()
 }
 
 @pub
+@main
 @after Rebuild
 task Run()
 {

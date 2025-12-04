@@ -1,10 +1,22 @@
 #include "Jobs.h"
+#include "Cache.h"
 #include "TableHelper.h"
 
 #include <string_view>
 #include <unordered_map>
 
 USE_MODULE(Arcana::Jobs);
+
+
+
+                                                                                                      
+//    ██████╗ ██████╗ ██╗██╗   ██╗ █████╗ ████████╗███████╗    ████████╗██╗   ██╗██████╗ ███████╗███████╗
+//    ██╔══██╗██╔══██╗██║██║   ██║██╔══██╗╚══██╔══╝██╔════╝    ╚══██╔══╝╚██╗ ██╔╝██╔══██╗██╔════╝██╔════╝
+//    ██████╔╝██████╔╝██║██║   ██║███████║   ██║   █████╗         ██║    ╚████╔╝ ██████╔╝█████╗  ███████╗
+//    ██╔═══╝ ██╔══██╗██║╚██╗ ██╔╝██╔══██║   ██║   ██╔══╝         ██║     ╚██╔╝  ██╔═══╝ ██╔══╝  ╚════██║
+//    ██║     ██║  ██║██║ ╚████╔╝ ██║  ██║   ██║   ███████╗       ██║      ██║   ██║     ███████╗███████║
+//    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚══════╝       ╚═╝      ╚═╝   ╚═╝     ╚══════╝╚══════╝
+//                                                                                                                                                                                                             
 
 
 enum class VisitMark : uint8_t
@@ -45,6 +57,16 @@ struct JobExpandMatch
 
 
 
+
+
+//    ██████╗ ██████╗ ██╗██╗   ██╗ █████╗ ████████╗███████╗    ██╗   ██╗███████╗██╗███╗   ██╗ ██████╗ ███████╗
+//    ██╔══██╗██╔══██╗██║██║   ██║██╔══██╗╚══██╔══╝██╔════╝    ██║   ██║██╔════╝██║████╗  ██║██╔════╝ ██╔════╝
+//    ██████╔╝██████╔╝██║██║   ██║███████║   ██║   █████╗      ██║   ██║███████╗██║██╔██╗ ██║██║  ███╗███████╗
+//    ██╔═══╝ ██╔══██╗██║╚██╗ ██╔╝██╔══██║   ██║   ██╔══╝      ██║   ██║╚════██║██║██║╚██╗██║██║   ██║╚════██║
+//    ██║     ██║  ██║██║ ╚████╔╝ ██║  ██║   ██║   ███████╗    ╚██████╔╝███████║██║██║ ╚████║╚██████╔╝███████║
+//    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚══════╝     ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
+//                                                                                                            
+
 template < typename T >
 using AbstractKeywordMap = std::unordered_map<
     std::string_view,
@@ -55,6 +77,21 @@ using AbstractKeywordMap = std::unordered_map<
 
 
 using ExpansionMap = AbstractKeywordMap<VarExpansion>;
+using Graph        = std::unordered_map<std::string, std::array<std::vector<std::string>, 2>>;
+
+
+
+
+
+
+
+//    ██████╗ ██████╗ ██╗██╗   ██╗ █████╗ ████████╗███████╗    ██╗   ██╗ █████╗ ██████╗ ███████╗
+//    ██╔══██╗██╔══██╗██║██║   ██║██╔══██╗╚══██╔══╝██╔════╝    ██║   ██║██╔══██╗██╔══██╗██╔════╝
+//    ██████╔╝██████╔╝██║██║   ██║███████║   ██║   █████╗      ██║   ██║███████║██████╔╝███████╗
+//    ██╔═══╝ ██╔══██╗██║╚██╗ ██╔╝██╔══██║   ██║   ██╔══╝      ╚██╗ ██╔╝██╔══██║██╔══██╗╚════██║
+//    ██║     ██║  ██║██║ ╚████╔╝ ██║  ██║   ██║   ███████╗     ╚████╔╝ ██║  ██║██║  ██║███████║
+//    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚══════╝      ╚═══╝  ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝
+//                                                                                              
 
 
 static const ExpansionMap Expansion_Map = 
@@ -65,28 +102,32 @@ static const ExpansionMap Expansion_Map =
 
 
 
-static bool HasFileChanged(const std::string& path) noexcept
-{
-    UNUSED(path);
-    return true;
-}
 
 
 
-void PruneUnchangedInstructions(Job& job,
-                                const Semantic::InstructionTask& task,
-                                const Semantic::VTable& vtable) noexcept
+//    ██████╗ ██████╗ ██╗██╗   ██╗ █████╗ ████████╗███████╗    ███████╗██╗   ██╗███╗   ██╗ ██████╗███████╗
+//    ██╔══██╗██╔══██╗██║██║   ██║██╔══██╗╚══██╔══╝██╔════╝    ██╔════╝██║   ██║████╗  ██║██╔════╝██╔════╝
+//    ██████╔╝██████╔╝██║██║   ██║███████║   ██║   █████╗      █████╗  ██║   ██║██╔██╗ ██║██║     ███████╗
+//    ██╔═══╝ ██╔══██╗██║╚██╗ ██╔╝██╔══██║   ██║   ██╔══╝      ██╔══╝  ██║   ██║██║╚██╗██║██║     ╚════██║
+//    ██║     ██║  ██║██║ ╚████╔╝ ██║  ██║   ██║   ███████╗    ██║     ╚██████╔╝██║ ╚████║╚██████╗███████║
+//    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚══════╝    ╚═╝      ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝╚══════╝
+//                                                                                                        
+
+
+static void PruneUnchangedInstructions(Jobs::Job& job,
+                                       const Semantic::InstructionTask& task,
+                                       const Semantic::VTable& vtable) noexcept
 {
     if (task.task_inputs.empty() || job.instructions.empty())
     {
         return;
     }
 
-    // vettore di flag per tenere/trimmare le istruzioni
+    // VECTOR USED TO TRIM OR KEEP INSTRUCTIONS
     std::vector<bool> keep(job.instructions.size(), true);
 
-    // helper locale: dato un file, marca le istruzioni che lo usano
-    auto process_file = [&] (const std::string & file)
+    // LAMBDA USED TO MAP FILE -> INSTRUCTION 
+    auto process_file = [&] (const std::string& file)
     {
         if (file.empty())
         {
@@ -95,42 +136,39 @@ void PruneUnchangedInstructions(Job& job,
 
         for (std::size_t i = 0; i < job.instructions.size(); ++i)
         {
+            // IF TRUE, THE ISNTRUCTION IS ALREADY PRUNED
             if (!keep[i])
             {
-                continue; // già scartata
+                continue; 
             }
 
-            const std::string & instr = job.instructions[i];
+            const std::string& instr = job.instructions[i];
 
-            // match banale: il nome file compare nella stringa dell'istruzione
+            // SIMPLE MATCH: INSTRUCTION CONTAINS FILE
             if (instr.find(file) != std::string::npos)
             {
-                // stub: in futuro qui controlli timestamp/hash del file
-                bool changed = HasFileChanged(file);
+                bool changed = Cache::Manager::Instance().HasFileChanged(file);
 
+                // IF TRUE, THE INSTRUCTION MUST BE REMOVED
                 if (!changed)
                 {
-                    keep[i] = false; // istruzione da togliere
+                    keep[i] = false;
                 }
             }
         }
     };
 
-    // iteri gli input dichiarati sul task
-    for (const auto & input_name : task.task_inputs)
+    // LOOP OVER TASK INPUTS
+    for (const auto& input_name : task.task_inputs)
     {
-        auto it = vtable.find(input_name);
-        if (it == vtable.end())
-        {
-            // input non trovato in vtable: per ora ignoro
-            continue;
-        }
+        // 100% FINDING RATE, VAR CHECK ALREADY DONE
+        auto        it      = vtable.find(input_name);
+        const auto& var_ref = it->second;
 
-        const auto & var_ref = it->second;
-
+        // IF ITS A GLOB
         if (!var_ref.glob_expansion.empty())
         {
-            // caso glob: più file
+            // CALL THE LAMBDA FOR EACH ITEM IN GLOB EXPANSION
             for (const auto & file : var_ref.glob_expansion)
             {
                 process_file(file);
@@ -138,7 +176,7 @@ void PruneUnchangedInstructions(Job& job,
         }
         else
         {
-            // fallback a valore singolo (es. una singola path)
+            // FALLBACK OS SIMPLE VARIABLE VALUE
             if (!var_ref.var_value.empty())
             {
                 process_file(var_ref.var_value);
@@ -146,7 +184,7 @@ void PruneUnchangedInstructions(Job& job,
         }
     }
 
-    // compattiamo le istruzioni mantenendo l'ordine
+    // JUST ITER OVER ORIGINAL INSTRUCTIONS AND APPEND VALID ONES 
     Semantic::Task::Instrs filtered;
     filtered.reserve(job.instructions.size());
 
@@ -158,11 +196,9 @@ void PruneUnchangedInstructions(Job& job,
         }
     }
 
+    // SWAP THE VECTORS
     job.instructions.swap(filtered);
 }
-
-
-
 
 
 
@@ -195,7 +231,6 @@ static ExpansionError ExpandListInstuctions(const Semantic::InstructionTask&  ta
 
         const std::size_t expected = it0->second.glob_expansion.size();
 
-        // Controllo da key[1] in poi
         bool ok = std::none_of(keys.begin() + 1, keys.end(), [&](const std::string& k)
         {
             auto it = vtable.find(k);
@@ -398,9 +433,6 @@ static std::pair<ExpansionError, std::optional<Job>> FromInstruction(const Seman
 }
 
 
-
-using Graph = std::unordered_map<std::string, std::array<std::vector<std::string>, 2>>;
-
 static Graph BuildGraph(const Semantic::FTable& table)
 {
     Graph g;
@@ -435,6 +467,8 @@ static Graph BuildGraph(const Semantic::FTable& table)
     return g;
 }
 
+
+
 static bool dfs_visit(const std::string&                name,
                       const Semantic::FTable&           table,
                             Semantic::VTable&           vtable,
@@ -443,45 +477,9 @@ static bool dfs_visit(const std::string&                name,
                       std::vector<Job>&                 out,
                       ExpansionError&                   err) noexcept
 {
-    std::stringstream ss;
-
-    auto tit = table.find(name);
-    if (tit == table.end())
+    // LAMBDA USED TO COLLECT NODE
+    auto collect_node = [&] (Arcana::Semantic::FTable::const_iterator& tit) noexcept -> bool
     {
-        ss << "Unknown task '" << ANSI_BMAGENTA << name << ANSI_RESET << "'";
-        err.msg = ss.str();
-        err.ok  = false;
-        return false;
-    }
-
-    VisitMark& m = mark[name];
-
-    if (m == VisitMark::PERM)
-        return true;
-
-    if (m == VisitMark::TEMP)
-    {
-        ss << "Cyclic dependency involving task '" << ANSI_BMAGENTA << name << ANSI_RESET << "'";
-        err.msg = ss.str();
-        err.ok  = false;
-        return false;
-    }
-
-    m = VisitMark::TEMP;
-
-    // visita tutti i successori nel grafo (AFTER + THEN già “fusi”)
-    auto git = graph.find(name);
-    if (git != graph.end())
-    {
-        for (const auto& succ : git->second[0])
-        {
-            if (!dfs_visit(succ, table, vtable, graph, mark, out, err))
-            {
-                return false;
-            }
-        }
-
-        // genera il Job associato a questo task
         const Semantic::InstructionTask& t = tit->second;
         const auto& result = FromInstruction(t, vtable);
 
@@ -492,8 +490,63 @@ static bool dfs_visit(const std::string&                name,
         }
 
         if (result.second)
+        {
             out.push_back(*result.second);
+        }
 
+        return true;
+    };
+
+    std::stringstream ss;
+
+    // CHECK FOR TASK EXISTANCE
+    auto tit = table.find(name);
+    if (tit == table.end())
+    {
+        ss << "Unknown task '" << ANSI_BMAGENTA << name << ANSI_RESET << "'";
+        err.msg = ss.str();
+        err.ok  = false;
+        return false;
+    }
+
+    // GET THE CURRENT NODE MARK
+    VisitMark& m = mark[name];
+
+    // IF NODE MARK IS PER JUST RETURN
+    if (m == VisitMark::PERM)
+    {
+        return true;
+    }
+
+    // IF THE NODE MARK IS TEMP, A CYCLIC DEPENDENCY IS DETECTED
+    if (m == VisitMark::TEMP)
+    {
+        ss << "Cyclic dependency involving task '" << ANSI_BMAGENTA << name << ANSI_RESET << "'";
+        err.msg = ss.str();
+        err.ok  = false;
+        return false;
+    }
+
+    // SO MARK THE NODE AS TEMP
+    m = VisitMark::TEMP;
+
+    // VISIT ALL ARCS
+    auto git = graph.find(name);
+    if (git != graph.end())
+    {
+        // VISIT THE DEPENDENCY FIRST (LEFT SIDE OF THE GRAPH-TREE)
+        for (const auto& succ : git->second[0])
+        {
+            if (!dfs_visit(succ, table, vtable, graph, mark, out, err))
+            {
+                return false;
+            }
+        }
+
+        // COLLECT THE CURRENT NODE
+        collect_node(tit);
+
+        // VISIT THE AFTER (RIGHT SIDE OF THE GRAPH-TREE)
         for (const auto& succ : git->second[1])
         {
             if (!dfs_visit(succ, table, vtable, graph, mark, out, err))
@@ -503,26 +556,24 @@ static bool dfs_visit(const std::string&                name,
         }
     }
 
+    // VISIT NODE AS VISITED
     m = VisitMark::PERM;
 
-    // genera il Job associato a questo task
-    const Semantic::InstructionTask& t = tit->second;
-    const auto& result = FromInstruction(t, vtable);
-
-    if (!result.first.ok)
-    {
-        err = result.first;
-        return false;
-    }
-
-    if (result.second)
-        out.push_back(*result.second);
-
-    return true;
+    return collect_node(tit);
 }
 
 
 
+
+
+
+//     ██████╗██╗      █████╗ ███████╗███████╗    ██╗███╗   ███╗██████╗ ██╗     
+//    ██╔════╝██║     ██╔══██╗██╔════╝██╔════╝    ██║████╗ ████║██╔══██╗██║     
+//    ██║     ██║     ███████║███████╗███████╗    ██║██╔████╔██║██████╔╝██║     
+//    ██║     ██║     ██╔══██║╚════██║╚════██║    ██║██║╚██╔╝██║██╔═══╝ ██║     
+//    ╚██████╗███████╗██║  ██║███████║███████║    ██║██║ ╚═╝ ██║██║     ███████╗
+//     ╚═════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝    ╚═╝╚═╝     ╚═╝╚═╝     ╚══════╝
+//                                                                              
 
 
 
@@ -544,10 +595,10 @@ ExpansionError List::FromEnv(Semantic::Enviroment& environment, List& out) noexc
     ExpansionError status;
     status.ok = true;
 
-    // build graph da ftable (AFTER + THEN)
+    // BUILD GRAPH OF TASKS DEPNDENCIES FROM THE FTABLE 
     Graph graph = BuildGraph(environment.ftable);
 
-    // 2) MAIN
+    // START COLLECTING FROM MAIN TASK
     if (auto main_task_opt = Table::GetValue(environment.ftable, Semantic::Attr::Type::MAIN))
     {
         const auto&       main_task  = main_task_opt.value();
@@ -557,21 +608,20 @@ ExpansionError List::FromEnv(Semantic::Enviroment& environment, List& out) noexc
         std::vector<Job>                 ordered;
         std::map<std::string, VisitMark> mark;
 
+        // DO A DFS VISIT STARTING BY THE MAIN TASK (ROOT) 
         if (!dfs_visit(main_name, environment.ftable, environment.vtable, graph, mark, ordered, err))
         {
             return err.ok ? status : err;
         }
 
-        // se dfs fa push_back dopo i figli, qui puoi fare reverse
-        //std::reverse(ordered.begin(), ordered.end());
-
+        // APPEND THE GENERATED JOB
         for (const Job& j : ordered)
         {
             out.Insert(j);
         }
     }
 
-    // 4) ALWAYS invariato
+    // COLLECT 'ALWAYS' TASKS  
     if (auto always_opt = Table::GetValues(environment.ftable, Semantic::Attr::Type::ALWAYS))
     {
         for (const auto& task : always_opt.value())
