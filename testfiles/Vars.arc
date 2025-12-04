@@ -8,7 +8,7 @@ FLAGS    = -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG
 @profile Release
 FLAGS    = -std=c++17 -Os -Wall -Wextra -DRELEASE
 
-TARGET   = arcana
+TARGET   = {arc:BUILDDIR}/test
 
 SOURCES  = {arc:SRCDIR}/**.cpp
 

@@ -136,7 +136,6 @@ static Arcana_Result run(const Support::Arguments& args)
         return ARCANA_RESULT__OK;
     }
 
-    runopt.dry_run = true;
     Core::run_jobs(joblist, runopt);
 
     return result;

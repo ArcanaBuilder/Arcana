@@ -22,11 +22,11 @@ print("Invoking arcana for {arc:TARGET} in {arc:__profile__} Mode")
 }
 
 
-@after Message MakeFolders
+@after MakeFolders
 @multithread
 task Compile(SOURCES) 
 {
-    {arc:COMPILER} {arc:FLAGS} {arc:list:SOURCES}   -c {arc:list:OBJECTS}
+    {arc:COMPILER} {arc:FLAGS} -c {arc:list:SOURCES} -o {arc:list:OBJECTS}
 }
     
     
@@ -55,7 +55,6 @@ task Build() {}
 @after Clean Build
 task Rebuild() {}
 
-
 @pub
 @after Clean Build
 task Install()
@@ -63,3 +62,9 @@ task Install()
     cp {arc:TARGET} /usr/bin/  
 }
 
+@pub
+@after Rebuild
+task Run()
+{
+    ./{arc:TARGET}  
+}

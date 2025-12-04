@@ -14,13 +14,6 @@ static Core::InstructionResult run_instruction(const std::string& interpreter, c
     Core::InstructionResult  res {};
     res.command = command;
 
-    if (opt.dry_run)
-    {
-        DBG("[DRY] " << interpreter << " -c \"" << command << "\"");
-        res.exit_code = 0;
-        return res;
-    }
-
     std::string full_cmd = interpreter + " -c \"" + command + "\"";
     int ret = std::system(full_cmd.c_str());
 
@@ -128,7 +121,7 @@ static Core::Result run_job(const Jobs::Job& job, const Core::RunOptions& opt) n
 std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::RunOptions& opt) noexcept
 {
     std::vector<Core::Result> results;
-    
+
     results.reserve(jobs.All().size());
 
     for (const auto &job : jobs.All())
