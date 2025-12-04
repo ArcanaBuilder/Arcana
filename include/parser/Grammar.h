@@ -102,6 +102,7 @@ enum class TASK_DECL : uint32_t
     RESERVED           = 0,
     TASKNAME              ,
     ROUNDLP               ,
+    INPUTS                ,
     ROUNDRP               ,
     NEWLINE               ,
     CURLYLP               ,

@@ -123,11 +123,13 @@ Arcana::Support::SemanticOutput Parser::Handle_TaskDecl(Grammar::Match& match)
     Statement body;
 
     Point  p1    = match[_I(Grammar::TASK_DECL::TASKNAME)];
+    Point  p2    = match[_I(Grammar::TASK_DECL::INPUTS)];
     Point  bbody = match[_I(Grammar::TASK_DECL::CURLYLP)];
     Point  ebody = match[_I(Grammar::TASK_DECL::CURLYRP)];
 
     Input  header_line = lexer[p1->token];
     Lexeme task        = header_line.substr(p1->start, p1->end - p1->start);
+    Lexeme inputs      = header_line.substr(p2->start, p2->end - p2->start);
 
     const std::size_t line_begin = bbody->token.line;
     const std::size_t line_end   = ebody->token.line;
@@ -184,7 +186,7 @@ Arcana::Support::SemanticOutput Parser::Handle_TaskDecl(Grammar::Match& match)
         }
     }
 
-    return instr_engine.Collect_Task(task, body);
+    return instr_engine.Collect_Task(task, inputs, body);
 }
 
 

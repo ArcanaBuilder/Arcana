@@ -3,6 +3,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "Jobs.h"
+#include "Core.h"
 #include "Parser.h"
 #include "Support.h"
 #include "Defines.h"
@@ -85,6 +86,7 @@ static Arcana_Result run(const Support::Arguments& args)
     Parsing::Parser      parser(lexer, engine);
     Semantic::Enviroment env;
     Jobs::List           joblist;
+    Core::RunOptions     runopt;
 
     parser.Set_ParsingError_Handler    (Support::ParserError   {lexer} );
     parser.Set_AnalisysError_Handler   (Support::SemanticError {lexer} );
@@ -133,6 +135,9 @@ static Arcana_Result run(const Support::Arguments& args)
         Debug::DebugJobsList(joblist);
         return ARCANA_RESULT__OK;
     }
+
+    runopt.dry_run = true;
+    Core::run_jobs(joblist, runopt);
 
     return result;
 }

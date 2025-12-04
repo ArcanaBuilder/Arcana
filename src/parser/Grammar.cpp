@@ -125,6 +125,7 @@ static Rules rule_TASK_DECL =
     Scan::TokenType::TASK         |
     Scan::TokenType::IDENTIFIER   |
     Scan::TokenType::ROUNDLP      |
+    Scan::TokenType::ANY          |
     Scan::TokenType::ROUNDRP      |
     Scan::TokenType::OPT_NEWLINE  |
     Scan::TokenType::CURLYLP      |

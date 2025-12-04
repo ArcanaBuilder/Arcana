@@ -2,91 +2,64 @@
 
 using default interpreter /bin/bash;
 
-import Defaults.arc;
-
-
-###########################
-# BUILT-IN TASKS
-###########################
-
-@public
-task Clean() 
-{ 
-    rm -rf {arc:BUILDDIR}
-}
-
-@public
-@always
-@dependecy Clean Build
-task Install()
-{
-    cp {arc:TARGET} /usr/bin/  
-}
+import Vars.arc;
 
 ###########################
-# OVERRIDED BUILT-IN TASKS
+# PRIVATE TASKS
 ###########################
 
-@public
-@dependecy Compile Link
-task Build() {}
 
-@public
-@main
-@multithreading
-task Compile()
-{
-    {arc:COMPILER} {arc:FLAGS} {arc:list:SOURCES} -c {arc:list:OBJECTS}
-}
-
-
-task Link()
-{
-    {arc:COMPILER} {arc:FLAGS} {arc:inline:OBJECTS} -o {arc:TARGET}
-}
-
-
-
-###########################
-# PRE BUILD TASKS
-###########################
-
-using order precompiler Message MakeFolders;
-
-@precompiler
 task MakeFolders() 
 {
     cd {arc:SRCDIR}
     find . -type d -exec mkdir -p "../{arc:BUILDDIR}"/{} \;
 }
 
-
 @interpreter /bin/python3
-@profile Debug
-@precompiler
 task Message() 
 {
-print("Compiling {arc:TARGET} in Debug Mode")
+print("Invoking arcana for {arc:TARGET} in {arc:__profile__} Mode")
 }
 
 
-@profile Release
-@precompiler
-task Message() 
+@after Message MakeFolders
+@multithread
+task Compile(SOURCES) 
 {
-    echo 'Compiling {arc:TARGET} in Release Mode'
+    {arc:COMPILER} {arc:FLAGS} {arc:list:SOURCES}   -c {arc:list:OBJECTS}
+}
+    
+    
+task Link()
+{        
+    {arc:COMPILER} {arc:FLAGS} {arc:inline:OBJECTS} -o {arc:TARGET}
 }
 
 
-
 ###########################
-# POST BUILD TASKS
+# PUBLIC TASKS
 ###########################
 
-@private
-@interpreter /bin/echo
-@postcompiler
-task Say_Something() 
+@pub
+@then MakeFolders
+task Clean() 
 { 
-    "GATOR!"
+    rm -rf {arc:BUILDDIR}
 }
+
+@pub
+@after Compile Link
+task Build() {}
+
+@pub
+@after Clean Build
+task Rebuild() {}
+
+
+@pub
+@after Clean Build
+task Install()
+{
+    cp {arc:TARGET} /usr/bin/  
+}
+

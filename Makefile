@@ -1,5 +1,5 @@
 CXX      := g++
-CXXFLAGS := -std=c++17 -g3 -O0 -Wall -Wextra -DDEBUG -Iinclude/common -Iinclude/core -Iinclude/parser -Iinclude/parser/util -Iinclude/core/util
+CXXFLAGS := -std=c++17 -g3 -O0 -Wall -Wextra -Wunused-variable -Wunused-function -Wunused-parameter -Wunreachable-code -Wunused-but-set-variable -Wunused-result -DDEBUG -Iinclude/common -Iinclude/core -Iinclude/parser -Iinclude/parser/util -Iinclude/core/util
 
 TARGET   := build/bin/arcana
 

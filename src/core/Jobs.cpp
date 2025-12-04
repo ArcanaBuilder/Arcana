@@ -65,6 +65,103 @@ static const ExpansionMap Expansion_Map =
 
 
 
+static bool HasFileChanged(const std::string& path) noexcept
+{
+    UNUSED(path);
+    return true;
+}
+
+
+
+void PruneUnchangedInstructions(Job& job,
+                                const Semantic::InstructionTask& task,
+                                const Semantic::VTable& vtable) noexcept
+{
+    if (task.task_inputs.empty() || job.instructions.empty())
+    {
+        return;
+    }
+
+    // vettore di flag per tenere/trimmare le istruzioni
+    std::vector<bool> keep(job.instructions.size(), true);
+
+    // helper locale: dato un file, marca le istruzioni che lo usano
+    auto process_file = [&] (const std::string & file)
+    {
+        if (file.empty())
+        {
+            return;
+        }
+
+        for (std::size_t i = 0; i < job.instructions.size(); ++i)
+        {
+            if (!keep[i])
+            {
+                continue; // già scartata
+            }
+
+            const std::string & instr = job.instructions[i];
+
+            // match banale: il nome file compare nella stringa dell'istruzione
+            if (instr.find(file) != std::string::npos)
+            {
+                // stub: in futuro qui controlli timestamp/hash del file
+                bool changed = HasFileChanged(file);
+
+                if (!changed)
+                {
+                    keep[i] = false; // istruzione da togliere
+                }
+            }
+        }
+    };
+
+    // iteri gli input dichiarati sul task
+    for (const auto & input_name : task.task_inputs)
+    {
+        auto it = vtable.find(input_name);
+        if (it == vtable.end())
+        {
+            // input non trovato in vtable: per ora ignoro
+            continue;
+        }
+
+        const auto & var_ref = it->second;
+
+        if (!var_ref.glob_expansion.empty())
+        {
+            // caso glob: più file
+            for (const auto & file : var_ref.glob_expansion)
+            {
+                process_file(file);
+            }
+        }
+        else
+        {
+            // fallback a valore singolo (es. una singola path)
+            if (!var_ref.var_value.empty())
+            {
+                process_file(var_ref.var_value);
+            }
+        }
+    }
+
+    // compattiamo le istruzioni mantenendo l'ordine
+    Semantic::Task::Instrs filtered;
+    filtered.reserve(job.instructions.size());
+
+    for (std::size_t i = 0; i < job.instructions.size(); ++i)
+    {
+        if (keep[i])
+        {
+            filtered.emplace_back(std::move(job.instructions[i]));
+        }
+    }
+
+    job.instructions.swap(filtered);
+}
+
+
 
 
 
@@ -253,10 +350,13 @@ static ExpansionError ExpandListInstuctions(const Semantic::InstructionTask&  ta
 
     if (never_matched)
     {
-        out_instrs.push_back(make_single_instruction(computed_instr));
+        if (task.task_instrs.size())
+        {
+            out_instrs.push_back(make_single_instruction(computed_instr));
+        }
     }
     else
-    {
+    {  
         out_instrs = std::move(computed_instr);
     }
 
@@ -281,7 +381,9 @@ static std::pair<ExpansionError, std::optional<Job>> FromInstruction(const Seman
         return std::make_pair(status, std::nullopt);
     }
 
-    if (!task.task_instrs.size())
+    PruneUnchangedInstructions(new_job, task, vtable);
+
+    if (!new_job.instructions.size())
     {
         status.ok = true;
         return std::make_pair(status, std::nullopt);
@@ -297,49 +399,104 @@ static std::pair<ExpansionError, std::optional<Job>> FromInstruction(const Seman
 
 
 
+using Graph = std::unordered_map<std::string, std::array<std::vector<std::string>, 2>>;
+
+static Graph BuildGraph(const Semantic::FTable& table)
+{
+    Graph g;
+
+    for (const auto& [name, task] : table)
+    {
+        // assicura che ogni task abbia almeno un vettore vuoto
+        g[name][0] = {};
+        g[name][1] = {}; 
+
+        // AFTER: dep -> task
+        if (task.hasAttribute(Semantic::Attr::Type::AFTER))
+        {
+            auto& deps = task.getProperties(Semantic::Attr::Type::AFTER);
+            for (const auto& dep_name : deps)
+            {
+                g[name][0].push_back(dep_name);
+            }
+        }
+
+        // THEN: task -> succ
+        if (task.hasAttribute(Semantic::Attr::Type::THEN))
+        {
+            auto& succs = task.getProperties(Semantic::Attr::Type::THEN);
+            for (const auto& succ_name : succs)
+            {
+                g[name][1].push_back(succ_name);
+            }
+        }
+    }
+
+    return g;
+}
+
 static bool dfs_visit(const std::string&                name,
                       const Semantic::FTable&           table,
                             Semantic::VTable&           vtable,
+                      const Graph&                      graph,
                       std::map<std::string, VisitMark>& mark,
                       std::vector<Job>&                 out,
                       ExpansionError&                   err) noexcept
 {
     std::stringstream ss;
 
-    auto it = table.find(name);
-
-    if (it == table.end())
+    auto tit = table.find(name);
+    if (tit == table.end())
     {
-        ss <<  "Unknown task '" << ANSI_BMAGENTA << name << ANSI_RESET << "'"; 
+        ss << "Unknown task '" << ANSI_BMAGENTA << name << ANSI_RESET << "'";
         err.msg = ss.str();
-        return false;   
+        err.ok  = false;
+        return false;
     }
 
     VisitMark& m = mark[name];
 
     if (m == VisitMark::PERM)
-    {
         return true;
-    }
 
     if (m == VisitMark::TEMP)
     {
-        ss <<  "Cyclic dependency involving task  '" << ANSI_BMAGENTA << name << ANSI_RESET << "'"; 
+        ss << "Cyclic dependency involving task '" << ANSI_BMAGENTA << name << ANSI_RESET << "'";
         err.msg = ss.str();
+        err.ok  = false;
         return false;
     }
 
     m = VisitMark::TEMP;
 
-    const Semantic::InstructionTask& t = it->second;
-
-    if (t.hasAttribute(Semantic::Attr::Type::DEPENDECY))
+    // visita tutti i successori nel grafo (AFTER + THEN già “fusi”)
+    auto git = graph.find(name);
+    if (git != graph.end())
     {
-        auto& deps = t.getProperties(Semantic::Attr::Type::DEPENDECY);
-
-        for (const std::string& dep_name : deps)
+        for (const auto& succ : git->second[0])
         {
-            if (!dfs_visit(dep_name, table, vtable, mark, out, err))
+            if (!dfs_visit(succ, table, vtable, graph, mark, out, err))
+            {
+                return false;
+            }
+        }
+
+        // genera il Job associato a questo task
+        const Semantic::InstructionTask& t = tit->second;
+        const auto& result = FromInstruction(t, vtable);
+
+        if (!result.first.ok)
+        {
+            err = result.first;
+            return false;
+        }
+
+        if (result.second)
+            out.push_back(*result.second);
+
+        for (const auto& succ : git->second[1])
+        {
+            if (!dfs_visit(succ, table, vtable, graph, mark, out, err))
             {
                 return false;
             }
@@ -348,6 +505,8 @@ static bool dfs_visit(const std::string&                name,
 
     m = VisitMark::PERM;
 
+    // genera il Job associato a questo task
+    const Semantic::InstructionTask& t = tit->second;
     const auto& result = FromInstruction(t, vtable);
 
     if (!result.first.ok)
@@ -357,12 +516,11 @@ static bool dfs_visit(const std::string&                name,
     }
 
     if (result.second)
-    {
         out.push_back(*result.second);
-    }
 
     return true;
 }
+
 
 
 
@@ -386,44 +544,34 @@ ExpansionError List::FromEnv(Semantic::Enviroment& environment, List& out) noexc
     ExpansionError status;
     status.ok = true;
 
-    // 1) PRETASK
-    for (const auto& pre_task : environment.pretask)
-    {
-        const auto& result = FromInstruction(pre_task, environment.vtable);
-        if (!result.first.ok)
-        {
-            return result.first;
-        }
-        else
-        {   
-            if (result.second) out.Insert(*result.second);
-        }
-    }
+    // build graph da ftable (AFTER + THEN)
+    Graph graph = BuildGraph(environment.ftable);
 
-    // 2) trova il MAIN
+    // 2) MAIN
     if (auto main_task_opt = Table::GetValue(environment.ftable, Semantic::Attr::Type::MAIN))
     {
-        const auto& main_task        = main_task_opt.value();
-        const std::string& main_name = main_task.get().task_name;
+        const auto&       main_task  = main_task_opt.value();
+        const std::string main_name  = main_task.get().task_name;
     
-        {
-            ExpansionError                   err;   
-            std::vector<Job>                 ordered;
-            std::map<std::string, VisitMark> mark;
+        ExpansionError                   err;   
+        std::vector<Job>                 ordered;
+        std::map<std::string, VisitMark> mark;
 
-            if (!dfs_visit(main_name, environment.ftable, environment.vtable, mark, ordered, err))
-            {
-                return err.ok ? status : err;
-            }
-    
-            for (const Job& j : ordered)
-            {
-                out.Insert(j);
-            }
+        if (!dfs_visit(main_name, environment.ftable, environment.vtable, graph, mark, ordered, err))
+        {
+            return err.ok ? status : err;
+        }
+
+        // se dfs fa push_back dopo i figli, qui puoi fare reverse
+        //std::reverse(ordered.begin(), ordered.end());
+
+        for (const Job& j : ordered)
+        {
+            out.Insert(j);
         }
     }
 
-    // 4) ALWAYS
+    // 4) ALWAYS invariato
     if (auto always_opt = Table::GetValues(environment.ftable, Semantic::Attr::Type::ALWAYS))
     {
         for (const auto& task : always_opt.value())
@@ -433,27 +581,12 @@ ExpansionError List::FromEnv(Semantic::Enviroment& environment, List& out) noexc
             {
                 return result.first;
             }
-            else
-            {   
-                if (result.second) out.Insert(*result.second);
+            else if (result.second)
+            {
+                out.Insert(*result.second);
             }
-        }
-    }
-
-    // 5) POSTTASK
-    for (const auto& post_task : environment.posttask)
-    {
-        const auto& result = FromInstruction(post_task, environment.vtable);
-        if (!result.first.ok)
-        {
-            return result.first;
-        }
-        else
-        {   
-            if (result.second) out.Insert(*result.second);
         }
     }
 
     return status;
 }
-

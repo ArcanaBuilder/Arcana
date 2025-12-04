@@ -84,13 +84,11 @@ BEGIN_NAMESPACE(Attr)
 //                                                                                                                       
 enum class Type
 {
-    PRECOMPILER      = 0,
-    POSTCOMPILER        ,
-    PROFILE             ,
+    PROFILE          = 0,
     PUBLIC              ,
-    PRIVATE             ,
     ALWAYS              ,
-    DEPENDECY           ,
+    AFTER               ,
+    THEN                ,
     MAP                 ,
     MULTITHREAD         ,
     MAIN                ,
@@ -230,7 +228,8 @@ END_NAMESPACE(Attr)
                                                                                                                     
 
 BEGIN_NAMESPACE(Task)
-                                                                                                               
+                                  
+using Inputs = std::vector<std::string>;
 using Instrs = std::vector<std::string>;
 
 END_NAMESPACE(Task)
@@ -244,7 +243,6 @@ BEGIN_NAMESPACE(Using)
 enum class Type
 {
     PROFILES             = 0,
-    ORDER                   ,
     INTERPRETER             ,
 };
 
@@ -310,11 +308,9 @@ using CRef = std::reference_wrapper<const T>;
 
 using VTable      = std::map<std::string, InstructionAssign>; 
 using FTable      = std::map<std::string, InstructionTask>; 
-using CTable      = std::map<std::string, InstructionCall>; 
 using VList       = std::vector<InstructionAssign>;
 using FList       = std::vector<InstructionTask>;
 using FListCRef   = std::vector<CRef<InstructionTask>>;
-using Order       = std::vector<std::string>;
 using Interpreter = std::string;
 
 
@@ -387,23 +383,27 @@ struct InstructionAssign
 struct InstructionTask
 {
     std::string  task_name;
+    Task::Inputs task_inputs;
     Task::Instrs task_instrs;
     FListCRef    dependecies;
+    FListCRef    thens;
     Attr::List   attributes;
     Interpreter  interpreter;
 
     InstructionTask() = default;
 
     InstructionTask(const std::string&  name,
+                    const Task::Inputs& inputs,
                     const Task::Instrs& instrs)
         :
         task_name(name),
+        task_inputs(inputs),
         task_instrs(instrs)
     {}
 
     // copy
-    InstructionTask(const InstructionTask& other)             = default;
-    InstructionTask& operator=(const InstructionTask & other) = default;
+    InstructionTask(const InstructionTask& other)            = default;
+    InstructionTask& operator=(const InstructionTask& other) = default;
 
     bool hasAttribute(const Attr::Type attr) const
     {
@@ -457,8 +457,6 @@ struct Enviroment
 public:
     VTable   vtable;
     FTable   ftable;
-    FList    pretask;
-    FList    posttask;
 
     const std::optional<std::string> AlignEnviroment() noexcept;
           Arcana_Result              CheckArgs(const Arcana::Support::Arguments& args) noexcept;
@@ -468,8 +466,6 @@ public:
     
 private:
     Profile     profile;
-    Order       preorder;
-    Order       postorder;
     Interpreter default_interpreter;
 };
 
@@ -494,7 +490,7 @@ public:
 
     SemanticOutput Collect_Attribute (const std::string& name, const std::string&  prop);
     SemanticOutput Collect_Assignment(const std::string& name, const std::string&  val); 
-    SemanticOutput Collect_Task      (const std::string& name, const Task::Instrs& instrs); 
+    SemanticOutput Collect_Task      (const std::string& name, const std::string& inputs, const Task::Instrs& instrs);
     SemanticOutput Collect_Using     (const std::string& what, const std::string&  opt); 
 
     Enviroment                       GetEnvironment()  const noexcept { return _env; }

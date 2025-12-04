@@ -81,24 +81,21 @@ using UsingMap       = AbstractKeywordMap<Using::Rule>;
 //                                                                                                                  
 
 static const AttributeMap Known_Attributes = 
-{
-    { "precompiler"    , Attr::Type::PRECOMPILER  },          
-    { "postcompiler"   , Attr::Type::POSTCOMPILER },          
+{         
     { "profile"        , Attr::Type::PROFILE      },          
-    { "public"         , Attr::Type::PUBLIC       },          
-    { "private"        , Attr::Type::PRIVATE      },          
+    { "pub"            , Attr::Type::PUBLIC       },                   
     { "always"         , Attr::Type::ALWAYS       },          
-    { "dependecy"      , Attr::Type::DEPENDECY    },          
+    { "after"          , Attr::Type::AFTER        },   
+    { "then"           , Attr::Type::THEN         },          
     { "map"            , Attr::Type::MAP          },    
-    { "multithreading" , Attr::Type::MULTITHREAD  },     
+    { "multithread"    , Attr::Type::MULTITHREAD  },     
     { "main"           , Attr::Type::MAIN         },  
     { "interpreter"    , Attr::Type::INTERPRETER  },          
 };
 
 
 static const UsingMap Known_Usings = 
-{
-    { "order"          , { { "precompiler", "postcompiler" },  Using::Type::ORDER       } },          
+{        
     { "profiles"       , { {                               },  Using::Type::PROFILES    } },   
     { "default"        , { { "interpreter"                 },  Using::Type::INTERPRETER } },   
 };
@@ -106,22 +103,19 @@ static const UsingMap Known_Usings =
 
 static const std::vector<std::string> _attributes =
 {
-    "precompiler"   ,
-    "postcompiler"  ,
     "profile"       ,
-    "public"        ,
-    "private"       ,
+    "pub"           ,
     "always"        ,
-    "dependecy"     ,
+    "after"         ,
+    "then"          ,
     "map"           ,
-    "multithreading",
+    "multithread"   ,
     "main"          ,
     "interpreter"   ,
 };
 
 static const std::vector<std::string> _usings =
 {
-    "order"   ,
     "profiles",
     "default" ,
 };
@@ -155,14 +149,12 @@ Engine::Engine()
     :
     _main_count(0)
 {
-    // ATTRIBUTE RULES
-    _attr_rules[_I(Attr::Type::PRECOMPILER )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK                         } };              
-    _attr_rules[_I(Attr::Type::POSTCOMPILER)] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };          
+    // ATTRIBUTE RULES      
     _attr_rules[_I(Attr::Type::PROFILE     )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK, Attr::Target::VARIABLE } };           
     _attr_rules[_I(Attr::Type::PUBLIC      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK, Attr::Target::VARIABLE } };    
-    _attr_rules[_I(Attr::Type::PRIVATE     )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK, Attr::Target::VARIABLE } };    
     _attr_rules[_I(Attr::Type::ALWAYS      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
-    _attr_rules[_I(Attr::Type::DEPENDECY   )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } };           
+    _attr_rules[_I(Attr::Type::AFTER       )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } }; 
+    _attr_rules[_I(Attr::Type::THEN        )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } };           
     _attr_rules[_I(Attr::Type::MAP         )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };     
     _attr_rules[_I(Attr::Type::MULTITHREAD )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
     _attr_rules[_I(Attr::Type::MAIN        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };     
@@ -313,11 +305,13 @@ SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::st
 } 
 
 
-SemanticOutput Engine::Collect_Task(const std::string& name, const Task::Instrs& instrs)
+SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& inputs, const Task::Instrs& instrs)
 {
-    std::stringstream    ss;
+    std::stringstream ss;
 
-    InstructionTask   task { name,  instrs };
+    Task::Inputs      task_inputs = Support::split(inputs);
+
+    InstructionTask   task { name, task_inputs, instrs };
     FTable&           ftable = _env.ftable;
 
     task.attributes = _attr_pending;
@@ -335,9 +329,9 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const Task::Instrs&
         }
     }
 
-    if (task.hasAttribute(Attr::Type::DEPENDECY))
+    if (task.hasAttribute(Attr::Type::AFTER))
     {
-        auto& properties = task.getProperties(Attr::Type::DEPENDECY);
+        auto& properties = task.getProperties(Attr::Type::AFTER);
 
         if (std::find(properties.begin(), properties.end(), name) != properties.end())
         {
@@ -368,7 +362,6 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
 {
     std::stringstream ss;
     Attr::Properties  options = Arcana::Support::split(opt);
-    Attr::Type        attr_type;
     Using::Rule       rule;
 
     // CHECK IF THE USING IS KNOWN 
@@ -382,8 +375,8 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
         return SEM_NOK_HINT(ss.str(), Support::FindClosest(_usings, what));
     }
 
-    // IF 'ORDER' IS SELECTED
-    if (rule.using_type == Using::Type::ORDER || rule.using_type == Using::Type::INTERPRETER)
+    // IF 'INTERPRETER' IS SELECTED
+    if (rule.using_type == Using::Type::INTERPRETER)
     {
         // CHECK FOR THE PROPERTIES SIZE
         if (options.size() == 0)
@@ -411,54 +404,22 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
             ss << "Unknown attribute " << "‘" << ANSI_BMAGENTA << options[0] << ANSI_RESET << "’ for statement " << ANSI_BMAGENTA << "using " << what << ANSI_RESET ;
             return SEM_NOK_HINT(ss.str(), Support::FindClosest(rule.valid_attr, options[0]));
         }
-
-        // GET THE ATTRIBUTE
-        attr_type = Known_Attributes.at(options[0]);
         
-
-        if (attr_type == Attr::Type::INTERPRETER)
+        // CHECK IF THE ATTRIBUTE IS FOLLOWER BY TASKS NAME
+        if (options.size() == 1)
         {
-            // CHECK IF THE ATTRIBUTE IS FOLLOWER BY TASKS NAME
-            if (options.size() == 1)
-            {
-                ss << "Statement " << "‘" << ANSI_BMAGENTA << "using default " << options[0] << ANSI_RESET << "’ must be followed by interpeter path";
-                return SEM_NOK(ss.str());
-            }
-
-            // CHECK IF THE INTERPRETER EXISTS
-            if (!Support::file_exists(options[1]))
-            {
-                ss << "Interpreter " << "‘" << ANSI_BMAGENTA << options[1] << ANSI_RESET << "’ is missing or unknown";
-                return SEM_NOK(ss.str());
-            }
-
-            _env.default_interpreter = options[1];
+            ss << "Statement " << "‘" << ANSI_BMAGENTA << "using default " << options[0] << ANSI_RESET << "’ must be followed by interpeter path";
+            return SEM_NOK(ss.str());
         }
-        else
+
+        // CHECK IF THE INTERPRETER EXISTS
+        if (!Support::file_exists(options[1]))
         {
-            auto& order = (attr_type == Attr::Type::PRECOMPILER) ? _env.preorder : _env.postorder;
-            
-            // CHECK IF THE ATTRIBUTE IS FOLLOWER BY TASKS NAME
-            if (options.size() == 1)
-            {
-                ss << "Statement " << "‘" << ANSI_BMAGENTA << "using order " << options[0] << ANSI_RESET << "’ must be followed by tasks name";
-                return SEM_NOK(ss.str());
-            }
-    
-            // GET THE TASKS AND CHECK FOR ERRORS
-            for (uint32_t iter = 1; iter < options.size(); ++iter)
-            {
-                if (std::find(order.begin(), order.end(), options[iter]) == order.end())
-                {
-                    order.push_back(options[iter]);
-                }
-                else
-                {
-                    ss << "Duplicate item in statement " << "‘" << ANSI_BMAGENTA << "using order" << ANSI_RESET << "’: ‘" << ANSI_BMAGENTA << options[iter] << ANSI_RESET <<"’" << ANSI_RESET ;
-                    return SEM_NOK(ss.str());
-                }
-            }
+            ss << "Interpreter " << "‘" << ANSI_BMAGENTA << options[1] << ANSI_RESET << "’ is missing or unknown";
+            return SEM_NOK(ss.str());
         }
+
+        _env.default_interpreter = options[1];
     }
 
     // IF 'PROFILES' IS SELECTED
@@ -587,91 +548,44 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
 {
     std::stringstream ss;
 
-    const std::array<Ref<Order>,  2> orders = { preorder               , postorder                };
-    const std::array<Ref<FList>,  2> flist  = { pretask                , posttask                 };
-    const std::array<Attr::Type,  2> atype  = { Attr::Type::PRECOMPILER, Attr::Type::POSTCOMPILER };
-    const std::array<std::string, 2> arepr  = { "precompiler"          , "postcompiler"           };
-
-    // IF 'DEPENDENCY' ATTRIBUTE IS FOUND FROM FTABLE
-    auto tasks = Table::GetValues(ftable, profile.profiles, Attr::Type::DEPENDECY);
-
-    // FOR EACH TASK 
-    for (auto& ref : tasks)
+    const std::array<Attr::Type, 2> attributes = { Attr::Type::AFTER, Attr::Type::THEN };
+    
+    
+    for (const auto attr : attributes)
     {
-        auto& task = ref.get();
-        auto props = task.getProperties(Attr::Type::DEPENDECY);
-
-        // CHECK IF THE DEPENDECY IS CONGRUENT, OTHERWISE RAISE AN ERROR
-        for (auto& p : props)
-        {
-            auto it = ftable.find(p);
-
-            if (it == ftable.end())
-            {
-                auto closest = Support::FindClosest(Table::Keys(ftable), p);
-
-                ss << "Invalid dependecy ‘" << ANSI_BMAGENTA << p << ANSI_RESET << "’ for task " << ANSI_BMAGENTA << task.task_name << ANSI_RESET << std::endl;
-                if (closest) ss << "[" << ANSI_BGREEN << "HINT" << ANSI_RESET << "]  Did you mean " << ANSI_BCYAN << closest.value() << ANSI_RESET << "?";
-                return ss.str();
-            }
-            else
-            {   
-                auto& ref_task = ftable[it->first];
-
-                if (ref_task.hasAttribute(Attr::Type::DEPENDECY))
-                {
-                    auto& ref_task_props = ref_task.getProperties(Attr::Type::DEPENDECY);
-
-                    if (std::find(ref_task_props.begin(), ref_task_props.end(), task.task_name) != ref_task_props.end())
-                    {
-                        ss << "Detected recursive dependecy for tasks " << ANSI_BMAGENTA << ref_task.task_name << ANSI_RESET << " and " << ANSI_BMAGENTA << task.task_name << ANSI_RESET;
-                        return ss.str();
-                    }
-                }
-            }
-
-            // ENQUEUE THE DEPENDECY IN ORDER
-            task.dependecies.push_back(std::cref(ftable.at(p)));
-        }
-    }
-
-    // ALIGN THE PRECOMPILER AND POSTCOMPLER TASKS
-    for (uint32_t iter = 0; iter < orders.size(); ++iter)
-    {
-        if (orders[iter].get().size() > 0)
-        {
-            // FOR EACH MARKED TASK
-            for (const auto& task : orders[iter].get())
-            {
-                // POP THE TASK FROM THE FTABLE AND ENQUEUE IN ORDER IN THE PROPER LIST
-                // ALSO CHECK FOR ERRORS
-                auto result = Table::TakeValue(ftable, task, profile.profiles, atype[iter]);
+        // IF ATTRIBUTE IS FOUND FROM FTABLE
+        auto tasks = Table::GetValues(ftable, profile.profiles, attr);
         
-                if (result)
+        // FOR EACH TASK 
+        for (auto& ref : tasks)
+        {
+            auto& task = ref.get();
+            auto props = task.getProperties(attr);
+    
+            // CHECK IF THE DEPENDECY IS CONGRUENT, OTHERWISE RAISE AN ERROR
+            for (auto& p : props)
+            {
+                auto it = ftable.find(p);
+    
+                if (it == ftable.end())
                 {
-                    flist[iter].get().push_back(result.value());
+                    auto closest = Support::FindClosest(Table::Keys(ftable), p);
+    
+                    ss << "Invalid dependecy ‘" << ANSI_BMAGENTA << p << ANSI_RESET << "’ for task " << ANSI_BMAGENTA << task.task_name << ANSI_RESET << std::endl;
+                    if (closest) ss << "[" << ANSI_BGREEN << "HINT" << ANSI_RESET << "]  Did you mean " << ANSI_BCYAN << closest.value() << ANSI_RESET << "?";
+                    return ss.str();
+                }
+        
+                // ENQUEUE THE DEPENDECY IN ORDER
+                if (attr == Attr::Type::AFTER)
+                {
+                    task.dependecies.push_back(std::cref(ftable.at(p)));
                 }
                 else
                 {
-                    ss << "Task ‘" << ANSI_BMAGENTA << task << ANSI_RESET << "’ is not marked with attribute " << ANSI_BMAGENTA << arepr[iter] << ANSI_RESET << " or does not exists";
-                    return ss.str();
+                    task.thens.push_back(std::cref(ftable.at(p)));
                 }
             }
-
-            auto result = Table::TakeValues(ftable, profile.profiles, atype[iter]);
-
-            for (const auto& task : result)
-            {
-                if (task.hasAttribute(Attr::Type::ALWAYS))
-                {
-                    flist[iter].get().push_back(task);
-                }
-            }
-        }
-        else
-        {
-            // FOR DEFAULT, THE DECLARATION ORDER IS USED
-            flist[iter].get() = Table::TakeValues(ftable, profile.profiles, atype[iter]);
         }
     }
 
@@ -682,30 +596,6 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
     }
 
     for (auto& [_, task] : ftable)
-    {
-        if (task.hasAttribute(Attr::Type::INTERPRETER))
-        {
-            task.interpreter = task.getProperties(Attr::Type::INTERPRETER).at(0);
-        }
-        else
-        {
-            task.interpreter = default_interpreter;
-        }
-    }
-
-    for (auto& task : pretask)
-    {
-        if (task.hasAttribute(Attr::Type::INTERPRETER))
-        {
-            task.interpreter = task.getProperties(Attr::Type::INTERPRETER).at(0);
-        }
-        else
-        {
-            task.interpreter = default_interpreter;
-        }
-    }
-
-    for (auto& task : posttask)
     {
         if (task.hasAttribute(Attr::Type::INTERPRETER))
         {
@@ -728,11 +618,23 @@ const std::optional<std::string> Enviroment::Expand() noexcept
     {
         std::stringstream        ss;
         std::vector<ExpandMatch> matches;
-
+        bool                     intern_satisfied = false;
+        
         for (const auto& var : vars)
         {
-            std::regex re("(\\{arc:)" + var + "(\\})");
-            for (std::sregex_iterator it(stmt.begin(), stmt.end(), re); it != std::sregex_iterator(); ++it)
+            std::regex intern_re(R"(\{arc:(__profile__)\})");
+            for (std::sregex_iterator it(stmt.begin(), stmt.end(), intern_re), end; it != end && !intern_satisfied; ++it)
+            {   
+                std::string new_stmt  = stmt.substr(0, it->position());
+                new_stmt             += (profile.selected.empty()) ? "None" : profile.selected;
+                new_stmt             += stmt.substr(it->position() + (*it)[0].length(), stmt.length() - it->position() + (*it)[0].length());
+                stmt = new_stmt;
+            }
+
+            intern_satisfied = true;
+
+            std::regex var_re("(\\{arc:)" + var + "(\\})");
+            for (std::sregex_iterator it(stmt.begin(), stmt.end(), var_re), end; it != end; ++it)
             {   
                 std::size_t start = it->position();
                 matches.push_back({var, start, start + var.size() + 6});
@@ -787,25 +689,17 @@ const std::optional<std::string> Enviroment::Expand() noexcept
     // ITERATE THE FTABLE AND TRY TO EXPAND
     for (auto& [name, task] : ftable)
     {
+        for (const auto& input : task.task_inputs)
+        {
+            if (std::find(var_keys.begin(), var_keys.end(), input) == var_keys.end())
+            {
+                std::stringstream ss;
+                ss << "Invalid input " << ANSI_BMAGENTA << input << ANSI_RESET << " for task " << ANSI_BMAGENTA << name << ANSI_RESET << ": Undefined variable";
+                return ss.str();
+            }
+        }
+
         for (auto& instr : task.task_instrs) 
-        {
-            expand_one(instr, var_keys);
-        }
-    }
-
-    // ITERATE THE pretask LIST AND TRY TO EXPAND
-    for (auto& pre : pretask)
-    {
-        for (auto& instr : pre.task_instrs) 
-        {
-            expand_one(instr, var_keys);
-        }
-    }
-
-    // ITERATE THE posttask LIST AND TRY TO EXPAND
-    for (auto& post : posttask)
-    {
-        for (auto& instr : post.task_instrs) 
         {
             expand_one(instr, var_keys);
         }
