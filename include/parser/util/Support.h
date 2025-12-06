@@ -81,13 +81,15 @@ struct Arguments
     profile;
 
     bool debug_jobs;
+    bool clear_cache;
 
     Arguments() 
         : 
         arcfile("arcfile"),
         task{"", false},
         profile{"", false},
-        debug_jobs(false)
+        debug_jobs(false),
+        clear_cache(false)
     {}
 };
 

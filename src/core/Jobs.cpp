@@ -424,10 +424,12 @@ static std::pair<ExpansionError, std::optional<Job>> FromInstruction(const Seman
         return std::make_pair(status, std::nullopt);
     }
 
-    if (task.hasAttribute(Semantic::Attr::Type::MULTITHREAD))
+    new_job.parallelizable = task.hasAttribute(Semantic::Attr::Type::MULTITHREAD);
+    
+    if (task.hasAttribute(Semantic::Attr::Type::FLUSHCACHE))
     {
-        new_job.parallelizable = true;
-    } 
+        Cache::Manager::Instance().ClearCache();
+    }
 
     return std::make_pair(status, new_job);
 }

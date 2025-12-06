@@ -9,10 +9,10 @@ FLAGS    = -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG
 FLAGS    = -std=c++17 -Os -Wall -Wextra -DRELEASE
 
 TARGET   = {arc:BUILDDIR}/test
-
 SOURCES  = {arc:SRCDIR}/**.cpp
 
-@map SOURCES; OBJECTS = {arc:BUILDDIR}/**.o
+@map SOURCES
+OBJECTS  = {arc:BUILDDIR}/**.o
 
 BUILDDIR = build
 SRCDIR   = src

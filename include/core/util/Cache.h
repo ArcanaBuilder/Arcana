@@ -4,10 +4,26 @@
 
 #include "Defines.h"
 
+#include <map>
+#include <filesystem>
 
 
 BEGIN_MODULE(Cache)
 USE_MODULE(Arcana);
+
+
+
+
+
+namespace fs = std::filesystem;
+
+
+
+
+
+
+
+std::string MD5(const std::string& data) noexcept;
 
 
 
@@ -35,11 +51,20 @@ public:
         return m;
     }
 
-    bool HasFileChanged(const std::string& path) noexcept;
+    void     ClearCache()                            noexcept;
+    void     LoadCache()                             noexcept;
+    bool     HasFileChanged(const std::string& path) noexcept;
+    fs::path WriteScript(const std::string& path)    noexcept;
+
 
 private:
-    Manager()  = default;
+    Manager();
     ~Manager() = default;
+
+    fs::path _cache_folder;
+    fs::path _script_path;
+    fs::path _input_path;
+    std::map<std::string, std::string> _cached_inputs;
 };
 
 

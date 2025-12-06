@@ -80,7 +80,8 @@ static const AttributeMap Known_Attributes =
     { "map"            , Attr::Type::MAP          },    
     { "multithread"    , Attr::Type::MULTITHREAD  },     
     { "main"           , Attr::Type::MAIN         },  
-    { "interpreter"    , Attr::Type::INTERPRETER  },          
+    { "interpreter"    , Attr::Type::INTERPRETER  },  
+    { "flushcache"     , Attr::Type::FLUSHCACHE   },          
 };
 
 
@@ -105,6 +106,7 @@ static const std::vector<std::string> _attributes =
     "multithread"   ,
     "main"          ,
     "interpreter"   ,
+    "flushcache"    ,
 };
 
 
@@ -161,9 +163,9 @@ Engine::Engine()
     _attr_rules[_I(Attr::Type::MAP         )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };     
     _attr_rules[_I(Attr::Type::MULTITHREAD )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
     _attr_rules[_I(Attr::Type::MAIN        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };     
-    _attr_rules[_I(Attr::Type::INTERPRETER )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK,                        } };        
+    _attr_rules[_I(Attr::Type::INTERPRETER )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK,                        } };       
+    _attr_rules[_I(Attr::Type::FLUSHCACHE  )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };         
 }
-
 
 
 SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::string&  prop)
@@ -583,7 +585,6 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
     std::stringstream ss;
 
     const std::array<Attr::Type, 2> attributes = { Attr::Type::AFTER, Attr::Type::THEN };
-    
     
     for (const auto attr : attributes)
     {

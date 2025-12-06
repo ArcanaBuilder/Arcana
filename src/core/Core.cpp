@@ -18,12 +18,12 @@ USE_MODULE(Arcana);
 
 static Core::InstructionResult run_instruction(const std::string& interpreter, const std::string& command) noexcept
 {
-    Core::InstructionResult  res {};
-    res.command = command;
+    Core::InstructionResult res { command, 0 };
 
-#warning Use Cache module here!  
-
-    std::string full_cmd = interpreter + " -c \"" + command + "\"";
+    Cache::Manager&         cache    = Cache::Manager::Instance();
+    std::filesystem::path   script   = cache.WriteScript(command);
+    std::string             full_cmd = interpreter + " \"" + script.string() + "\"";
+    
     int ret = std::system(full_cmd.c_str());
 
     if (ret == -1)

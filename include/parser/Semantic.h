@@ -68,6 +68,7 @@ enum class Type
     MULTITHREAD         ,
     MAIN                ,
     INTERPRETER         ,
+    FLUSHCACHE          ,
 
     ATTRIBUTE__UNKNOWN  ,
     ATTRIBUTE__COUNT    ,
@@ -334,6 +335,8 @@ struct InstructionTask
     FListCRef    thens;
     Attr::List   attributes;
     Interpreter  interpreter;
+    bool         flush_cache = false;
+
 
     InstructionTask() = default;
 

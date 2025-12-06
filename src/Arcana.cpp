@@ -1,6 +1,7 @@
 #include "Jobs.h"
 #include "Core.h"
 #include "Debug.h" 
+#include "Cache.h"
 #include "Parser.h"
 #include "Support.h"
 #include "Defines.h"
@@ -43,6 +44,14 @@ static Arcana_Result run(const Support::Arguments& args)
     Semantic::Enviroment env;
     Jobs::List           joblist;
     Core::RunOptions     runopt;
+    Cache::Manager&      cache = Cache::Manager::Instance();
+
+    if (args.clear_cache)
+    {
+        cache.ClearCache();
+    }
+
+    cache.LoadCache();
 
     parser.Set_ParsingError_Handler    (Support::ParserError   {lexer} );
     parser.Set_AnalisysError_Handler   (Support::SemanticError {lexer} );

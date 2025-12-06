@@ -1,9 +1,28 @@
 #!/usr/bin/arcana
 
-import Vars.arc;
-
+using profiles Debug Release;
 using default interpreter /bin/bash;
 using threads 8;
+
+
+COMPILER = g++
+
+@profile Debug
+FLAGS    = -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG
+
+@profile Release
+FLAGS    = -std=c++17 -Os -Wall -Wextra -DRELEASE
+
+INCLUDES = -Iinclude/common -Iinclude/core -Iinclude/parser -Iinclude/parser/util -Iinclude/core/util
+
+TARGET   = {arc:BUILDDIR}/arcana
+SOURCES  = {arc:SRCDIR}/**.cpp
+
+@map SOURCES
+OBJECTS  = {arc:BUILDDIR}/**.o
+
+BUILDDIR = build
+SRCDIR   = src
 
 
 ###########################
@@ -27,7 +46,7 @@ print("Invoking arcana for {arc:TARGET} in {arc:__profile__} Mode")
 @after MakeFolders
 task Compile(SOURCES) 
 {
-    {arc:COMPILER} {arc:FLAGS} -c {arc:list:SOURCES} -o {arc:list:OBJECTS}
+    {arc:COMPILER} {arc:FLAGS} {arc:INCLUDES} -c {arc:list:SOURCES} -o {arc:list:OBJECTS}
 }
     
     
@@ -50,6 +69,7 @@ task Clean()
 }
 
 @pub
+@main
 @after Compile Link
 task Build() {}
 
@@ -62,12 +82,4 @@ task Rebuild() {}
 task Install()
 {
     cp {arc:TARGET} /usr/bin/  
-}
-
-@pub
-@main
-@after Message Rebuild
-task Run()
-{
-    ./{arc:TARGET}  
 }
