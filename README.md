@@ -48,7 +48,8 @@ task Compile(SOURCES) {
     gcc -c {arc:list:SOURCES}
 }
 ```
-Inputs tell the engine what the task depends on, enabling precise caching.</br>
+Inputs tell the engine what the task depends on, enabling precise caching.
+
 
 ### **Variables**
 Globbing that behaves naturally
@@ -72,24 +73,36 @@ or
 ```bash
 arcana build -p Release
 ```
-Profiles modify behavior without injecting conditional logic into the DSL.</br>
-Attributes that extend, not complicate.</br>
-Attributes add metadata to tasks: ordering, interpreters, multithreading, cache behavior, and more.</br>
-They enhance your workflow without adding hidden semantics.</br>
-Predictable caching.</br></br>
-Arcana automatically checks whether a task’s inputs have changed:</br>
-**unchanged → task skipped**</br>
-**modified → task executed**</br>
+Profiles modify behavior without injecting conditional logic into the DSL.
+
+Attributes that extend, not complicate.
+
+Attributes add metadata to tasks: ordering, interpreters, multithreading, cache behavior, and more.
+
+They enhance your workflow without adding hidden semantics.
+
+Predictable caching.
+
+Arcana automatically checks whether a task’s inputs have changed:
+
+**unchanged → task skipped**
+
+**modified → task executed**
+
 
 Use your preferred interpreter
-Task bodies run in the system’s interpreter (bash by default).</br>
+Task bodies run in the system’s interpreter (bash by default).
+
 Arcana does not embed its own programming language.
 If your shell can run it, Arcana can orchestrate it.
 
 ## 🧠 Philosophy
-**Transparency**: no invisible rules.</br>
-**Minimalism**: a tool stays maintainable by staying small.</br>
-**User control**: you describe the build; Arcana executes it.</br>
+**Transparency**: no invisible rules.
+
+**Minimalism**: a tool stays maintainable by staying small.
+
+**User control**: you describe the build; Arcana executes it.
+
 
 ## 🚀 Getting Started
 Create an arcfile at your project root, by the generator.
@@ -114,15 +127,17 @@ arcana <task>
 ## 🧩 Who is Arcana for?
 Arcana fits well for:
 
-- developers who prefer explicit build logic over implicit rules</br>
-- small and medium projects that don’t need heavyweight ecosystems</br>
-- teams that want build scripts everyone can read</br>
-- users frustrated by Make, yet unwilling to adopt massive systems like CMake</br>
-- anyone who wants structured task orchestration without sacrificing shell freedom</br>
+- developers who prefer explicit build logic over implicit rules
+- small and medium projects that don’t need heavyweight ecosystems
+- teams that want build scripts everyone can read
+- users frustrated by Make, yet unwilling to adopt massive systems like CMake
+- anyone who wants structured task orchestration without sacrificing shell freedom
+
 
 If you want a builder that does its job without getting in your way, Arcana fits perfectly.
 
 
 ## 📄 License
-See the repository for license details.</br>
+See the repository for license details.
+
 Contributions, issues, and feature ideas are welcome.
