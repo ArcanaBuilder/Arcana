@@ -603,7 +603,6 @@ ExpandGlob(Semantic::VTable& vtable)
 inline std::string
 Map(Semantic::VTable& vtable)
 {
-#warning Handle errors!
     std::stringstream ss;
 
     auto glob_regex = [] (const std::string &pattern) noexcept -> std::string
@@ -643,12 +642,18 @@ Map(Semantic::VTable& vtable)
 
     auto map_required = Table::GetValues(vtable, Semantic::Attr::Type::MAP);
     
-    if (!map_required) return "";
+    if (!map_required) return ss.str();
     
     for (auto& stmt : map_required.value())
     {
         auto& map_to   = stmt.get();
         auto& map_from = vtable[map_to.getProperties(Semantic::Attr::Type::MAP).at(0)];
+
+        if (map_from.glob_expansion.size() == 0)
+        {
+            ss << "MAP error: cannot use non glob varaiable to map " << ANSI_BMAGENTA << map_to.var_name << ANSI_RESET;
+            return ss.str();
+        }
 
         std::string re_str = glob_regex(map_from.var_value);
         std::regex  re(re_str);
@@ -660,15 +665,22 @@ Map(Semantic::VTable& vtable)
             std::smatch m;
     
             if (!std::regex_match(src, m, re))
+            {
                 continue;
+            }
     
             // gruppo catturato (quello che stava al posto di **)
             std::string middle = m[1].str();
-    
-            std::string out = map_to.var_value;
-            if (auto pos = out.find("**"); pos != std::string::npos)
-                out.replace(pos, 2, middle);
-    
+            std::string out    = map_to.var_value;
+
+            auto pos = out.find("**");
+            if (pos == std::string::npos)
+            {
+                ss << "MAP error: destination pattern for " ANSI_BMAGENTA << map_to.var_name << ANSI_RESET " does not contain '**'";
+                return ss.str();
+            }
+
+            out.replace(pos, 2, middle);
             result.emplace_back(out);
         }
     

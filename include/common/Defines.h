@@ -35,6 +35,10 @@
 #define _I(enum)                                ((size_t) enum) 
 
 
+#define __ARCANA__VERSION__                     0.1
+#define __ARCANA__VERSION__STR__                "0.1"
+
+
 
 
 //     █████╗ ███╗   ██╗███████╗██╗    ███████╗███████╗ ██████╗ █████╗ ██████╗ ███████╗███████╗
@@ -110,7 +114,7 @@
 
 #include <iostream>
 
-
+#define ARC(msg)                              std::cout << "[" << ANSI_BGREEN << ANSI_DIM << "ARCANA" << ANSI_RESET "] " << msg << std::endl
 #define DBG(msg)                              std::cout << "[" << ANSI_BYELLOW << ANSI_DIM << "DEBUG" << ANSI_RESET "] " << ANSI_GRAY << msg << ANSI_RESET << std::endl
 #define MSG(msg)                              std::cout << msg << std::endl
 #define ERR(msg)                              std::cerr << "[" << ANSI_BRED << "ERROR" << ANSI_RESET << "] " << msg << std::endl
@@ -134,8 +138,7 @@
 enum Arcana_Result : int32_t
 {
     ARCANA_RESULT__OK               =  0,
-    ARCANA_RESULT__INVALID_ARGS     = -1,
-    ARCANA_RESULT__PARSING_ERROR    = -2,
+    ARCANA_RESULT__NOK              = -1,
 };
 
 enum class Semantic_Result : int32_t

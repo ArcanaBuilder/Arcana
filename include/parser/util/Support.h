@@ -76,20 +76,28 @@ struct Arguments
     {
         std::string value;
         bool        found;
+
+        operator bool () const noexcept { return found; } 
     } 
     task,
-    profile;
+    profile,
+    generator;
 
     bool debug_jobs;
-    bool clear_cache;
+    bool flush_cache;
+    bool version;
+    bool help;
 
     Arguments() 
         : 
         arcfile("arcfile"),
         task{"", false},
         profile{"", false},
+        generator{"", false},
         debug_jobs(false),
-        clear_cache(false)
+        flush_cache(false),
+        version(false),
+        help(false)
     {}
 };
 

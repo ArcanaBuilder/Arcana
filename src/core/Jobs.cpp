@@ -425,6 +425,7 @@ static std::pair<ExpansionError, std::optional<Job>> FromInstruction(const Seman
     }
 
     new_job.parallelizable = task.hasAttribute(Semantic::Attr::Type::MULTITHREAD);
+    new_job.echo           = task.hasAttribute(Semantic::Attr::Type::ECHO);
     
     if (task.hasAttribute(Semantic::Attr::Type::FLUSHCACHE))
     {
@@ -446,9 +447,9 @@ static Graph BuildGraph(const Semantic::FTable& table)
         g[name][1] = {}; 
 
         // AFTER: dep -> task
-        if (task.hasAttribute(Semantic::Attr::Type::AFTER))
+        if (task.hasAttribute(Semantic::Attr::Type::REQUIRES))
         {
-            auto& deps = task.getProperties(Semantic::Attr::Type::AFTER);
+            auto& deps = task.getProperties(Semantic::Attr::Type::REQUIRES);
             for (const auto& dep_name : deps)
             {
                 g[name][0].push_back(dep_name);

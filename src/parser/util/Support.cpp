@@ -110,7 +110,7 @@ Arcana_Result Support::ParserError::operator() (const std::string& ctx, const Gr
     
     std::cerr << ss.str();
 
-    return Arcana_Result::ARCANA_RESULT__PARSING_ERROR;
+    return Arcana_Result::ARCANA_RESULT__NOK;
 }
 
 
@@ -130,7 +130,7 @@ Arcana_Result Support::SemanticError::operator() (const std::string& ctx, const 
 
     std::cerr << ss.str();
 
-    return Arcana_Result::ARCANA_RESULT__PARSING_ERROR;
+    return Arcana_Result::ARCANA_RESULT__NOK;
 }
 
 
@@ -142,7 +142,7 @@ Arcana_Result Support::PostProcError::operator() (const std::string& ctx, const 
     ss << "                 " << err << std::endl;
     std::cerr << ss.str();
 
-    return Arcana_Result::ARCANA_RESULT__PARSING_ERROR;
+    return Arcana_Result::ARCANA_RESULT__NOK;
 }
 
 
@@ -231,15 +231,43 @@ std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char*
                 return "Missing value for option -p";
             }
         }
+        if (arg == "--generate")
+        {
+            args.generator.found = true;
+
+            if (i + 1 < argc)
+            {
+                args.generator.value = argv[i + 1];
+                i += 2;
+            }
+            else
+            {
+                ++i;
+            }
+
+            continue;
+        }
         else if (arg == "--debug-jobs")
         {
             args.debug_jobs = true;
             ++i;
             continue;
         }
-        else if (arg == "--clear-cache")
+        else if (arg == "--flush-cache")
         {
-            args.clear_cache = true;
+            args.flush_cache = true;
+            ++i;
+            continue;
+        }
+        else if (arg == "--version")
+        {
+            args.version = true;
+            ++i;
+            continue;
+        }
+        else if (arg == "--help")
+        {
+            args.help = true;
             ++i;
             continue;
         }

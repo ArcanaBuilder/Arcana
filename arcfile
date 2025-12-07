@@ -2,7 +2,7 @@
 
 using profiles Debug Release;
 using default interpreter /bin/bash;
-using threads 8;
+using threads 24;
 
 
 COMPILER = g++
@@ -39,11 +39,12 @@ task MakeFolders()
 @interpreter /bin/python3
 task Message() 
 {
-print("Invoking arcana for {arc:TARGET} in {arc:__profile__} Mode")
+print("Invoking arcana ({arc:__version__}) for {arc:TARGET} in {arc:__profile__} Mode")
 }
 
-
-@after MakeFolders
+@echo
+@requires MakeFolders
+@multithread
 task Compile(SOURCES) 
 {
     {arc:COMPILER} {arc:FLAGS} {arc:INCLUDES} -c {arc:list:SOURCES} -o {arc:list:OBJECTS}
@@ -70,15 +71,15 @@ task Clean()
 
 @pub
 @main
-@after Compile Link
+@requires Message Compile Link
 task Build() {}
 
 @pub
-@after Clean Build
+@requires Message Clean Build
 task Rebuild() {}
 
 @pub
-@after Clean Build
+@requires Clean Build
 task Install()
 {
     cp {arc:TARGET} /usr/bin/  

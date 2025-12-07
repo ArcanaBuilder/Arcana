@@ -75,13 +75,14 @@ static const AttributeMap Known_Attributes =
     { "profile"        , Attr::Type::PROFILE      },          
     { "pub"            , Attr::Type::PUBLIC       },                   
     { "always"         , Attr::Type::ALWAYS       },          
-    { "after"          , Attr::Type::AFTER        },   
+    { "requires"       , Attr::Type::REQUIRES     },   
     { "then"           , Attr::Type::THEN         },          
     { "map"            , Attr::Type::MAP          },    
     { "multithread"    , Attr::Type::MULTITHREAD  },     
     { "main"           , Attr::Type::MAIN         },  
     { "interpreter"    , Attr::Type::INTERPRETER  },  
-    { "flushcache"     , Attr::Type::FLUSHCACHE   },          
+    { "flushcache"     , Attr::Type::FLUSHCACHE   },       
+    { "echo"           , Attr::Type::ECHO         },          
 };
 
 
@@ -100,13 +101,14 @@ static const std::vector<std::string> _attributes =
     "profile"       ,
     "pub"           ,
     "always"        ,
-    "after"         ,
+    "requires"      ,
     "then"          ,
     "map"           ,
     "multithread"   ,
     "main"          ,
     "interpreter"   ,
     "flushcache"    ,
+    "echo"          ,
 };
 
 
@@ -158,13 +160,14 @@ Engine::Engine()
     _attr_rules[_I(Attr::Type::PROFILE     )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK, Attr::Target::VARIABLE } };           
     _attr_rules[_I(Attr::Type::PUBLIC      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK, Attr::Target::VARIABLE } };    
     _attr_rules[_I(Attr::Type::ALWAYS      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
-    _attr_rules[_I(Attr::Type::AFTER       )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } }; 
+    _attr_rules[_I(Attr::Type::REQUIRES    )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } }; 
     _attr_rules[_I(Attr::Type::THEN        )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } };           
     _attr_rules[_I(Attr::Type::MAP         )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };     
     _attr_rules[_I(Attr::Type::MULTITHREAD )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
     _attr_rules[_I(Attr::Type::MAIN        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };     
     _attr_rules[_I(Attr::Type::INTERPRETER )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK,                        } };       
-    _attr_rules[_I(Attr::Type::FLUSHCACHE  )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };         
+    _attr_rules[_I(Attr::Type::FLUSHCACHE  )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } }; 
+    _attr_rules[_I(Attr::Type::ECHO        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };         
 }
 
 
@@ -337,9 +340,9 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& 
         }
     }
 
-    if (task.hasAttribute(Attr::Type::AFTER))
+    if (task.hasAttribute(Attr::Type::REQUIRES))
     {
-        auto& properties = task.getProperties(Attr::Type::AFTER);
+        auto& properties = task.getProperties(Attr::Type::REQUIRES);
 
         if (std::find(properties.begin(), properties.end(), name) != properties.end())
         {
@@ -507,13 +510,13 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
                 HINT("Did you mean " << ANSI_BCYAN << closest.value() << ANSI_RESET << "?");
             }
 
-            return Arcana_Result::ARCANA_RESULT__INVALID_ARGS;
+            return Arcana_Result::ARCANA_RESULT__NOK;
         }
         // CHECK IF THE SELECTED TASK HAS THE ATTRIBUTE 'PUBLIC'
         else if (!task.value().get().hasAttribute(Semantic::Attr::Type::PUBLIC))
         {
             ERR("Requested task " << ANSI_BMAGENTA << args.task.value << ANSI_RESET << " does not have " << ANSI_BMAGENTA << "public" << ANSI_RESET << " attribute");
-            return Arcana_Result::ARCANA_RESULT__INVALID_ARGS;
+            return Arcana_Result::ARCANA_RESULT__NOK;
         }
         
         // TOOGLE ATTRIBUTE 'MAIN' IF TASK IS SPECIFIED
@@ -537,7 +540,7 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
         if (!main_task.size())
         {
             ERR("No main task specified, make it explicit in the arcfile with the @main attribute or pass a task on the command line");
-            return Arcana_Result::ARCANA_RESULT__INVALID_ARGS;
+            return Arcana_Result::ARCANA_RESULT__NOK;
         }
     }
 
@@ -556,7 +559,7 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
                 HINT("Did you mean " << ANSI_BCYAN << closest.value() << ANSI_RESET << "?");
             }
 
-            return Arcana_Result::ARCANA_RESULT__INVALID_ARGS;
+            return Arcana_Result::ARCANA_RESULT__NOK;
         }
 
         profile.selected = args.profile.value;
@@ -584,7 +587,7 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
 {
     std::stringstream ss;
 
-    const std::array<Attr::Type, 2> attributes = { Attr::Type::AFTER, Attr::Type::THEN };
+    const std::array<Attr::Type, 2> attributes = { Attr::Type::REQUIRES, Attr::Type::THEN };
     
     for (const auto attr : attributes)
     {
@@ -612,7 +615,7 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
                 }
         
                 // ENQUEUE THE DEPENDECY IN ORDER
-                if (attr == Attr::Type::AFTER)
+                if (attr == Attr::Type::REQUIRES)
                 {
                     task.dependecies.push_back(std::cref(ftable.at(p)));
                 }
@@ -658,11 +661,20 @@ const std::optional<std::string> Enviroment::Expand() noexcept
         
         for (const auto& var : vars)
         {
-            std::regex intern_re(R"(\{arc:(__profile__)\})");
+            std::regex intern_re(R"(\{arc:(__profile__|__version__)\})");
             for (std::sregex_iterator it(stmt.begin(), stmt.end(), intern_re), end; it != end && !intern_satisfied; ++it)
             {   
                 std::string new_stmt  = stmt.substr(0, it->position());
-                new_stmt             += (profile.selected.empty()) ? "None" : profile.selected;
+
+                if ((*it)[1].compare("__profile__") == 0)
+                {
+                    new_stmt += (profile.selected.empty()) ? "None" : profile.selected;
+                } 
+                else if ((*it)[1].compare("__version__") == 0)
+                {
+                    new_stmt += __ARCANA__VERSION__STR__;
+                }
+
                 new_stmt             += stmt.substr(it->position() + (*it)[0].length(), stmt.length() - it->position() + (*it)[0].length());
                 stmt = new_stmt;
             }
@@ -754,9 +766,11 @@ const std::optional<std::string> Enviroment::Expand() noexcept
     }
 
     // HANDLE MAX THREADS   
-    if (max_threads == 0)
+    auto machine_max_threads = std::thread::hardware_concurrency();
+
+    if (max_threads == 0 || max_threads > machine_max_threads)
     {
-        max_threads = std::thread::hardware_concurrency();
+        max_threads = machine_max_threads;
     }
 
     return std::nullopt;

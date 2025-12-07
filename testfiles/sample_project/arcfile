@@ -10,7 +10,6 @@ using threads 8;
 # PRIVATE TASKS
 ###########################
 
-
 task MakeFolders() 
 {
     cd {arc:SRCDIR}
@@ -23,13 +22,12 @@ task Message()
 print("Invoking arcana for {arc:TARGET} in {arc:__profile__} Mode")
 }
 
-
-@after MakeFolders
+@multithread
+@requires MakeFolders
 task Compile(SOURCES) 
 {
     {arc:COMPILER} {arc:FLAGS} -c {arc:list:SOURCES} -o {arc:list:OBJECTS}
 }
-    
     
 task Link()
 {        
@@ -50,15 +48,15 @@ task Clean()
 }
 
 @pub
-@after Compile Link
+@requires Compile Link
 task Build() {}
 
 @pub
-@after Clean Build
+@requires Clean Build
 task Rebuild() {}
 
 @pub
-@after Clean Build
+@requires Clean Build
 task Install()
 {
     cp {arc:TARGET} /usr/bin/  
@@ -66,7 +64,7 @@ task Install()
 
 @pub
 @main
-@after Message Rebuild
+@requires Message Rebuild
 task Run()
 {
     ./{arc:TARGET}  

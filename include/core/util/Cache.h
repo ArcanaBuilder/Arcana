@@ -51,6 +51,7 @@ public:
         return m;
     }
 
+    void     EraseCache()                            noexcept;
     void     ClearCache()                            noexcept;
     void     LoadCache()                             noexcept;
     bool     HasFileChanged(const std::string& path) noexcept;

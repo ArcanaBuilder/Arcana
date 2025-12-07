@@ -461,6 +461,16 @@ Manager::Manager()
 
 
 
+void Manager::EraseCache() noexcept
+{
+    if (dir_exists(_cache_folder))
+    {
+        remove_dir_recursive(_cache_folder);
+    }
+}
+
+
+
 void Manager::ClearCache() noexcept
 {
     if (dir_exists(_script_path))
@@ -500,6 +510,8 @@ void Manager::LoadCache() noexcept
 
     for_each_file(_input_path, [this] (const std::filesystem::path& fullpath, const std::string& fname, const std::string& content)
     {
+        UNUSED(fullpath);
+        
         _cached_inputs[fname] = content;
     });
 }

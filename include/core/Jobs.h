@@ -64,7 +64,7 @@ struct Job
     Semantic::Task::Instrs instructions;
     Semantic::Interpreter  interpreter;
     bool                   parallelizable;
-    bool                   flush_cache;
+    bool                   echo;
 };
 
 
