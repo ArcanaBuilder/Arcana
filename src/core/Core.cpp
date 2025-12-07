@@ -149,6 +149,8 @@ static Core::Result run_job(const Jobs::Job& job, const Core::RunOptions& opt) n
 
 std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::RunOptions& opt) noexcept
 {
+    bool ok = true;
+
     std::vector<Core::Result> results;
 
     results.reserve(jobs.All().size());
@@ -163,9 +165,15 @@ std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::Run
 
         if (!r.ok && opt.stop_on_error)
         {
+            ok = false;
             ERR(ANSI_GRAY << "Task failed: " << job.name << ANSI_RESET);
             break;
         }
+    }
+
+    if (ok)
+    {
+        ARC(jobs.main_job << " done!");
     }
 
     return results;

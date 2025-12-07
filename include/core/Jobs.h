@@ -93,6 +93,7 @@ public:
     static ExpansionError    FromEnv(Semantic::Enviroment& environment, List& out) noexcept;
     const  std::vector<Job>& All() const noexcept { return data; }
 
+    std::string main_job;
 private:
     void Insert(const std::optional<Job>& j);
     void Insert(std::vector<Job>& vj);

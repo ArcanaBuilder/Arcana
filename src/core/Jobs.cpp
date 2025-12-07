@@ -622,6 +622,8 @@ ExpansionError List::FromEnv(Semantic::Enviroment& environment, List& out) noexc
         {
             out.Insert(j);
         }
+
+        out.main_job = main_name;
     }
 
     // COLLECT 'ALWAYS' TASKS  
