@@ -247,9 +247,9 @@ std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char*
 
             continue;
         }
-        else if (arg == "--debug-jobs")
+        else if (arg == "--debug")
         {
-            args.debug_jobs = true;
+            args.debug = true;
             ++i;
             continue;
         }

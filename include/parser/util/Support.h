@@ -83,7 +83,7 @@ struct Arguments
     profile,
     generator;
 
-    bool debug_jobs;
+    bool debug;
     bool flush_cache;
     bool version;
     bool help;
@@ -94,7 +94,7 @@ struct Arguments
         task{"", false},
         profile{"", false},
         generator{"", false},
-        debug_jobs(false),
+        debug(false),
         flush_cache(false),
         version(false),
         help(false)
