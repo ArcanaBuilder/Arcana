@@ -70,6 +70,7 @@ enum class Type
     INTERPRETER         ,
     FLUSHCACHE          ,
     ECHO                ,
+    EXCLUDE             ,
 
     ATTRIBUTE__UNKNOWN  ,
     ATTRIBUTE__COUNT    ,
