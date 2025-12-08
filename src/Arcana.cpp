@@ -162,17 +162,31 @@ LANGUAGE:
     Attributes allow you to customize variables and, above all, tasks as much as possible.
 
     @map                            Valid only for variables. Allows you to map one glob to another.
+
     @pub                            Export task to the caller. By defaults all symbols are private.
+
     @main                           Mark the task as main task.
+
     @echo                           Prints at runtime on stdout the executed task instructions.
+
     @then        <task list>        After the execution of the task with the after attribute, 
                                     the specified tasks will be called.
+
     @requires    <task list>        Before the execution of the task with the after attribute, 
                                     the specified tasks will be called.
+
+    @exclude     <VARNAME>          Used primarily for glob expansions. It allows you to perform 
+                                    subtraction between sets by subtracting the value of VARNAME 
+                                    from the variable characterized by this attribute.
+
     @always                         Execute the task regardless of job scheduling.
+
     @profile     <profile>          Used only when the <profile> is given.
+
     @flushcache                     Clears cache, forces subsequent tasks to ignore it.
+
     @interpreter <interpreter>      Force the task to be executed with the specified interpreter.
+    
     @multithread                    Enable the multithread for the selected task, not guaranteed.
 
 

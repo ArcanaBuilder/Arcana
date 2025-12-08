@@ -586,6 +586,27 @@ ExpandGlob(Semantic::VTable& vtable)
             }
     
             stmt.glob_expansion = result;
+
+            if (stmt.hasAttribute(Semantic::Attr::Type::EXCLUDE))
+            {
+                const auto& var = vtable[stmt.getProperties(Semantic::Attr::Type::EXCLUDE)[0]];
+                
+                std::vector<std::string> what;
+
+                if (var.glob_expansion.size())
+                {
+                    what = var.glob_expansion;
+                }
+                else
+                {
+                    what.push_back(var.var_value);
+                }
+
+                stmt.glob_expansion.erase(std::remove_if(stmt.glob_expansion.begin(), stmt.glob_expansion.end(),
+                           [&](const auto& v){ return std::find(what.begin(), what.end(), v) != what.end(); }),
+                           stmt.glob_expansion.end()
+                );
+            }
         }
         catch(const std::exception& e)
         {

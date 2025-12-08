@@ -82,7 +82,8 @@ static const AttributeMap Known_Attributes =
     { "main"           , Attr::Type::MAIN         },  
     { "interpreter"    , Attr::Type::INTERPRETER  },  
     { "flushcache"     , Attr::Type::FLUSHCACHE   },       
-    { "echo"           , Attr::Type::ECHO         },          
+    { "echo"           , Attr::Type::ECHO         },    
+    { "exclude"        , Attr::Type::EXCLUDE      },          
 };
 
 
@@ -109,6 +110,7 @@ static const std::vector<std::string> _attributes =
     "interpreter"   ,
     "flushcache"    ,
     "echo"          ,
+    "exclude"       ,
 };
 
 
@@ -162,7 +164,8 @@ Engine::Engine()
     _attr_rules[_I(Attr::Type::ALWAYS      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
     _attr_rules[_I(Attr::Type::REQUIRES    )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } }; 
     _attr_rules[_I(Attr::Type::THEN        )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } };           
-    _attr_rules[_I(Attr::Type::MAP         )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };     
+    _attr_rules[_I(Attr::Type::MAP         )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };  
+    _attr_rules[_I(Attr::Type::EXCLUDE     )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };     
     _attr_rules[_I(Attr::Type::MULTITHREAD )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
     _attr_rules[_I(Attr::Type::MAIN        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };     
     _attr_rules[_I(Attr::Type::INTERPRETER )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK,                        } };       
@@ -231,15 +234,15 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
             return SEM_NOK_HINT(ss.str(), Support::FindClosest(profiles, property[0]));
         }
     }
-    // IF THE ATTRBUTE IS 'MAP'
-    else if (attr == Attr::Type::MAP)
+    // IF THE ATTRBUTE IS 'MAP' or 'EXCLUDE'
+    else if (attr == Attr::Type::MAP || attr == Attr::Type::EXCLUDE)
     {
         // CHECK THE VTABLE FOR THE MAPPING VARIABLE
         auto keys = Table::Keys(_env.vtable);
 
         if (std::find(keys.begin(), keys.end(), property[0]) == keys.end())
         {
-            ss << "Invalid mapping " << "‘" << ANSI_BMAGENTA << property[0] << ANSI_RESET << "’" << ": undeclared variable";
+            ss << "Invalid " << name << " ‘" << ANSI_BMAGENTA << property[0] << ANSI_RESET << "’" << ": undeclared variable";
             return SEM_NOK_HINT(ss.str(), Support::FindClosest(keys, name));
         }
     }
