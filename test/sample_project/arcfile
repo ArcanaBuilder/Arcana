@@ -1,0 +1,71 @@
+#!/usr/bin/arcana
+
+import Vars.arc;
+
+using default interpreter /bin/bash;
+using threads 8;
+
+
+###########################
+# PRIVATE TASKS
+###########################
+
+task MakeFolders() 
+{
+    cd {arc:SRCDIR}
+    find . -type d -exec mkdir -p "../{arc:BUILDDIR}"/{} \;
+}
+
+@interpreter /bin/python3
+task Message() 
+{
+print("Invoking arcana for {arc:TARGET} in {arc:__profile__} Mode")
+}
+
+@multithread
+@requires MakeFolders
+task Compile(SOURCES) 
+{
+    {arc:COMPILER} {arc:FLAGS} -c {arc:list:SOURCES} -o {arc:list:OBJECTS}
+}
+    
+task Link()
+{        
+    {arc:COMPILER} {arc:FLAGS} {arc:inline:OBJECTS} -o {arc:TARGET}
+}
+
+
+###########################
+# PUBLIC TASKS
+###########################
+
+@pub
+@flushcache
+@then MakeFolders
+task Clean() 
+{ 
+    rm -rf {arc:BUILDDIR}
+}
+
+@pub
+@requires Compile Link
+task Build() {}
+
+@pub
+@requires Clean Build
+task Rebuild() {}
+
+@pub
+@requires Clean Build
+task Install()
+{
+    cp {arc:TARGET} /usr/bin/  
+}
+
+@pub
+@main
+@requires Message Rebuild
+task Run()
+{
+    ./{arc:TARGET}  
+}
