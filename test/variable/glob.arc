@@ -1,14 +1,9 @@
 ###############################################################################
 # THIS TEST AIM TO:
-# - check if empty variable assignment is performet correctly
+# - check if glob variable can be expanded
 ###############################################################################
 
-
-
-VARIABLE = 
-
-
-
+VARIABLE = ./**.arc
 
 
 @pub; @main; task DUMMY() {}
