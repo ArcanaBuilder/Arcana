@@ -653,42 +653,51 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
 const std::optional<std::string> Enviroment::Expand() noexcept
 {
     // LAMBDA USED TO EXPAND A STATEMENT
-    auto expand_one = [this](std::string& stmt, std::vector<std::string>& vars) noexcept
+    auto expand_one = [this](std::string& stmt) noexcept -> std::optional<std::string>
     {
         std::stringstream        ss;
         std::vector<ExpandMatch> matches;
         bool                     intern_satisfied = false;
         
-        for (const auto& var : vars)
-        {
-            std::regex intern_re(R"(\{arc:(__profile__|__version__)\})");
-            for (std::sregex_iterator it(stmt.begin(), stmt.end(), intern_re), end; it != end && !intern_satisfied; ++it)
-            {   
-                std::string new_stmt  = stmt.substr(0, it->position());
+        std::regex intern_re(R"(\{arc:(__profile__|__version__)\})");
+        for (std::sregex_iterator it(stmt.begin(), stmt.end(), intern_re), end; it != end && !intern_satisfied; ++it)
+        {   
+            std::string new_stmt  = stmt.substr(0, it->position());
 
-                if ((*it)[1].compare("__profile__") == 0)
-                {
-                    new_stmt += (profile.selected.empty()) ? "None" : profile.selected;
-                } 
-                else if ((*it)[1].compare("__version__") == 0)
-                {
-                    new_stmt += __ARCANA__VERSION__STR__;
-                }
-
-                new_stmt             += stmt.substr(it->position() + (*it)[0].length(), stmt.length() - it->position() + (*it)[0].length());
-                stmt = new_stmt;
+            if ((*it)[1].compare("__profile__") == 0)
+            {
+                new_stmt += (profile.selected.empty()) ? "None" : profile.selected;
+            } 
+            else if ((*it)[1].compare("__version__") == 0)
+            {
+                new_stmt += __ARCANA__VERSION__STR__;
             }
 
-            intern_satisfied = true;
+            new_stmt             += stmt.substr(it->position() + (*it)[0].length(), stmt.length() - it->position() + (*it)[0].length());
+            stmt = new_stmt;
+        }
 
-            std::regex var_re("(\\{arc:)" + var + "(\\})");
-            for (std::sregex_iterator it(stmt.begin(), stmt.end(), var_re), end; it != end; ++it)
-            {   
+        intern_satisfied = true;
+
+        std::regex var_re(R"(\{arc:([A-Za-z]+)\})");
+        for (std::sregex_iterator it(stmt.begin(), stmt.end(), var_re), end; it != end; ++it)
+        {   
+            if (const auto vit = vtable.find((*it)[1]); vit != vtable.end())
+            {
+                const auto& var = vit->first;
                 std::size_t start = it->position();
                 matches.push_back({var, start, start + var.size() + 6});
             }
-        }
+            else
+            {
+                std::stringstream err;
+                err << "Undefined variable " << ANSI_BMAGENTA << (*it)[1] << ANSI_RESET 
+                    << " while trying to expand "<< ANSI_BMAGENTA << "{arc:" << (*it)[1] << "}" << ANSI_RESET;
 
+                return err.str();
+            }
+        }
+        
         if (!matches.empty())
         {
             std::size_t iterator = 0;
@@ -716,6 +725,7 @@ const std::optional<std::string> Enviroment::Expand() noexcept
             stmt = ss.str();
         }
 
+        return std::nullopt;
     };
 
     // FOR EACH KEY IN VTABLE
@@ -731,7 +741,10 @@ const std::optional<std::string> Enviroment::Expand() noexcept
     // ITERATE THE VTABLE AND TRY TO EXPAND
     for (auto& [name, var] : vtable)
     {
-        expand_one(var.var_value, var_keys);
+        if (const auto err = expand_one(var.var_value); err.has_value())
+        {
+            return err;
+        }
     }
 
     // ITERATE THE FTABLE AND TRY TO EXPAND
@@ -749,7 +762,10 @@ const std::optional<std::string> Enviroment::Expand() noexcept
 
         for (auto& instr : task.task_instrs) 
         {
-            expand_one(instr, var_keys);
+            if (const auto err = expand_one(instr); err.has_value())
+            {
+                return err;
+            }
         }
     }
 
