@@ -87,7 +87,7 @@ auto reference_inline = [] (const Semantic::FListCRef& tasks) noexcept -> std::s
 };
 
 
-auto print_attributes = [] (const Semantic::Attr::List & attrs) noexcept -> std::string
+auto print_attributes = [] (const Semantic::Attr::List & attrs) noexcept -> void
 {
     std::stringstream ss;
 
@@ -98,9 +98,10 @@ auto print_attributes = [] (const Semantic::Attr::List & attrs) noexcept -> std:
         {
             ss << " -> " << vector_inline(item.props);
         }
+        ss << std::endl;
     }
 
-    return ss.str();
+    print_line(ss.str());
 };
 
 

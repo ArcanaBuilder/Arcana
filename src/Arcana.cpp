@@ -9,10 +9,12 @@
 #include "Generator.h"
 #include "TableHelper.h"
 
+#include <cerrno>
+#include <cstring>
 #include <variant>
 #include <iostream>
-
-
+#include <unistd.h>
+#include <filesystem>
 
 USE_MODULE(Arcana);
 
@@ -337,6 +339,17 @@ int main(int argc, char** argv)
     {
         ERR("Script arcfile not found!");
         return Arcana_Result::ARCANA_RESULT__NOK;
+    }
+    else
+    {
+        std::filesystem::path p(args.arcfile);
+        std::filesystem::path dir = p.parent_path();
+
+        if (!dir.empty() && chdir(dir.c_str()) != 0)
+        {
+            ERR("chdir failed for " << dir << ": " << std::strerror(errno));
+            return Arcana_Result::ARCANA_RESULT__NOK;
+        }
     }
 
     Cache::Manager::Instance().LoadCache();
