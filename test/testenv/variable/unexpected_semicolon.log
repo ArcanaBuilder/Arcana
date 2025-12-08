@@ -1,0 +1,17 @@
+[ARCANA] DEBUG AFTER PARSING
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     VTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     FTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[SYNTAX ERROR] In file ‘../variable/unexpected_semicolon.arc’, line 11: ‘; # <-- NOT ALLOWED’
+               +~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        Found:    ; (semicolon)
+        Expected: ‘identifier’ or ‘task’ or ‘import’ or ‘using’ or ‘at sign’ or ‘<new line>’ or ‘EOF’ for statement(s)
+                  - Assignment
+                  - Empty Line
+                  - Attribute
+                  - Task Declaration
+                  - Import
+                  - Using

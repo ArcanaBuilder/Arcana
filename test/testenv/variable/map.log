@@ -1,0 +1,132 @@
+[ARCANA] DEBUG AFTER PARSING
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     VTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : VARIABLE                                                                                                 |
+[DEBUG] | VALUE     : ./**.arc                                                                                                 |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : VARIABLE2                                                                                                |
+[DEBUG] | VALUE     : ./**.test                                                                                                |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] | map -> VARIABLE                                                                                                      |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     FTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : DUMMY                                                                                                  |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  :                                                                                                        |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | main                                                                                                                 |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[ARCANA] DEBUG AFTER ALIGNMENT
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     VTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : VARIABLE                                                                                                 |
+[DEBUG] | VALUE     : ./**.arc                                                                                                 |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : VARIABLE2                                                                                                |
+[DEBUG] | VALUE     : ./**.test                                                                                                |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] | map -> VARIABLE                                                                                                      |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     FTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : DUMMY                                                                                                  |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | main                                                                                                                 |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[ARCANA] DEBUG AFTER EXPANSION
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     VTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : VARIABLE                                                                                                 |
+[DEBUG] | VALUE     : ./**.arc                                                                                                 |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ./recursive_glob.arc                                                                                                 |
+[DEBUG] | ./unspecified_profiles.arc                                                                                           |
+[DEBUG] | ./empty_assignment.arc                                                                                               |
+[DEBUG] | ./expansion.arc                                                                                                      |
+[DEBUG] | ./invalid_map2.arc                                                                                                   |
+[DEBUG] | ./profiles.arc                                                                                                       |
+[DEBUG] | ./unmatched_glob.arc                                                                                                 |
+[DEBUG] | ./invalid_assignment.arc                                                                                             |
+[DEBUG] | ./simple_assingment.arc                                                                                              |
+[DEBUG] | ./undetected_expansion.arc                                                                                           |
+[DEBUG] | ./map.arc                                                                                                            |
+[DEBUG] | ./unspecified_map.arc                                                                                                |
+[DEBUG] | ./unexpected_semicolon.arc                                                                                           |
+[DEBUG] | ./undefined_expansion.arc                                                                                            |
+[DEBUG] | ./relative_glob.arc                                                                                                  |
+[DEBUG] | ./invalid_map.arc                                                                                                    |
+[DEBUG] | ./dangling_profile.arc                                                                                               |
+[DEBUG] | ./dangling_map.arc                                                                                                   |
+[DEBUG] | ./semicolon.arc                                                                                                      |
+[DEBUG] | ./undeclared_profiles.arc                                                                                            |
+[DEBUG] | ./abs_glob.arc                                                                                                       |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : VARIABLE2                                                                                                |
+[DEBUG] | VALUE     : ./**.test                                                                                                |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ./recursive_glob.test                                                                                                |
+[DEBUG] | ./unspecified_profiles.test                                                                                          |
+[DEBUG] | ./empty_assignment.test                                                                                              |
+[DEBUG] | ./expansion.test                                                                                                     |
+[DEBUG] | ./invalid_map2.test                                                                                                  |
+[DEBUG] | ./profiles.test                                                                                                      |
+[DEBUG] | ./unmatched_glob.test                                                                                                |
+[DEBUG] | ./invalid_assignment.test                                                                                            |
+[DEBUG] | ./simple_assingment.test                                                                                             |
+[DEBUG] | ./undetected_expansion.test                                                                                          |
+[DEBUG] | ./map.test                                                                                                           |
+[DEBUG] | ./unspecified_map.test                                                                                               |
+[DEBUG] | ./unexpected_semicolon.test                                                                                          |
+[DEBUG] | ./undefined_expansion.test                                                                                           |
+[DEBUG] | ./relative_glob.test                                                                                                 |
+[DEBUG] | ./invalid_map.test                                                                                                   |
+[DEBUG] | ./dangling_profile.test                                                                                              |
+[DEBUG] | ./dangling_map.test                                                                                                  |
+[DEBUG] | ./semicolon.test                                                                                                     |
+[DEBUG] | ./undeclared_profiles.test                                                                                           |
+[DEBUG] | ./abs_glob.test                                                                                                      |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] | map -> VARIABLE                                                                                                      |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     FTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : DUMMY                                                                                                  |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | main                                                                                                                 |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                      JOBS DEBUG                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+

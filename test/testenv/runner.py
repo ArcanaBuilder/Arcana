@@ -42,7 +42,8 @@ def scan_arc_tests(root):
 
 
 def run_test(test: Test):
-    print(f'Running [{"POSITIVE" if test.expected_result == 0 else "NEGATIVE"}] test: {test.script:30s}', end='')
+    type: str = "\x1b[2m\033[32mPOSITIVE\033[0m" if test.expected_result == 0 else "\x1b[2m\033[31mNEGATIVE\033[0m"
+    print(f'Running [{type}] test: {test.script:30s}', end='')
 
     cmd = ["arcana", "-s", test.path, "--debug"]
 
@@ -63,7 +64,7 @@ def exec_tests(root: str, tests: list[Test]):
 
     os.makedirs(test_pwd, exist_ok=True)
 
-    tests.sort(key=lambda t: t.expected_result, reverse=True)
+    tests.sort(key=lambda t: (t.expected_result, t.path))
 
     for test in tests:
         test_name = f'{test.script}.log'

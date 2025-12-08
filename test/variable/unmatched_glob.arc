@@ -1,9 +1,9 @@
 ###############################################################################
 # THIS TEST AIM TO:
-# - check if glob variable can be expanded
+# - check if glob variable can not be expanded, no file .idk 
 ###############################################################################
 
-VARIABLE = ./**.arc
+VARIABLE = ./**.idk
 
 
 @pub; @main; task DUMMY() {}
