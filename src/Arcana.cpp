@@ -74,7 +74,6 @@ USAGE
 OPTIONS
   --help                Show this help message.
   --version             Print the arcana version.
-  --debug-jobs          Show tasks that would run, without executing them.
   --flush-cache         Flush arcana cache, then exit.
   -p <profile>          Build with a specific profile. Profiles must be declared in the arcfile. 
   -s <arcfile>          Build with a specific arcfile. 
@@ -201,6 +200,14 @@ static Arcana_Result Parse(const Support::Arguments& args)
     
     result = parser.Parse(env);
 
+    if (args.debug)
+    {
+        ARC("DEBUG AFTER PARSING");
+
+        Debug::VTable(env.vtable);
+        Debug::FTable(env.ftable);
+    }
+
     if (result != Arcana_Result::ARCANA_RESULT__OK)
     {
         return result;
@@ -220,6 +227,14 @@ static Arcana_Result Parse(const Support::Arguments& args)
         ERR(alignment_result.value());
         return Arcana_Result::ARCANA_RESULT__NOK;
     }
+
+    if (args.debug)
+    {
+        ARC("DEBUG AFTER ALIGNMENT");
+        
+        Debug::VTable(env.vtable);
+        Debug::FTable(env.ftable);
+    }
     
     auto expand_result = env.Expand();
 
@@ -227,6 +242,14 @@ static Arcana_Result Parse(const Support::Arguments& args)
     {
         ERR(expand_result.value());
         return Arcana_Result::ARCANA_RESULT__NOK;
+    }
+    
+    if (args.debug)
+    {
+        ARC("DEBUG AFTER EXPANSION");
+        
+        Debug::VTable(env.vtable);
+        Debug::FTable(env.ftable);
     }
 
     return Arcana_Result::ARCANA_RESULT__OK;
@@ -247,9 +270,9 @@ static Arcana_Result Execute(const Support::Arguments& args)
         return Arcana_Result::ARCANA_RESULT__NOK;
     }
 
-    if (args.debug_jobs)
+    if (args.debug)
     {
-        Debug::DebugJobsList(joblist);
+        Debug::JobsList(joblist);
         return ARCANA_RESULT__OK;
     }
 
