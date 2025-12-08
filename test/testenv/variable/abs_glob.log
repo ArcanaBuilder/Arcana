@@ -64,6 +64,7 @@
 [DEBUG] | /home/stefano/Workspace/Arcana/test/variable/unexpected_semicolon.arc                                                |
 [DEBUG] | /home/stefano/Workspace/Arcana/test/variable/undefined_expansion.arc                                                 |
 [DEBUG] | /home/stefano/Workspace/Arcana/test/variable/relative_glob.arc                                                       |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/variable/invalid_declaration.arc                                                 |
 [DEBUG] | /home/stefano/Workspace/Arcana/test/variable/invalid_map.arc                                                         |
 [DEBUG] | /home/stefano/Workspace/Arcana/test/variable/dangling_profile.arc                                                    |
 [DEBUG] | /home/stefano/Workspace/Arcana/test/variable/dangling_map.arc                                                        |

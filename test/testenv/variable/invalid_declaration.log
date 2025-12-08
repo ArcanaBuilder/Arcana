@@ -1,0 +1,17 @@
+[ARCANA] DEBUG AFTER PARSING
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     VTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     FTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[SYNTAX ERROR] In file ‘../variable/invalid_declaration.arc’, line 8: ‘2 = VALUE ’
+               +~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        Found:    2 (number)
+        Expected: ‘identifier’ or ‘task’ or ‘import’ or ‘using’ or ‘at sign’ or ‘<new line>’ or ‘EOF’ for statement(s)
+                  - Assignment
+                  - Empty Line
+                  - Attribute
+                  - Task Declaration
+                  - Import
+                  - Using

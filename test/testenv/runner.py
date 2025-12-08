@@ -56,7 +56,9 @@ def run_test(test: Test):
     return ANSI_ESCAPE.sub('', res.stdout), ANSI_ESCAPE.sub('', res.stderr), res.returncode
 
 
-def exec_tests(root: str, tests: list[Test]):
+def exec_tests(root: str, tests: list[Test]) -> tuple:
+    passed = 0
+    failed = 0
     test_pwd  = f'{root}'
 
     if os.path.exists(test_pwd):
@@ -73,19 +75,28 @@ def exec_tests(root: str, tests: list[Test]):
 
         if code == test.expected_result:
             print("[\033[92mPASSED\033[0m]")
+            passed += 1
         else:
             print("[\033[91mFAILED\033[0m]")
+            failed += 1
 
         with open(f'{test_pwd}/{test_name}', "w", encoding="utf-8") as f:
             f.write(out)
             f.write(err)
 
+    return (passed, failed)
 
 def main():
     root:  str        = f"../{argv[1]}"
     tests: list[Test] = scan_arc_tests(root)
-    exec_tests(argv[1], tests)
+    passed, failed = exec_tests(argv[1], tests)
 
+    print(f'''
+### Test Campaign '{argv[1]}'
+- Passed:    {passed}
+- Failed:    {failed}
+- P/F Rateo: {(100*passed)/(passed+failed):.1f}%
+''')
 
 if __name__ == "__main__":
     main()

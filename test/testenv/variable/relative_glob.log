@@ -64,6 +64,7 @@
 [DEBUG] | ./unexpected_semicolon.arc                                                                                           |
 [DEBUG] | ./undefined_expansion.arc                                                                                            |
 [DEBUG] | ./relative_glob.arc                                                                                                  |
+[DEBUG] | ./invalid_declaration.arc                                                                                            |
 [DEBUG] | ./invalid_map.arc                                                                                                    |
 [DEBUG] | ./dangling_profile.arc                                                                                               |
 [DEBUG] | ./dangling_map.arc                                                                                                   |
