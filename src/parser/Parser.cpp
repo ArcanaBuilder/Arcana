@@ -204,6 +204,19 @@ Arcana_Result Parser::Handle_Import(Grammar::Match& match, Semantic::Enviroment&
     Input  input  = lexer[p1->token];
     Lexeme script = input.substr(p1->start, p1->end - p1->start);
 
+    if (script.empty() || !Support::file_exists(script))
+    {
+        std::stringstream ss;
+
+        ss << "[" << ANSI_BRED << "SEMANTIC ERROR" << ANSI_RESET << "] In file ‘" << ANSI_BOLD << this->lexer.source() << ANSI_RESET << "’, line " 
+           << ANSI_BOLD << match[0]->token.line << ": ‘" << lexer[match[0]->token]  << ANSI_RESET << "’" << std::endl;
+        ss << "                 " << "Invalid import file" << std::endl;
+
+        std::cerr << ss.str();
+        
+        return Arcana_Result::ARCANA_RESULT__NOK;
+    }
+
     Arcana_Result        result;
     Scan::Lexer          lexer(script);
     Grammar::Engine      engine;
