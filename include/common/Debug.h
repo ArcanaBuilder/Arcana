@@ -183,6 +183,7 @@ inline void JobsList(const Jobs::List& jobs)
         print_line("NAME       : " + job.name);
         print_line("INTERPRETER: " + job.interpreter);
         print_line(std::string("MULTITHREAD: ") +(job.parallelizable ? "Yes" : "No"));
+        print_line(std::string("ECHO       : ") +(job.echo ? "Yes" : "No"));
         print_line("INSTRUCTION: ");
         for (const auto& job_instr : job.instructions)
         {

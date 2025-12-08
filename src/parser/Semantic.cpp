@@ -346,7 +346,7 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& 
 
         if (std::find(properties.begin(), properties.end(), name) != properties.end())
         {
-            ss << "Attribute " << ANSI_BMAGENTA << "@dependency" << ANSI_RESET << " with property " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’ cannot be auto referencing";
+            ss << "Attribute " << ANSI_BMAGENTA << "@requires" << ANSI_RESET << " with property " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’ cannot be auto referencing";
             return SEM_NOK(ss.str());
         }
 
