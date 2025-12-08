@@ -22,7 +22,7 @@ def scan_arc_tests(root):
 
     for dirpath, _, filenames in os.walk(root):
         for f in filenames:
-            if f.endswith(".arc"):
+            if f.endswith(".arc") or f == 'arcfile':
                 path = os.path.join(dirpath, f)
 
                 try:
@@ -38,12 +38,17 @@ def scan_arc_tests(root):
                     
                 tests.append( Test(path, os.path.splitext(os.path.basename(path))[0], expected_result) )
 
+    arcfile_tests = [t for t in tests if t.script == "arcfile"]
+
+    if arcfile_tests:
+        tests = [arcfile_tests[0]]
+
     return tests
 
 
 def run_test(test: Test):
     type: str = "\x1b[2m\033[32mPOSITIVE\033[0m" if test.expected_result == 0 else "\x1b[2m\033[31mNEGATIVE\033[0m"
-    print(f'Running [{type}] test: {test.script:30s}', end='')
+    print(f'Running [{type}] test: {test.script:40s}', end='')
 
     cmd = ["arcana", "-s", test.path, "--debug"]
 
@@ -86,17 +91,27 @@ def exec_tests(root: str, tests: list[Test]) -> tuple:
 
     return (passed, failed)
 
-def main():
-    root:  str        = f"../{argv[1]}"
-    tests: list[Test] = scan_arc_tests(root)
-    passed, failed = exec_tests(argv[1], tests)
 
-    print(f'''
-### Test Campaign '{argv[1]}'
+campaigns = [ 'statement', 'variable', 'task', 'project' ]
+
+for campagn in campaigns:
+    print(f'''###############################################################################
+# Running Test Campaign '{campagn}'
+''')
+    root:  str        = f"../{campagn}"
+    tests: list[Test] = scan_arc_tests(root)
+
+    if len(tests):
+        passed, failed = exec_tests(campagn, tests)
+
+        print(f'''
+# Test Campaign '{campagn}'
 - Passed:    {passed}
 - Failed:    {failed}
 - P/F Rateo: {(100*passed)/(passed+failed):.1f}%
+###############################################################################
+
+
+
 ''')
 
-if __name__ == "__main__":
-    main()

@@ -12,7 +12,7 @@ TARGET   = {arc:BUILDDIR}/test
 SOURCES  = {arc:SRCDIR}/**.cpp
 
 @map SOURCES
-OBJECTS  = {arc:BUILDDIR}
+OBJECTS  = {arc:BUILDDIR}/**.o
 
 BUILDDIR = build
 SRCDIR   = src

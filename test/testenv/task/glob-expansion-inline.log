@@ -1,0 +1,102 @@
+[ARCANA] DEBUG AFTER PARSING
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     VTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : VAR                                                                                                      |
+[DEBUG] | VALUE     : **.arc                                                                                                   |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     FTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : T1                                                                                                     |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  :                                                                                                        |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | main                                                                                                                 |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     rm {arc:inline:VAR}                                                                                              |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[ARCANA] DEBUG AFTER ALIGNMENT
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     VTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : VAR                                                                                                      |
+[DEBUG] | VALUE     : **.arc                                                                                                   |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     FTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : T1                                                                                                     |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | main                                                                                                                 |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     rm {arc:inline:VAR}                                                                                              |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[ARCANA] DEBUG AFTER EXPANSION
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     VTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : VAR                                                                                                      |
+[DEBUG] | VALUE     : **.arc                                                                                                   |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/java-like_decl.arc                                                          |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/undefined-interpreter.arc                                                   |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/undefined-attributes.arc                                                    |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/no-keyword_decl.arc                                                         |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/input.arc                                                                   |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/attribute-some-then-requires.arc                                            |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/variable-expansion.arc                                                      |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/attribute-recursive-requires.arc                                            |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/glob-expansion-list.arc                                                     |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/idk-like_decl.arc                                                           |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/attributes.arc                                                              |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/no-closing-brace_decl.arc                                                   |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/undefined-input.arc                                                         |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/attribute-complex-recursive-then.arc                                        |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/glob-expansion-inline.arc                                                   |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/nameless_decl.arc                                                           |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/main-absent.arc                                                             |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/attribute-complex-recursive-requires.arc                                    |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/glob-expansion-as-value.arc                                                 |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/no-roundp_decl.arc                                                          |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/c-like_decl.arc                                                             |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/attribute-recursive-then.arc                                                |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/inline_decl.arc                                                             |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/no-brace_decl.arc                                                           |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/glob-expansion-undefined.arc                                                |
+[DEBUG] | /home/stefano/Workspace/Arcana/test/task/no-opening-brace_decl.arc                                                   |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     FTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : T1                                                                                                     |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | main                                                                                                                 |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     rm {arc:inline:VAR}                                                                                              |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                      JOBS DEBUG                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME       : T1                                                                                                      |
+[DEBUG] | INTERPRETER: /bin/bash                                                                                               |
+[DEBUG] | MULTITHREAD: No                                                                                                      |
+[DEBUG] | ECHO       : No                                                                                                      |
+[DEBUG] | INSTRUCTION:                                                                                                         |
+[DEBUG] |     rm /home/stefano/Workspace/Arcana/test/task/java-like_decl.arc /home/stefano/Workspace/Arcana/test/task/undefine |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+

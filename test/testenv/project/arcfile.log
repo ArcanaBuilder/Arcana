@@ -1,0 +1,473 @@
+[ARCANA] DEBUG AFTER PARSING
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     VTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : BUILDDIR                                                                                                 |
+[DEBUG] | VALUE     : build                                                                                                    |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : COMPILER                                                                                                 |
+[DEBUG] | VALUE     : g++                                                                                                      |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : FLAGS@@Debug                                                                                             |
+[DEBUG] | VALUE     : -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG                                                       |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] | profile -> Debug                                                                                                     |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : FLAGS@@Release                                                                                           |
+[DEBUG] | VALUE     : -std=c++17 -Os -Wall -Wextra -DRELEASE                                                                   |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] | profile -> Release                                                                                                   |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : OBJECTS                                                                                                  |
+[DEBUG] | VALUE     : {arc:BUILDDIR}/**.o                                                                                      |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] | map -> SOURCES                                                                                                       |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : SOURCES                                                                                                  |
+[DEBUG] | VALUE     : {arc:SRCDIR}/**.cpp                                                                                      |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : SRCDIR                                                                                                   |
+[DEBUG] | VALUE     : src                                                                                                      |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : TARGET                                                                                                   |
+[DEBUG] | VALUE     : {arc:BUILDDIR}/test                                                                                      |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     FTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Build                                                                                                  |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  :                                                                                                        |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | requires -> Compile, Link                                                                                            |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Clean                                                                                                  |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  :                                                                                                        |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | flushcache                                                                                                           |
+[DEBUG] | then -> MakeFolders                                                                                                  |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     rm -rf {arc:BUILDDIR}                                                                                            |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Compile                                                                                                |
+[DEBUG] | INPUTS      : SOURCES                                                                                                |
+[DEBUG] | INTERPETER  :                                                                                                        |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | multithread                                                                                                          |
+[DEBUG] | requires -> MakeFolders                                                                                              |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     {arc:COMPILER} {arc:FLAGS} -c {arc:list:SOURCES} -o {arc:list:OBJECTS}                                           |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Install                                                                                                |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  :                                                                                                        |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | requires -> Clean, Build                                                                                             |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     cp {arc:TARGET} /usr/bin/                                                                                        |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Link                                                                                                   |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  :                                                                                                        |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     {arc:COMPILER} {arc:FLAGS} {arc:inline:OBJECTS} -o {arc:TARGET}                                                  |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : MakeFolders                                                                                            |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  :                                                                                                        |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     cd {arc:SRCDIR}                                                                                                  |
+[DEBUG] |     find . -type d -exec mkdir -p "../{arc:BUILDDIR}"/{} \;                                                          |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Message                                                                                                |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  :                                                                                                        |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | interpreter -> /bin/python3                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] | print("Invoking arcana for {arc:TARGET} in {arc:__profile__} Mode")                                                  |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Rebuild                                                                                                |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  :                                                                                                        |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | requires -> Clean, Build                                                                                             |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Run                                                                                                    |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  :                                                                                                        |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | main                                                                                                                 |
+[DEBUG] | requires -> Message, Rebuild                                                                                         |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     ./{arc:TARGET}                                                                                                   |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[ARCANA] DEBUG AFTER ALIGNMENT
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     VTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : BUILDDIR                                                                                                 |
+[DEBUG] | VALUE     : build                                                                                                    |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : COMPILER                                                                                                 |
+[DEBUG] | VALUE     : g++                                                                                                      |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : FLAGS                                                                                                    |
+[DEBUG] | VALUE     : -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG                                                       |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] | profile -> Debug                                                                                                     |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : OBJECTS                                                                                                  |
+[DEBUG] | VALUE     : {arc:BUILDDIR}/**.o                                                                                      |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] | map -> SOURCES                                                                                                       |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : SOURCES                                                                                                  |
+[DEBUG] | VALUE     : {arc:SRCDIR}/**.cpp                                                                                      |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : SRCDIR                                                                                                   |
+[DEBUG] | VALUE     : src                                                                                                      |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : TARGET                                                                                                   |
+[DEBUG] | VALUE     : {arc:BUILDDIR}/test                                                                                      |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     FTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Build                                                                                                  |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | requires -> Compile, Link                                                                                            |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Clean                                                                                                  |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | flushcache                                                                                                           |
+[DEBUG] | then -> MakeFolders                                                                                                  |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     rm -rf {arc:BUILDDIR}                                                                                            |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Compile                                                                                                |
+[DEBUG] | INPUTS      : SOURCES                                                                                                |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | multithread                                                                                                          |
+[DEBUG] | requires -> MakeFolders                                                                                              |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     {arc:COMPILER} {arc:FLAGS} -c {arc:list:SOURCES} -o {arc:list:OBJECTS}                                           |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Install                                                                                                |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | requires -> Clean, Build                                                                                             |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     cp {arc:TARGET} /usr/bin/                                                                                        |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Link                                                                                                   |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     {arc:COMPILER} {arc:FLAGS} {arc:inline:OBJECTS} -o {arc:TARGET}                                                  |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : MakeFolders                                                                                            |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     cd {arc:SRCDIR}                                                                                                  |
+[DEBUG] |     find . -type d -exec mkdir -p "../{arc:BUILDDIR}"/{} \;                                                          |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Message                                                                                                |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/python3                                                                                           |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | interpreter -> /bin/python3                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] | print("Invoking arcana for {arc:TARGET} in {arc:__profile__} Mode")                                                  |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Rebuild                                                                                                |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | requires -> Clean, Build                                                                                             |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Run                                                                                                    |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | main                                                                                                                 |
+[DEBUG] | requires -> Message, Rebuild                                                                                         |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     ./{arc:TARGET}                                                                                                   |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[ARCANA] DEBUG AFTER EXPANSION
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     VTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : BUILDDIR                                                                                                 |
+[DEBUG] | VALUE     : build                                                                                                    |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : COMPILER                                                                                                 |
+[DEBUG] | VALUE     : g++                                                                                                      |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : FLAGS                                                                                                    |
+[DEBUG] | VALUE     : -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG                                                       |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] | profile -> Debug                                                                                                     |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : OBJECTS                                                                                                  |
+[DEBUG] | VALUE     : build/**.o                                                                                               |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | build/main.o                                                                                                         |
+[DEBUG] | build/submod/test.o                                                                                                  |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] | map -> SOURCES                                                                                                       |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : SOURCES                                                                                                  |
+[DEBUG] | VALUE     : src/**.cpp                                                                                               |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | src/main.cpp                                                                                                         |
+[DEBUG] | src/submod/test.cpp                                                                                                  |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : SRCDIR                                                                                                   |
+[DEBUG] | VALUE     : src                                                                                                      |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME      : TARGET                                                                                                   |
+[DEBUG] | VALUE     : build/test                                                                                               |
+[DEBUG] | GLOB EXP  :                                                                                                          |
+[DEBUG] | ATTRIBUTES:                                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                     FTABLE DEBUG                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Build                                                                                                  |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | requires -> Compile, Link                                                                                            |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Clean                                                                                                  |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | flushcache                                                                                                           |
+[DEBUG] | then -> MakeFolders                                                                                                  |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     rm -rf build                                                                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Compile                                                                                                |
+[DEBUG] | INPUTS      : SOURCES                                                                                                |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | multithread                                                                                                          |
+[DEBUG] | requires -> MakeFolders                                                                                              |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     g++ -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG -c {arc:list:SOURCES} -o {arc:list:OBJECTS}               |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Install                                                                                                |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | requires -> Clean, Build                                                                                             |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     cp build/test /usr/bin/                                                                                          |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Link                                                                                                   |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     g++ -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG {arc:inline:OBJECTS} -o build/test                        |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : MakeFolders                                                                                            |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     cd src                                                                                                           |
+[DEBUG] |     find . -type d -exec mkdir -p "../build"/{} \;                                                                   |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Message                                                                                                |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/python3                                                                                           |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | interpreter -> /bin/python3                                                                                          |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] | print("Invoking arcana for build/test in Debug Mode")                                                                |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Rebuild                                                                                                |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | requires -> Clean, Build                                                                                             |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME        : Run                                                                                                    |
+[DEBUG] | INPUTS      :                                                                                                        |
+[DEBUG] | INTERPETER  : /bin/bash                                                                                              |
+[DEBUG] | ATTRIBUTES  :                                                                                                        |
+[DEBUG] | pub                                                                                                                  |
+[DEBUG] | main                                                                                                                 |
+[DEBUG] | requires -> Message, Rebuild                                                                                         |
+[DEBUG] |                                                                                                                      |
+[DEBUG] | INSTRUCTIONS:                                                                                                        |
+[DEBUG] |     ./build/test                                                                                                     |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] |                                                      JOBS DEBUG                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME       : Message                                                                                                 |
+[DEBUG] | INTERPRETER: /bin/python3                                                                                            |
+[DEBUG] | MULTITHREAD: No                                                                                                      |
+[DEBUG] | ECHO       : No                                                                                                      |
+[DEBUG] | INSTRUCTION:                                                                                                         |
+[DEBUG] | print("Invoking arcana for build/test in Debug Mode")                                                                |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME       : Clean                                                                                                   |
+[DEBUG] | INTERPRETER: /bin/bash                                                                                               |
+[DEBUG] | MULTITHREAD: No                                                                                                      |
+[DEBUG] | ECHO       : No                                                                                                      |
+[DEBUG] | INSTRUCTION:                                                                                                         |
+[DEBUG] |     rm -rf build                                                                                                     |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME       : MakeFolders                                                                                             |
+[DEBUG] | INTERPRETER: /bin/bash                                                                                               |
+[DEBUG] | MULTITHREAD: No                                                                                                      |
+[DEBUG] | ECHO       : No                                                                                                      |
+[DEBUG] | INSTRUCTION:                                                                                                         |
+[DEBUG] |     cd src                                                                                                           |
+[DEBUG] |     find . -type d -exec mkdir -p "../build"/{} \;                                                                   |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME       : Compile                                                                                                 |
+[DEBUG] | INTERPRETER: /bin/bash                                                                                               |
+[DEBUG] | MULTITHREAD: Yes                                                                                                     |
+[DEBUG] | ECHO       : No                                                                                                      |
+[DEBUG] | INSTRUCTION:                                                                                                         |
+[DEBUG] |     g++ -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG -c src/main.cpp -o build/main.o                           |
+[DEBUG] |     g++ -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG -c src/submod/test.cpp -o build/submod/test.o             |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME       : Link                                                                                                    |
+[DEBUG] | INTERPRETER: /bin/bash                                                                                               |
+[DEBUG] | MULTITHREAD: No                                                                                                      |
+[DEBUG] | ECHO       : No                                                                                                      |
+[DEBUG] | INSTRUCTION:                                                                                                         |
+[DEBUG] |     g++ -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG build/main.o build/submod/test.o -o build/test            |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
+[DEBUG] | NAME       : Run                                                                                                     |
+[DEBUG] | INTERPRETER: /bin/bash                                                                                               |
+[DEBUG] | MULTITHREAD: No                                                                                                      |
+[DEBUG] | ECHO       : No                                                                                                      |
+[DEBUG] | INSTRUCTION:                                                                                                         |
+[DEBUG] |     ./build/test                                                                                                     |
+[DEBUG] |                                                                                                                      |
+[DEBUG] +----------------------------------------------------------------------------------------------------------------------+
