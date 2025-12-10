@@ -73,36 +73,27 @@ or
 ```bash
 arcana build -p Release
 ```
-Profiles modify behavior without injecting conditional logic into the DSL.
+Profiles modify behavior without injecting conditional logic into the DSL.  
+Attributes that extend, not complicate.  
+Attributes add metadata to tasks: ordering, interpreters, multithreading, cache behavior, and more.  
+They enhance your workflow without adding hidden semantics.  
+Predictable caching.  
 
-Attributes that extend, not complicate.
-
-Attributes add metadata to tasks: ordering, interpreters, multithreading, cache behavior, and more.
-
-They enhance your workflow without adding hidden semantics.
-
-Predictable caching.
-
-Arcana automatically checks whether a task’s inputs have changed:
-
-**unchanged → task skipped**
-
-**modified → task executed**
+Arcana automatically checks whether a task’s inputs have changed:  
+**unchanged → task skipped**  
+**modified → task executed**  
 
 
-Use your preferred interpreter
+Use your preferred interpreter:  
 Task bodies run in the system’s interpreter (bash by default).
 
-Arcana does not embed its own programming language.
+Arcana does not embed its own programming language.  
 If your shell can run it, Arcana can orchestrate it.
 
 ## 🧠 Philosophy
-**Transparency**: no invisible rules.
-
-**Minimalism**: a tool stays maintainable by staying small.
-
-**User control**: you describe the build; Arcana executes it.
-
+**Transparency**: no invisible rules.  
+**Minimalism**: a tool stays maintainable by staying small.  
+**User control**: you describe the build; Arcana executes it.  
 
 ## 🚀 Getting Started
 Create an arcfile at your project root, by the generator.
@@ -141,3 +132,8 @@ If you want a builder that does its job without getting in your way, Arcana fits
 See the repository for license details.
 
 Contributions, issues, and feature ideas are welcome.
+
+
+## 🛠️ Developed and mainteined by
+[MastroGibbs (GitLab)](https://gitlab.com/MastroGibbs)  
+[MastroGibbs (GitHub)](https://github.com/Mastro-Gibbs)
