@@ -2,3 +2,5 @@
 .arcana
 .vscode
 build/*
+arcbuild
+arcbuild/*

@@ -42,6 +42,7 @@ struct Result
 
 struct RunOptions
 {
+    bool     silent          = false;
     bool     stop_on_error   = true;
     unsigned max_parallelism = std::thread::hardware_concurrency();
 };

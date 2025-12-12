@@ -40,8 +40,8 @@ static Semantic::Enviroment env;
 
 static Arcana_Result Version(void)
 {
-    MSG("Arcana:  the make-like but user frendly builder");
-    MSG("Version: " << __ARCANA__VERSION__STR__);
+    MSG("Arcana — the modern alternative to make.");
+    MSG("Version: " << __ARCANA__VERSION__);
 
     return Arcana_Result::ARCANA_RESULT__OK;
 }
@@ -57,7 +57,7 @@ static Arcana_Result Help(void)
          ██▄▄██ ██▄▄██▄ ██     ██▄▄██ ██ ▀▄██ ██▄▄██ 
          ██  ██ ██   ██ ▀█████ ██  ██ ██   ██ ██  ██ 
                                          
-         Arcana, the make-like but user frendly builder
+         Arcana — the modern alternative to make.
 
 
 DESCRIPTION
@@ -74,11 +74,13 @@ USAGE
 
 
 OPTIONS
-  --help                Show this help message.
-  --version             Print the arcana version.
+  --help                Show this help message, then exit.
+  --version             Print the arcana version, then exit.
   --flush-cache         Flush arcana cache, then exit.
-  -p <profile>          Build with a specific profile. Profiles must be declared in the arcfile. 
-  -s <arcfile>          Build with a specific arcfile. 
+  --silent              Suppress Arcana runtime logs on stdout.
+  -p <profile>          Execute the arcfile with a specific profile. 
+                        Profiles must be declared in the arcfile, via 'using profiles' statement. 
+  -s <arcfile>          Execute the CLI passed arcfile. 
   --generate [stream]   Generate an arcfile template. If a stream is passed the template will be
                         saved into it.
                         If the stream is stdout, the template will be printed on int. 
@@ -109,13 +111,32 @@ LANGUAGE:
                                                     Omitting this statement will result in the use of all 
                                                     the cores on your machine.
   
-  SYSTEM VARIABLES:
-    In Arcana there are a few system variables that can be used in simple variable expansions.
+  BUILTIN SYMBOLS:
+    In Arcana there are builtin symbols:
 
-    __profile__                     A system variable that identifies the currently selected profile. 
-                                    If no profile exists, it will have the value 'None'.
+    __main__                        A symbol that identifies the name of the main task.
+                                    It represents the entry point of the execution graph.
 
-    __version__                     A system variable that identifies the current version of arcana.
+    __root__                        A symbol that identifies the absolute path of the project root.
+                                    The project root is defined as the directory containing the main Arcana file.
+
+    __version__                     A symbol that identifies the current version of Arcana.
+                                    It can be used for compatibility checks and diagnostics.
+
+    __profile__                     A symbol that identifies the currently selected execution profile.
+                                    If no profile is selected, it will have the value 'None'.
+
+    __threads__                     A symbol that identifies the number of threads effectively used
+                                    for task execution at runtime.
+
+    __max_threads__                 A symbol that identifies the maximum number of threads allowed
+                                    for task execution, as determined by system capabilities and configuration.
+
+    __os__                          A symbol that identifies the target operating system.
+                                    The value is determined at compile time and is platform independent.
+
+    __arch__                        A symbol that identifies the target CPU architecture.
+                                    The value is determined at compile time and is platform independent.
 
 
   VARIABLES:
@@ -292,6 +313,7 @@ static Arcana_Result Execute(const Support::Arguments& args)
         return ARCANA_RESULT__OK;
     }
 
+    runopt.silent          = args.silent;
     runopt.max_parallelism = env.GetThreads();
     Core::run_jobs(joblist, runopt);
 
@@ -374,6 +396,8 @@ int main(int argc, char** argv)
     {
         return result;
     }
+
+    Cache::Manager::Instance().HandleProfileChange(env.GetProfile().selected);
 
     return Execute(args);
 }

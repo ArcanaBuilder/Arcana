@@ -31,6 +31,7 @@ enum class VarExpansion : uint8_t
 {
     LIST,
     INLINE,
+    UNDEFINDED
 };
 
 
@@ -254,6 +255,7 @@ static ExpansionError ExpandListInstuctions(const Semantic::InstructionTask&  ta
     };
 
     bool                   never_matched = true;
+    VarExpansion           expasion      = VarExpansion::UNDEFINDED;
     std::stringstream      err;
     ExpansionError         status;
     Semantic::Task::Instrs computed_instr;
@@ -368,10 +370,12 @@ static ExpansionError ExpandListInstuctions(const Semantic::InstructionTask&  ta
 
                 if (match.var_exp == VarExpansion::LIST)
                 {
+                    expasion = match.var_exp;
                     out += vec[i];
                 }
                 else // INLINE
                 {
+                    expasion = expasion == VarExpansion::LIST ? expasion : match.var_exp;
                     out += inline_cache[match.var_name];
                 }
 
@@ -383,7 +387,7 @@ static ExpansionError ExpandListInstuctions(const Semantic::InstructionTask&  ta
         }
     }
 
-    if (never_matched)
+    if (never_matched || expasion != VarExpansion::LIST)
     {
         if (task.task_instrs.size())
         {

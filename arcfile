@@ -2,7 +2,7 @@
 
 using profiles Debug Release;
 using default interpreter /bin/bash;
-using threads 24;
+using threads 12;
 
 
 COMPILER = g++
@@ -15,13 +15,14 @@ FLAGS    = -std=c++17 -Os -Wall -Wextra -DRELEASE
 
 INCLUDES = -Iinclude/common -Iinclude/core -Iinclude/parser -Iinclude/parser/util -Iinclude/core/util
 
-TARGET   = {arc:BUILDDIR}/arcana
+TOOL     = arcana
+TARGET   = {arc:BUILDDIR}/{arc:TOOL}
 SOURCES  = {arc:SRCDIR}/**.cpp
 
 @map SOURCES
 OBJECTS  = {arc:BUILDDIR}/**.o
 
-BUILDDIR = build
+BUILDDIR = arcbuild
 SRCDIR   = src
 
 
@@ -39,12 +40,24 @@ task MakeFolders()
 @interpreter /bin/python3
 task Message() 
 {
-print("Invoking arcana ({arc:__version__}) for {arc:TARGET} in {arc:__profile__} Mode")
+if '{arc:__profile__}' == 'Release':
+    print('Executing {arc:__main__} for {arc:TOOL} in {arc:__profile__} mode!')
+
+if '{arc:__profile__}' != 'Release':
+    print('Executing {arc:__main__} for {arc:TOOL} in {arc:__profile__} mode!')
+    print('Builtin Symbols:')
+    print('main       : {arc:__main__}')
+    print('root       : {arc:__root__}')
+    print('version    : {arc:__version__}')
+    print('profile    : {arc:__profile__}')
+    print('threads    : {arc:__threads__}')
+    print('max_threads: {arc:__max_threads__}')
+    print('OS         : {arc:__os__}')
+    print('arch       : {arc:__arch__}')
 }
 
 @echo
 @requires MakeFolders
-@multithread
 task Compile(SOURCES) 
 {
     {arc:COMPILER} {arc:FLAGS} {arc:INCLUDES} -c {arc:list:SOURCES} -o {arc:list:OBJECTS}

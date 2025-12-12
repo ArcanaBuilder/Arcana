@@ -16,7 +16,11 @@ USE_MODULE(Arcana);
 //    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚══════╝╚══════╝
 //                                                                 
 
-static Core::InstructionResult run_instruction(const std::string& interpreter, const std::string& command, const bool echo) noexcept
+static Core::InstructionResult run_instruction(const std::string& jobname, 
+                                               const std::size_t  idx,  
+                                               const std::string& interpreter, 
+                                               const std::string& command, 
+                                               const bool         echo) noexcept
 {
     Core::InstructionResult res { command, 0 };
 
@@ -26,7 +30,7 @@ static Core::InstructionResult run_instruction(const std::string& interpreter, c
     }
 
     Cache::Manager&         cache    = Cache::Manager::Instance();
-    std::filesystem::path   script   = cache.WriteScript(command);
+    std::filesystem::path   script   = cache.WriteScript(jobname, idx, command);
     std::string             full_cmd = interpreter + " \"" + script.string() + "\"";
     
     int ret = std::system(full_cmd.c_str());
@@ -54,10 +58,12 @@ static Core::Result run_job(const Jobs::Job& job, const Core::RunOptions& opt) n
 
     if (!job.parallelizable)
     {
+        std::size_t idx = 0;
+
         // LINEAR EXECUTION OF JOB: NO MT
         for (const auto &cmd : job.instructions)
         {
-            auto r = run_instruction(job.interpreter, cmd, job.echo);
+            auto r = run_instruction(job.name, idx, job.interpreter, cmd, job.echo);
             result.results.push_back(r);
 
             // ON ERROR JUST QUIT
@@ -71,6 +77,8 @@ static Core::Result run_job(const Jobs::Job& job, const Core::RunOptions& opt) n
                     break;
                 }
             }
+
+            ++idx;
         }
     }
     else
@@ -85,7 +93,7 @@ static Core::Result run_job(const Jobs::Job& job, const Core::RunOptions& opt) n
         auto worker = [&] (std::size_t idx)
         {
             const auto& cmd = job.instructions[idx];
-            auto        r   = run_instruction(job.interpreter, cmd, job.echo);
+            auto        r   = run_instruction(job.name, idx, job.interpreter, cmd, job.echo);
 
             // BE SURE TO USE A MUTEX TO WRITE IN THE RESULT ARRAY
             std::lock_guard<std::mutex> lock(mutex);
@@ -150,7 +158,6 @@ static Core::Result run_job(const Jobs::Job& job, const Core::RunOptions& opt) n
 std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::RunOptions& opt) noexcept
 {
     bool ok = true;
-
     std::vector<Core::Result> results;
 
     results.reserve(jobs.All().size());
@@ -158,7 +165,10 @@ std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::Run
     // RUN EACH JOB 
     for (auto &job : jobs.All())
     {
-        ARC(ANSI_GRAY << "Running task: "  << job.name << ANSI_RESET);
+        if (!opt.silent)
+        {
+            ARC(ANSI_GRAY << "Running task: "  << job.name << ANSI_RESET);
+        }
 
         auto r = run_job(job, opt);
         results.push_back(r);
@@ -171,9 +181,9 @@ std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::Run
         }
     }
 
-    if (ok)
+    if (ok && !opt.silent)
     {
-        ARC(jobs.main_job << " done!");
+        ARC("Action '" << jobs.main_job << "' done!");
     }
 
     return results;

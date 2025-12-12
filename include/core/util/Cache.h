@@ -51,11 +51,12 @@ public:
         return m;
     }
 
-    void     EraseCache()                            noexcept;
-    void     ClearCache()                            noexcept;
-    void     LoadCache()                             noexcept;
-    bool     HasFileChanged(const std::string& path) noexcept;
-    fs::path WriteScript(const std::string& path)    noexcept;
+    void     EraseCache()                                    noexcept;
+    void     ClearCache()                                    noexcept;
+    void     LoadCache()                                     noexcept;
+    bool     HasFileChanged(const std::string& path)         noexcept;
+    void     HandleProfileChange(const std::string& profile) noexcept;
+    fs::path WriteScript(const std::string& jobname, const std::size_t idx, const std::string& path) noexcept;
 
 
 private:
@@ -65,7 +66,9 @@ private:
     fs::path _cache_folder;
     fs::path _script_path;
     fs::path _input_path;
+    fs::path _profile;
     std::map<std::string, std::string> _cached_inputs;
+    std::string                        _cached_profile;
 };
 
 

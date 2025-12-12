@@ -662,7 +662,7 @@ const std::optional<std::string> Enviroment::Expand() noexcept
         std::vector<ExpandMatch> matches;
         bool                     intern_satisfied = false;
         
-        std::regex intern_re(R"(\{arc:(__profile__|__version__)\})");
+        std::regex intern_re(R"(\{arc:(__profile__|__version__|__main__|__root__|__max_threads__|__threads__|__os__|__arch__)\})");
         for (std::sregex_iterator it(stmt.begin(), stmt.end(), intern_re), end; it != end && !intern_satisfied; ++it)
         {   
             std::string new_stmt  = stmt.substr(0, it->position());
@@ -673,10 +673,63 @@ const std::optional<std::string> Enviroment::Expand() noexcept
             } 
             else if ((*it)[1].compare("__version__") == 0)
             {
-                new_stmt += __ARCANA__VERSION__STR__;
+                new_stmt += __ARCANA__VERSION__;
+            }
+            else if ((*it)[1].compare("__main__") == 0)
+            {
+                auto main_task_opt = Table::GetValue(ftable, Semantic::Attr::Type::MAIN);
+                new_stmt += main_task_opt.value().get().task_name;
+            }
+            else if ((*it)[1].compare("__root__") == 0)
+            {
+                new_stmt += std::filesystem::current_path().string();
+            }
+            else if ((*it)[1].compare("__max_threads__") == 0)
+            {
+                new_stmt += std::to_string(std::thread::hardware_concurrency());
+            }
+            else if ((*it)[1].compare("__threads__") == 0)
+            {
+                new_stmt += std::to_string(max_threads);
+            }
+            else if ((*it)[1].compare("__os__") == 0)
+            {
+                #if defined(_WIN32)
+                    new_stmt += "windows";
+                #elif defined(__APPLE__) && defined(__MACH__)
+                    new_stmt += "macos";
+                #elif defined(__linux__)
+                    new_stmt += "linux";
+                #elif defined(__FreeBSD__)
+                    new_stmt += "freebsd";
+                #elif defined(__unix__)
+                    new_stmt += "unix";
+                #else
+                    new_stmt += "unknown";
+                #endif
+            }
+            else if ((*it)[1].compare("__arch__") == 0)
+            {
+                #if defined(__x86_64__) || defined(_M_X64)
+                    new_stmt += "x86_64";
+                #elif defined(__i386__) || defined(_M_IX86)
+                    new_stmt += "x86";
+                #elif defined(__aarch64__) || defined(_M_ARM64)
+                    new_stmt += "aarch64";
+                #elif defined(__arm__) || defined(_M_ARM)
+                    new_stmt += "arm";
+                #elif defined(__riscv) || defined(__riscv__)
+                    new_stmt += "riscv";
+                #elif defined(__powerpc64__) || defined(__ppc64__)
+                    new_stmt += "ppc64";
+                #elif defined(__powerpc__) || defined(__ppc__)
+                    new_stmt += "ppc";
+                #else
+                    new_stmt += "unknown";
+                #endif
             }
 
-            new_stmt             += stmt.substr(it->position() + (*it)[0].length(), stmt.length() - it->position() + (*it)[0].length());
+            new_stmt += stmt.substr(it->position() + (*it)[0].length(), stmt.length() - it->position() + (*it)[0].length());
             stmt = new_stmt;
         }
 
@@ -731,6 +784,15 @@ const std::optional<std::string> Enviroment::Expand() noexcept
         return std::nullopt;
     };
 
+    // HANDLE MAX THREADS   
+    auto machine_max_threads = std::thread::hardware_concurrency();
+
+    if (max_threads == 0 || max_threads > machine_max_threads)
+    {
+        max_threads = machine_max_threads;
+    }
+
+    
     // FOR EACH KEY IN VTABLE
     auto var_keys = Table::Keys(vtable);
     
@@ -782,14 +844,6 @@ const std::optional<std::string> Enviroment::Expand() noexcept
     if (auto res = Table::Map(vtable); !res.empty())
     {
         return res;
-    }
-
-    // HANDLE MAX THREADS   
-    auto machine_max_threads = std::thread::hardware_concurrency();
-
-    if (max_threads == 0 || max_threads > machine_max_threads)
-    {
-        max_threads = machine_max_threads;
     }
 
     return std::nullopt;

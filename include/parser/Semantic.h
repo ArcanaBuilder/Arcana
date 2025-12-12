@@ -416,6 +416,7 @@ public:
     
     Interpreter                      GetInterpreter() noexcept { return default_interpreter; }
     uint32_t                         GetThreads()     noexcept { return max_threads;         }
+    Profile&                         GetProfile()     noexcept { return profile;             }
 
 private:
     Profile     profile;

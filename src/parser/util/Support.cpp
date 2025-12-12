@@ -271,6 +271,12 @@ std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char*
             ++i;
             continue;
         }
+        else if (arg == "--silent")
+        {
+            args.silent = true;
+            ++i;
+            continue;
+        }
         else if (!args.task.found)
         {
             args.task.found = true;

@@ -108,6 +108,12 @@ void Lexer::advance()
             return;
         }
 
+        // IGNORE CR (CRLF normalization)
+        if (c == '\r')
+        {
+            continue;
+        }
+
         // if (c == '\\')
         // {
         //     int n = in_.peek();

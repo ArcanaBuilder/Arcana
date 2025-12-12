@@ -87,6 +87,7 @@ struct Arguments
     bool flush_cache;
     bool version;
     bool help;
+    bool silent;
 
     Arguments() 
         : 
@@ -97,7 +98,8 @@ struct Arguments
         debug(false),
         flush_cache(false),
         version(false),
-        help(false)
+        help(false),
+        silent(false)
     {}
 };
 

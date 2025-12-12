@@ -197,7 +197,7 @@ inline bool for_each_file(const fs::path& dir,
 
 
 
-std::string MD5_file(const fs::path& p) noexcept
+std::string read_file(const fs::path& p) noexcept
 {
     std::error_code ec;
 
@@ -219,8 +219,16 @@ std::string MD5_file(const fs::path& p) noexcept
         file.read(&data[0], data.size());
     }
 
-    return Cache::MD5(data);
+    return data;
 }
+
+
+std::string MD5_file(const fs::path& p) noexcept
+{
+    return Cache::MD5(read_file(p));
+}
+
+
 
 
 
@@ -456,7 +464,8 @@ Manager::Manager()
     :
     _cache_folder(".arcana"),
     _script_path (_P(_cache_folder) / _P("script")),
-    _input_path  (_P(_cache_folder) / _P("input"))
+    _input_path  (_P(_cache_folder) / _P("input")),
+    _profile     (_P(_cache_folder) / _P("profile"))
 {}
 
 
@@ -508,12 +517,36 @@ void Manager::LoadCache() noexcept
         create_dir(_input_path);
     }
 
+    if (!file_exists(_profile))
+    {
+        create_file(_profile, "");
+    }
+
     for_each_file(_input_path, [this] (const std::filesystem::path& fullpath, const std::string& fname, const std::string& content)
     {
         UNUSED(fullpath);
         
         _cached_inputs[fname] = content;
     });
+
+    _cached_profile = read_file(_profile);
+}
+
+
+
+void Manager::HandleProfileChange(const std::string& profile) noexcept
+{
+    if (_cached_profile.compare(profile) != 0)
+    {
+        if (dir_exists(_input_path))
+        {
+            remove_dir_recursive(_input_path);
+        }
+
+        _cached_inputs.clear();
+    }
+
+    create_file(_profile, profile);
 }
 
 
@@ -537,12 +570,25 @@ bool Manager::HasFileChanged(const std::string& path) noexcept
 
 
 
-fs::path Manager::WriteScript(const std::string& content) noexcept
+fs::path Manager::WriteScript(const std::string& jobname, const std::size_t idx, const std::string& content) noexcept
 {
-    std::string md5_file = MD5(content);
-    fs::path    md5_path = _script_path / md5_file;
+    std::string md5_filename = MD5(jobname);
+    fs::path    script_path  = _script_path / (md5_filename + std::to_string(idx));
 
-    create_file(md5_path, content);
+    if (file_exists(script_path))
+    {
+        std::string md5_oldcontent = MD5_file(script_path);
+        std::string md5_newcontent = MD5(content);
 
-    return md5_path;
+        if (md5_oldcontent.compare(md5_newcontent) != 0)
+        {
+            create_file(script_path, content);
+        }
+    }
+    else
+    {
+        create_file(script_path, content);
+    }
+
+    return script_path;
 }
