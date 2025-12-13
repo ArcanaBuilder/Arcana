@@ -51,6 +51,7 @@ Arcana_Result Parser::Parse(Semantic::Enviroment& env)
                 case Grammar::Rule::ATTRIBUTE:         astout = Handle_Attribute(match);   match.valid = false;  break;
                 case Grammar::Rule::TASK_DECL:         astout = Handle_TaskDecl(match);    match.valid = false;  break;
                 case Grammar::Rule::USING:             astout = Handle_Using(match);       match.valid = false;  break;
+                case Grammar::Rule::MAPPING:           astout = Handle_Mapping(match);     match.valid = false;  break;
                 default:                                                                   match.valid = false;  break;
             }
 
@@ -251,3 +252,20 @@ Arcana::Support::SemanticOutput Parser::Handle_Using(Grammar::Match& match)
 
     return instr_engine.Collect_Using(what, opt);
 }
+
+
+
+Arcana::Support::SemanticOutput Parser::Handle_Mapping(Grammar::Match& match)
+{
+    // EXTRACT THE STRINGS FROM THE INPUT AND PASS THEM INTO THE SEMANTIC ENGINE
+    Point  p1     = match[_I(Grammar::MAPPING::ITEM_1)];
+    Point  p2     = match[_I(Grammar::MAPPING::ITEM_2)];
+    
+    Input  input  = lexer[p1->token];
+
+    Lexeme item1 = input.substr(p1->start, p1->end - p1->start);
+    Lexeme item2 = input.substr(p2->start, p2->end - p2->start);
+
+    return instr_engine.Collect_Mapping(item1, item2);
+}
+

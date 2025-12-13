@@ -189,7 +189,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
 
     if (attr == Attr::Type::ATTRIBUTE__UNKNOWN)
     {
-        ss << "Attribute " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’" << " not recognized";
+        ss << "Attribute " << "‘" << TOKEN_MAGENTA(name) << "’" << " not recognized";
         return SEM_NOK_HINT(ss.str(), Support::FindClosest(_attributes, name));
     }
 
@@ -203,12 +203,12 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         // CHECK THE NUMBER OF PROPERTIES
         if (props_count == 0)
         {
-            ss << "Attribute " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’" << " requires at least one option";
+            ss << "Attribute " << "‘" << TOKEN_MAGENTA(name) << "’" << " requires at least one option";
             return SEM_NOK(ss.str());
         }
         else if (props_count != 1 && rule.count == Attr::Count::ONE)
         {
-            ss << "Attribute " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’" << " requires one option, not " << props_count;
+            ss << "Attribute " << "‘" << TOKEN_MAGENTA(name) << "’" << " requires one option, not " << props_count;
             return SEM_NOK(ss.str());
         }
     }
@@ -217,7 +217,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         // CHECK FOR PROPERTIES PRESENCE, BUT THE RULE NOT ADMIT THEM
         if (props_count > 0)
         {
-            ss << "Attribute " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’" << " requires no option";
+            ss << "Attribute " << "‘" << TOKEN_MAGENTA(name) << "’" << " requires no option";
             return SEM_NOK(ss.str());
         }
     }
@@ -230,7 +230,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
 
         if (std::find(profiles.begin(), profiles.end(), property[0]) == profiles.end())
         {
-            ss << "Profile " << "‘" << ANSI_BMAGENTA << property[0] << ANSI_RESET << "’" << " must be declared via " << ANSI_BMAGENTA << "‘using profile <profilenames>’" << ANSI_RESET;
+            ss << "Profile " << "‘" << TOKEN_MAGENTA(property[0]) << "’" << " must be declared via " << ANSI_BMAGENTA << "‘using profile <profilenames>’" << ANSI_RESET;
             return SEM_NOK_HINT(ss.str(), Support::FindClosest(profiles, property[0]));
         }
     }
@@ -242,7 +242,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
 
         if (std::find(keys.begin(), keys.end(), property[0]) == keys.end())
         {
-            ss << "Invalid " << name << " ‘" << ANSI_BMAGENTA << property[0] << ANSI_RESET << "’" << ": undeclared variable";
+            ss << "Invalid " << name << " ‘" << TOKEN_MAGENTA(property[0]) << "’" << ": undeclared variable";
             return SEM_NOK_HINT(ss.str(), Support::FindClosest(keys, name));
         }
     }
@@ -252,7 +252,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         // CHECK FOR THE UNIQUENESS
         if (_main_count > 0)
         {
-            ss << "Cannot tag multiple tasks with attribute " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’";
+            ss << "Cannot tag multiple tasks with attribute " << "‘" << TOKEN_MAGENTA(name) << "’";
             return SEM_NOK(ss.str());
         }
 
@@ -264,7 +264,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         // CHECK IF THE INTERPRETER EXISTS
         if (!Support::file_exists(property[0]))
         {
-            ss << "Interpreter " << "‘" << ANSI_BMAGENTA << property[0] << ANSI_RESET << "’ is missing or unknown";
+            ss << "Interpreter " << "‘" << TOKEN_MAGENTA(property[0]) << "’ is missing or unknown";
             return SEM_NOK(ss.str());
         }
     }
@@ -297,7 +297,7 @@ SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::st
 
         if (std::find(rule.targets.begin(), rule.targets.end(), Attr::Target::VARIABLE) == rule.targets.end())
         {
-            ss << "Attribute " << "‘" << ANSI_BMAGENTA << attr.name << ANSI_RESET << "’" << " is not valid for variable assignment";
+            ss << "Attribute " << "‘" << TOKEN_MAGENTA(attr.name) << "’" << " is not valid for variable assignment";
             return SEM_NOK(ss.str());
         }
     }
@@ -338,7 +338,7 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& 
 
         if (std::find(rule.targets.begin(), rule.targets.end(), Attr::Target::TASK) == rule.targets.end())
         {
-            ss << "Attribute " << "‘" << ANSI_BMAGENTA << attr.name << ANSI_RESET << "’" << " is not valid for tasks";
+            ss << "Attribute " << "‘" << TOKEN_MAGENTA(attr.name) << "’" << " is not valid for tasks";
             return SEM_NOK(ss.str());
         }
     }
@@ -349,7 +349,7 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& 
 
         if (std::find(properties.begin(), properties.end(), name) != properties.end())
         {
-            ss << "Attribute " << ANSI_BMAGENTA << "@requires" << ANSI_RESET << " with property " << "‘" << ANSI_BMAGENTA << name << ANSI_RESET << "’ cannot be auto referencing";
+            ss << "Attribute " << TOKEN_MAGENTA("@requires") << " with property " << "‘" << TOKEN_MAGENTA(name) << "’ cannot be auto referencing";
             return SEM_NOK(ss.str());
         }
 
@@ -386,7 +386,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
     }
     else
     {
-        ss << "Unknown " << "‘" << ANSI_BMAGENTA << what << ANSI_RESET << "’ for statement " << ANSI_BMAGENTA << "using" << ANSI_RESET ;
+        ss << "Unknown " << "‘" << TOKEN_MAGENTA(what) << "’ for statement " << TOKEN_MAGENTA("using") ;
         return SEM_NOK_HINT(ss.str(), Support::FindClosest(_usings, what));
     }
 
@@ -404,10 +404,10 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
                     ss1 << ", or ";
                 }
 
-                ss1 << ANSI_BMAGENTA << rule.valid_attr[iter] << ANSI_RESET; 
+                ss1 << TOKEN_MAGENTA(rule.valid_attr[iter]); 
             }
 
-            ss << "Statement " << "‘" << ANSI_BMAGENTA << "using " << what << ANSI_RESET << "’ must be followed by " << ss1.str();
+            ss << "Statement " << "‘" << TOKEN_MAGENTA("using " << what ) << "’ must be followed by " << ss1.str();
             return SEM_NOK(ss.str());
         }
 
@@ -416,21 +416,21 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
 
         if (attr == rule.valid_attr.end())
         {
-            ss << "Unknown attribute " << "‘" << ANSI_BMAGENTA << options[0] << ANSI_RESET << "’ for statement " << ANSI_BMAGENTA << "using " << what << ANSI_RESET ;
+            ss << "Unknown attribute " << "‘" << TOKEN_MAGENTA(options[0]) << "’ for statement " << TOKEN_MAGENTA("using " << what ) ;
             return SEM_NOK_HINT(ss.str(), Support::FindClosest(rule.valid_attr, options[0]));
         }
         
         // CHECK IF THE ATTRIBUTE IS FOLLOWER BY TASKS NAME
         if (options.size() == 1)
         {
-            ss << "Statement " << "‘" << ANSI_BMAGENTA << "using default " << options[0] << ANSI_RESET << "’ must be followed by interpeter path";
+            ss << "Statement " << "‘" << TOKEN_MAGENTA("using default " << options[0] ) << "’ must be followed by interpeter path";
             return SEM_NOK(ss.str());
         }
 
         // CHECK IF THE INTERPRETER EXISTS
         if (!Support::file_exists(options[1]))
         {
-            ss << "Interpreter " << "‘" << ANSI_BMAGENTA << options[1] << ANSI_RESET << "’ is missing or unknown";
+            ss << "Interpreter " << "‘" << TOKEN_MAGENTA(options[1]) << "’ is missing or unknown";
             return SEM_NOK(ss.str());
         }
 
@@ -443,7 +443,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
         // CHECK FOR THE SIZE
         if (options.size() == 0)
         {
-            ss << "Statement " << "‘" << ANSI_BMAGENTA << "using profiles" << ANSI_RESET << "’ must be followed by profiles name";
+            ss << "Statement " << "‘" << TOKEN_MAGENTA("using profiles") << "’ must be followed by profiles name";
             return SEM_NOK(ss.str());
         }
 
@@ -456,7 +456,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
             }
             else
             {
-                ss << "Duplicate item in statement " << "‘" << ANSI_BMAGENTA << "using profiles" << ANSI_RESET << "’: ‘" << ANSI_BMAGENTA << options[iter] << ANSI_RESET <<"’" << ANSI_RESET ;
+                ss << "Duplicate item in statement " << "‘" << TOKEN_MAGENTA("using profiles") << "’: ‘" << TOKEN_MAGENTA(options[iter]) <<"’" << ANSI_RESET ;
                 return SEM_NOK(ss.str());
             }
         }
@@ -468,7 +468,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
         // CHECK FOR THE SIZE
         if (options.size() != 1)
         {
-            ss << "Statement " << "‘" << ANSI_BMAGENTA << "using multithread" << ANSI_RESET << "’ must be followed maximum threads allowed";
+            ss << "Statement " << "‘" << TOKEN_MAGENTA("using multithread") << "’ must be followed maximum threads allowed";
             return SEM_NOK(ss.str());
         }
 
@@ -481,7 +481,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
 
         if (ec != std::errc{} || ptr != end || max_threads <= 0)
         {
-            ss << "Invalid value for multithread: " << ANSI_BMAGENTA  << options[0] << ANSI_RESET << ". Expected a positive integer.";
+            ss << "Invalid value for multithread: " << TOKEN_MAGENTA(options[0]) << ". Expected a positive integer.";
             return SEM_NOK(ss.str());
         }
 
@@ -490,6 +490,39 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
 
     return SemanticOutput{};
 }
+
+
+
+SemanticOutput Engine::Collect_Mapping(const std::string& item_1, const std::string& item_2)
+{
+    std::stringstream ss;
+
+    auto&       vtable   = _env.vtable;
+    const auto  keys     = Table::Keys(vtable);
+    auto        it_item1 = vtable.find(item_1);
+    auto        it_item2 = vtable.find(item_2);
+
+    if (it_item1 == vtable.end())
+    {
+        ss << "Invalid mapping " << TOKEN_MAGENTA(item_1) << " -> " << TOKEN_MAGENTA(item_2) << "! " << item_1 << ": undeclared variable";
+        return SEM_NOK_HINT(ss.str(), Support::FindClosest(keys, item_1));
+    }
+
+    if (it_item2 == vtable.end())
+    {
+        ss << "Invalid mapping " << TOKEN_MAGENTA(item_1) << " -> " << TOKEN_MAGENTA(item_2) << "! " << item_2 << ": undeclared variable";
+        return SEM_NOK_HINT(ss.str(), Support::FindClosest(keys, item_2));
+    }
+
+    it_item2->second.attributes.push_back({
+        "map",
+        Attr::Type::MAP,
+        {item_1}
+    });
+
+    return SemanticOutput{};
+}
+
 
 
 
@@ -503,7 +536,7 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
 
         if (!task)
         {
-            ERR("Unknown task " << ANSI_BMAGENTA << args.task.value << ANSI_RESET);
+            ERR("Unknown task " << TOKEN_MAGENTA(args.task.value));
 
             auto keys    = Table::Keys(ftable);             
             auto closest = Support::FindClosest(keys, args.task.value);
@@ -518,7 +551,7 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
         // CHECK IF THE SELECTED TASK HAS THE ATTRIBUTE 'PUBLIC'
         else if (!task.value().get().hasAttribute(Semantic::Attr::Type::PUBLIC))
         {
-            ERR("Requested task " << ANSI_BMAGENTA << args.task.value << ANSI_RESET << " does not have " << ANSI_BMAGENTA << "public" << ANSI_RESET << " attribute");
+            ERR("Requested task " << TOKEN_MAGENTA(args.task.value << ANSI_RESET << " does not have " << ANSI_BMAGENTA << "public" ) << " attribute");
             return Arcana_Result::ARCANA_RESULT__NOK;
         }
         
@@ -553,7 +586,7 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
         // CHECK FOR THE PRESENCE, IF NOT THEN GIVA AN HINT
         if (std::find(profile.profiles.begin(), profile.profiles.end(), args.profile.value) == profile.profiles.end())
         {
-            ERR("Requested profile " << ANSI_BMAGENTA << args.profile.value << ANSI_RESET << " is invalid!");
+            ERR("Requested profile " << TOKEN_MAGENTA(args.profile.value) << " is invalid!");
 
             auto closest = Support::FindClosest(profile.profiles, args.profile.value);
 
@@ -612,7 +645,7 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
                 {
                     auto closest = Support::FindClosest(Table::Keys(ftable), p);
     
-                    ss << "Invalid dependecy ‘" << ANSI_BMAGENTA << p << ANSI_RESET << "’ for task " << ANSI_BMAGENTA << task.task_name << ANSI_RESET << std::endl;
+                    ss << "Invalid dependecy ‘" << TOKEN_MAGENTA(p) << "’ for task " << TOKEN_MAGENTA(task.task_name) << std::endl;
                     if (closest) ss << "[" << ANSI_BGREEN << "HINT" << ANSI_RESET << "]  Did you mean " << ANSI_BCYAN << closest.value() << ANSI_RESET << "?";
                     return ss.str();
                 }
@@ -820,7 +853,7 @@ const std::optional<std::string> Enviroment::Expand() noexcept
             if (std::find(var_keys.begin(), var_keys.end(), input) == var_keys.end())
             {
                 std::stringstream ss;
-                ss << "Invalid input " << ANSI_BMAGENTA << input << ANSI_RESET << " for task " << ANSI_BMAGENTA << name << ANSI_RESET << ": Undefined variable";
+                ss << "Invalid input " << TOKEN_MAGENTA(input << ANSI_RESET << " for task " << ANSI_BMAGENTA << name ) << ": Undefined variable";
                 return ss.str();
             }
         }

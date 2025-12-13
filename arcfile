@@ -4,26 +4,20 @@ using profiles Debug Release;
 using default interpreter /bin/bash;
 using threads 12;
 
-
 COMPILER = g++
 
-@profile Debug
-FLAGS    = -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG
-
-@profile Release
-FLAGS    = -std=c++17 -Os -Wall -Wextra -DRELEASE
-
-INCLUDES = -Iinclude/common -Iinclude/core -Iinclude/parser -Iinclude/parser/util -Iinclude/core/util
-
-TOOL     = arcana
-TARGET   = {arc:BUILDDIR}/{arc:TOOL}
-SOURCES  = {arc:SRCDIR}/**.cpp
-
-@map SOURCES
-OBJECTS  = {arc:BUILDDIR}/**.o
+@profile Debug;   FLAGS = -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG
+@profile Release; FLAGS = -std=c++17 -Os -Wall -Wextra -DRELEASE
 
 BUILDDIR = arcbuild
 SRCDIR   = src
+TOOL     = arcana
+TARGET   = {arc:BUILDDIR}/{arc:TOOL}
+SOURCES  = {arc:SRCDIR}/**.cpp
+OBJECTS  = {arc:BUILDDIR}/**.o
+INCLUDES = -Iinclude/common -Iinclude/core -Iinclude/parser -Iinclude/parser/util -Iinclude/core/util
+
+map SOURCES -> OBJECTS;
 
 
 ###########################
@@ -57,16 +51,17 @@ if '{arc:__profile__}' != 'Release':
 }
 
 @echo
+@multithread
 @requires MakeFolders
 task Compile(SOURCES) 
 {
-    {arc:COMPILER} {arc:FLAGS} {arc:INCLUDES} -c {arc:list:SOURCES} -o {arc:list:OBJECTS}
+{arc:COMPILER} {arc:FLAGS} {arc:INCLUDES} -c {arc:list:SOURCES} -o {arc:list:OBJECTS}
 }
     
     
 task Link()
 {        
-    {arc:COMPILER} {arc:FLAGS} {arc:inline:OBJECTS} -o {arc:TARGET}
+{arc:COMPILER} {arc:FLAGS} {arc:inline:OBJECTS} -o {arc:TARGET}
 }
 
 

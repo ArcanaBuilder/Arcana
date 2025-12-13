@@ -50,6 +50,7 @@ enum class Rule : uint32_t
     TASK_DECL             ,
     IMPORT                ,
     USING                 ,
+    MAPPING               ,
 };
 
 
@@ -111,6 +112,18 @@ enum class USING : uint32_t
     RESERVED           = 0, 
     WHAT                  ,
     OPT                   , 
+    GRAMMAR_END           ,
+};
+
+
+
+enum class MAPPING : uint32_t 
+{
+    RESERVED1          = 0, 
+    ITEM_1                ,
+    RESERVED2             ,
+    RESERVED3             ,
+    ITEM_2                , 
     GRAMMAR_END           ,
 };
 

@@ -110,6 +110,9 @@ LANGUAGE:
                                                     which to parallelize the execution of a specific task.
                                                     Omitting this statement will result in the use of all 
                                                     the cores on your machine.
+
+    map <SOURCE> -> <TARGET>                        Same as attribute @map. 
+
   
   BUILTIN SYMBOLS:
     In Arcana there are builtin symbols:

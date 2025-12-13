@@ -68,6 +68,8 @@ Token Lexer::next()
         case ']':  return simpleToken(TokenType::SQUARERP);
         case '{':  return simpleToken(TokenType::CURLYLP);
         case '}':  return simpleToken(TokenType::CURLYRP);
+        case '<':  return simpleToken(TokenType::ANGULARLP);
+        case '>':  return simpleToken(TokenType::ANGULARRP);
         case '@':  return simpleToken(TokenType::AT);
         case ';':  return simpleToken(TokenType::SEMICOLON);
         case '\n': return simpleToken(TokenType::NEWLINE);
@@ -216,6 +218,10 @@ Token Lexer::identifier()
     else if (lower.compare("using") == 0)
     {
         tt = TokenType::USING;
+    }
+    else if (lower.compare("map") == 0)
+    {
+        tt = TokenType::MAPPING;
     }
 
     // GENERATE THE TOKEN

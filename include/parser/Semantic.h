@@ -454,6 +454,8 @@ public:
     SemanticOutput Collect_Assignment(const std::string& name, const std::string&  val); 
     SemanticOutput Collect_Task      (const std::string& name, const std::string& inputs, const Task::Instrs& instrs);
     SemanticOutput Collect_Using     (const std::string& what, const std::string&  opt); 
+    SemanticOutput Collect_Mapping   (const std::string& item_1, const std::string& item_2);
+
 
     Enviroment                       GetEnvironment()  const noexcept { return _env; }
     Enviroment&                      EnvRef()                         { return _env; }

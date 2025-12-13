@@ -150,6 +150,18 @@ static Rules rule_USING =
 
 
 
+static Rules rule_MAP = 
+{
+    Scan::TokenType::MAPPING      |
+    Scan::TokenType::IDENTIFIER   |
+    Scan::TokenType::MINUS        |
+    Scan::TokenType::ANGULARRP    |
+    Scan::TokenType::IDENTIFIER   |
+    ( Scan::TokenType::NEWLINE || Scan::TokenType::SEMICOLON || Scan::TokenType::ENDOFFILE )  
+};
+
+
+
 
 
 
@@ -171,6 +183,7 @@ Engine::Engine()
     _rules[Rule::TASK_DECL        ] = rule_TASK_DECL.buffer;
     _rules[Rule::IMPORT           ] = rule_IMPORT.buffer;
     _rules[Rule::USING            ] = rule_USING.buffer;
+    _rules[Rule::MAPPING          ] = rule_MAP.buffer;
 
     _index[Rule::VARIABLE_ASSIGN  ] = std::vector<Index>(rule_VARIABLE_ASSIGNMENT.buffer.size());
     _index[Rule::EMPTY_LINE       ] = std::vector<Index>(rule_EMPTY_LINE.buffer.size());
@@ -178,6 +191,7 @@ Engine::Engine()
     _index[Rule::TASK_DECL        ] = std::vector<Index>(rule_TASK_DECL.buffer.size());
     _index[Rule::IMPORT           ] = std::vector<Index>(rule_IMPORT.buffer.size());
     _index[Rule::USING            ] = std::vector<Index>(rule_USING.buffer.size());
+    _index[Rule::MAPPING          ] = std::vector<Index>(rule_MAP.buffer.size());
 }
 
 

@@ -2,6 +2,16 @@
 
 All relevant changes to this project will be documented in this file.
 
+
+
+## [0.3.1] - 2025-12-13
+
+### Added
+- New statement **map** (same as @map attribute), with syntax:
+```arcana
+map <SOURCE> -> <TARGET>;
+```
+
 ## [0.3.0] - 2025-12-12
 
 ### Added

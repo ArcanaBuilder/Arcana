@@ -35,7 +35,7 @@
 #define _I(enum)                                ((size_t) enum) 
 
 
-#define __ARCANA__VERSION__                     "0.3.0"
+#define __ARCANA__VERSION__                     "0.3.1"
 
 
 
@@ -99,6 +99,10 @@
 #define ANSI_REVERSE                            "\x1b[7m"
 #define ANSI_HIDDEN                             "\x1b[8m"
 
+
+// utils
+#define TOKEN_MAGENTA(token)                    ANSI_BMAGENTA << token << ANSI_RESET
+#define TOKEN_CYAN(token)                       ANSI_BCYAN    << token << ANSI_RESET
 
 
 

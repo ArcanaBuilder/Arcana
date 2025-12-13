@@ -519,6 +519,8 @@ std::string Support::TokenTypeRepr(const Scan::TokenType type)
         case Scan::TokenType::SQUARERP:    return "right bracket";    
         case Scan::TokenType::CURLYLP:     return "left brace";   
         case Scan::TokenType::CURLYRP:     return "right brace";   
+        case Scan::TokenType::ANGULARLP:   return "left angular parenthesis";   
+        case Scan::TokenType::ANGULARRP:   return "right angular parenthesis"; 
         case Scan::TokenType::AT:          return "at sign";   
         case Scan::TokenType::SEMICOLON:   return "semicolon";   
         case Scan::TokenType::NEWLINE:     return "<new line>";   
@@ -594,6 +596,7 @@ std::string Support::RuleRepr(const Grammar::Rule type)
         case Grammar::Rule::TASK_DECL:         return "Task Declaration";
         case Grammar::Rule::IMPORT:            return "Import";
         case Grammar::Rule::USING:             return "Using";
+        case Grammar::Rule::MAPPING:           return "Mapping";
         default:                               return "<INVALID>";
     }
 }
