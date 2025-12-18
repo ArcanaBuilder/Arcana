@@ -12,6 +12,7 @@
 #include <variant>
 #include <optional>
 #include <string_view>
+#include <unordered_map>
 
 
 #include "Defines.h"
@@ -347,6 +348,21 @@ std::string RuleRepr(const Grammar::Rule type);
 std::optional<std::string> FindClosest(const std::vector<std::string> & list,
                                 const std::string & target,
                                 std::size_t max_distance = std::numeric_limits<std::size_t>::max()) noexcept;
+
+
+
+
+
+template < typename T >
+using AbstractKeywordMap = std::unordered_map<
+    std::string_view,
+    T,
+    StringViewHash,
+    StringViewEq
+>;
+
+
+
 
 
 END_MODULE(Support)

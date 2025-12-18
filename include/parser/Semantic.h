@@ -71,6 +71,7 @@ enum class Type
     FLUSHCACHE          ,
     ECHO                ,
     EXCLUDE             ,
+    IFOS                ,
 
     ATTRIBUTE__UNKNOWN  ,
     ATTRIBUTE__COUNT    ,

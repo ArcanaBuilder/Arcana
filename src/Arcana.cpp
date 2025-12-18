@@ -16,6 +16,10 @@
 #include <unistd.h>
 #include <filesystem>
 
+
+
+#include "Glob.h"
+
 USE_MODULE(Arcana);
 
 
@@ -187,6 +191,9 @@ LANGUAGE:
 
     @map                            Valid only for variables. Allows you to map one glob to another.
 
+    @ifos        <os>               Valid only for variables. Enables the annotated variables or 
+                                    tasks only when the host OS matches <os>.
+
     @pub                            Export task to the caller. By defaults all symbols are private.
 
     @main                           Mark the task as main task.
@@ -205,7 +212,8 @@ LANGUAGE:
 
     @always                         Execute the task regardless of job scheduling.
 
-    @profile     <profile>          Used only when the <profile> is given.
+    @profile     <profile>          Restricts the annotated variables or tasks to the specified 
+                                    build profile.
 
     @flushcache                     Clears cache, forces subsequent tasks to ignore it.
 
@@ -384,10 +392,15 @@ int main(int argc, char** argv)
         std::filesystem::path p(args.arcfile);
         std::filesystem::path dir = p.parent_path();
 
-        if (!dir.empty() && chdir(dir.c_str()) != 0)
+        if (!dir.empty())
         {
-            ERR("chdir failed for " << dir << ": " << std::strerror(errno));
-            return Arcana_Result::ARCANA_RESULT__NOK;
+            std::error_code ec;
+            std::filesystem::current_path(dir, ec);
+            if (ec)
+            {
+                ERR("chdir failed for " << dir << ": " << ec.message());
+                return Arcana_Result::ARCANA_RESULT__NOK;
+            }
         }
     }
 

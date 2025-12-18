@@ -1,5 +1,7 @@
 #include "Semantic.h"
 
+#include "Glob.h"
+#include "Core.h"
 #include "Support.h"
 #include "TableHelper.h"
 
@@ -46,17 +48,8 @@ struct ExpandMatch
 //                                                   
 
 
-template < typename T >
-using AbstractKeywordMap = std::unordered_map<
-    std::string_view,
-    T,
-    Arcana::Support::StringViewHash,
-    Arcana::Support::StringViewEq
->;
-
-
-using AttributeMap   = AbstractKeywordMap<Attr::Type>;
-using UsingMap       = AbstractKeywordMap<Using::Rule>;
+using AttributeMap   = Arcana::Support::AbstractKeywordMap<Attr::Type>;
+using UsingMap       = Arcana::Support::AbstractKeywordMap<Using::Rule>;
 
 
 
@@ -83,7 +76,8 @@ static const AttributeMap Known_Attributes =
     { "interpreter"    , Attr::Type::INTERPRETER  },  
     { "flushcache"     , Attr::Type::FLUSHCACHE   },       
     { "echo"           , Attr::Type::ECHO         },    
-    { "exclude"        , Attr::Type::EXCLUDE      },          
+    { "exclude"        , Attr::Type::EXCLUDE      },   
+    { "ifos"           , Attr::Type::IFOS         },          
 };
 
 
@@ -111,6 +105,7 @@ static const std::vector<std::string> _attributes =
     "flushcache"    ,
     "echo"          ,
     "exclude"       ,
+    "ifos"          ,
 };
 
 
@@ -170,7 +165,8 @@ Engine::Engine()
     _attr_rules[_I(Attr::Type::MAIN        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };     
     _attr_rules[_I(Attr::Type::INTERPRETER )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK,                        } };       
     _attr_rules[_I(Attr::Type::FLUSHCACHE  )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } }; 
-    _attr_rules[_I(Attr::Type::ECHO        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };         
+    _attr_rules[_I(Attr::Type::ECHO        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };   
+    _attr_rules[_I(Attr::Type::IFOS        )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };         
 }
 
 
@@ -268,6 +264,15 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
             return SEM_NOK(ss.str());
         }
     }
+    // IF THE ATTRIBUTE IS 'IFOS'
+    else if (attr == Attr::Type::IFOS)
+    {
+        if (!Core::is_os(property[0]))
+        {
+            ss << "Invalid OS " << "‘" << TOKEN_MAGENTA(property[0]) << "’";
+            return SEM_NOK(ss.str());
+        }
+    }
 
     // ENQUEUE THE ATTRIBUTE
     _attr_pending.push_back({ 
@@ -303,11 +308,16 @@ SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::st
     }
     
     // GENERATE A MANGLING IF THE ASSIGNMENT IS TAGGED WITH THE ATTRIBUTE PROFILE
-    const auto& attr = std::find(assign.attributes.begin(), assign.attributes.end(), Attr::Type::PROFILE);
+    const auto& attr_profile = std::find(assign.attributes.begin(), assign.attributes.end(), Attr::Type::PROFILE);
+    const auto& attr_if      = std::find(assign.attributes.begin(), assign.attributes.end(), Attr::Type::IFOS);
 
-    if (attr != assign.attributes.end())
+    if (attr_profile != assign.attributes.end())
     {
-        _env.vtable[Support::generate_mangling(name, (*attr).props[0])] = assign;
+        _env.vtable[Support::generate_mangling(name, (*attr_profile).props[0])] = assign;
+    }
+    else if (attr_if != assign.attributes.end())
+    {
+        _env.vtable[Support::generate_mangling(name, (*attr_if).props[0])] = assign;
     }
     else
     {
@@ -354,7 +364,6 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& 
         }
 
     }
-
 
     // GENERATE A MANGLING IF THE ASSIGNMENT IS TAGGED WITH THE ATTRIBUTE PROFILE
     const auto& attr = std::find(task.attributes.begin(), task.attributes.end(), Attr::Type::PROFILE);
@@ -450,7 +459,12 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
         // COLLECT THEM AND CHECK FOR ERRORS
         for (uint32_t iter = 0; iter < options.size(); ++iter)
         {
-            if (std::find(_env.profile.profiles.begin(), _env.profile.profiles.end(), options[iter]) == _env.profile.profiles.end())
+            if (Core::is_os(options[iter]) || Core::is_arch(options[iter]))
+            {
+                ss << "Profile " << "‘" << TOKEN_MAGENTA(options[iter]) << "’ cannot be the OS or ARCH name";
+                return SEM_NOK(ss.str());
+            }
+            else if (std::find(_env.profile.profiles.begin(), _env.profile.profiles.end(), options[iter]) == _env.profile.profiles.end())
             {
                 _env.profile.profiles.push_back(options[iter]);
             }
@@ -486,6 +500,8 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
         }
 
         _env.max_threads = max_threads;
+
+        Core::update_symbol(Core::SymbolType::THREADS, std::to_string(max_threads));
     }
 
     return SemanticOutput{};
@@ -568,6 +584,8 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
             Attr::Type::MAIN, 
             {}
         });
+
+        Core::update_symbol(Core::SymbolType::MAIN, task.value().get().task_name);
     }
     else
     {
@@ -599,20 +617,24 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
         }
 
         profile.selected = args.profile.value;
+
     }
     else
     {
         // IF NO PROFILES ARE SPECFIED, JUST RETURN
         if (profile.profiles.empty()) return Arcana_Result::ARCANA_RESULT__OK;
-
+        
         // FOR THE DEFAULT GET THE FIRST OF THEM
         profile.selected = profile.profiles[0];
     }
+
+    Core::update_symbol(Core::SymbolType::PROFILE, profile.selected);
     
     // AFTER THE PROFILE SELECTION, REMOVE THE UNWANTED KEYS FROM THE TABLES AND
     // REMOVE THE MANGLINGS   
     Table::AlignOnProfile(vtable, profile.selected);
     Table::AlignOnProfile(ftable, profile.selected);
+    Table::AlignOnOS(vtable);
     
     return Arcana_Result::ARCANA_RESULT__OK;
 }
@@ -700,66 +722,9 @@ const std::optional<std::string> Enviroment::Expand() noexcept
         {   
             std::string new_stmt  = stmt.substr(0, it->position());
 
-            if ((*it)[1].compare("__profile__") == 0)
+            if (auto symbol_type = Core::is_symbol((*it)[1]); symbol_type != Core::SymbolType::UNDEFINED)
             {
-                new_stmt += (profile.selected.empty()) ? "None" : profile.selected;
-            } 
-            else if ((*it)[1].compare("__version__") == 0)
-            {
-                new_stmt += __ARCANA__VERSION__;
-            }
-            else if ((*it)[1].compare("__main__") == 0)
-            {
-                auto main_task_opt = Table::GetValue(ftable, Semantic::Attr::Type::MAIN);
-                new_stmt += main_task_opt.value().get().task_name;
-            }
-            else if ((*it)[1].compare("__root__") == 0)
-            {
-                new_stmt += std::filesystem::current_path().string();
-            }
-            else if ((*it)[1].compare("__max_threads__") == 0)
-            {
-                new_stmt += std::to_string(std::thread::hardware_concurrency());
-            }
-            else if ((*it)[1].compare("__threads__") == 0)
-            {
-                new_stmt += std::to_string(max_threads);
-            }
-            else if ((*it)[1].compare("__os__") == 0)
-            {
-                #if defined(_WIN32)
-                    new_stmt += "windows";
-                #elif defined(__APPLE__) && defined(__MACH__)
-                    new_stmt += "macos";
-                #elif defined(__linux__)
-                    new_stmt += "linux";
-                #elif defined(__FreeBSD__)
-                    new_stmt += "freebsd";
-                #elif defined(__unix__)
-                    new_stmt += "unix";
-                #else
-                    new_stmt += "unknown";
-                #endif
-            }
-            else if ((*it)[1].compare("__arch__") == 0)
-            {
-                #if defined(__x86_64__) || defined(_M_X64)
-                    new_stmt += "x86_64";
-                #elif defined(__i386__) || defined(_M_IX86)
-                    new_stmt += "x86";
-                #elif defined(__aarch64__) || defined(_M_ARM64)
-                    new_stmt += "aarch64";
-                #elif defined(__arm__) || defined(_M_ARM)
-                    new_stmt += "arm";
-                #elif defined(__riscv) || defined(__riscv__)
-                    new_stmt += "riscv";
-                #elif defined(__powerpc64__) || defined(__ppc64__)
-                    new_stmt += "ppc64";
-                #elif defined(__powerpc__) || defined(__ppc__)
-                    new_stmt += "ppc";
-                #else
-                    new_stmt += "unknown";
-                #endif
+                new_stmt += Core::symbol(symbol_type);
             }
 
             new_stmt += stmt.substr(it->position() + (*it)[0].length(), stmt.length() - it->position() + (*it)[0].length());
@@ -824,7 +789,6 @@ const std::optional<std::string> Enviroment::Expand() noexcept
     {
         max_threads = machine_max_threads;
     }
-
     
     // FOR EACH KEY IN VTABLE
     auto var_keys = Table::Keys(vtable);
@@ -868,15 +832,43 @@ const std::optional<std::string> Enviroment::Expand() noexcept
     }
 
     // HANDLE GLOB EXPANSION
-    if (auto res = Table::ExpandGlob(vtable); !res.empty())
+    Glob::ExpandOptions opt;
+
+    for (auto& [name, var] : vtable)
     {
-        return res;
+        Glob::Pattern    pattern;
+        Glob::ParseError error;
+
+        if (!Glob::Parse(var.var_value, pattern, error))
+        {
+            std::stringstream ss;
+            return ss.str();
+        }
+
+        if (!Arcana::Glob::Expand(pattern, ".", var.glob_expansion, opt))
+        {
+            std::stringstream ss;
+            return ss.str();
+        }
     }
 
+
     // HANDLE MAPPED VARS EXPANSION
-    if (auto res = Table::Map(vtable); !res.empty())
+    auto map_required = Table::GetValues(vtable, Semantic::Attr::Type::MAP);
+
+    for (auto& stmt : map_required.value())
     {
-        return res;
+        Glob::ParseError e1, e2;
+
+        auto& map_to   = stmt.get();
+        auto& map_from = vtable[map_to.getProperties(Semantic::Attr::Type::MAP).at(0)];
+
+        if (!Arcana::Glob::MapGlobToGlob(map_from.var_value,      map_to.var_value, 
+                                         map_from.glob_expansion, map_to.glob_expansion, e1, e2))
+        {
+            std::stringstream ss;
+            return ss.str();
+        }
     }
 
     return std::nullopt;

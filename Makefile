@@ -8,7 +8,8 @@ SRCS := 								\
     $(wildcard src/core/*.cpp) 			\
     $(wildcard src/core/util/*.cpp) 	\
     $(wildcard src/parser/*.cpp) 		\
-    $(wildcard src/parser/util/*.cpp) 
+    $(wildcard src/parser/util/*.cpp) 	\
+    $(wildcard src/common/*.cpp) 	
 
 OBJS := $(patsubst src/%.cpp,build/%.o,$(SRCS))
 

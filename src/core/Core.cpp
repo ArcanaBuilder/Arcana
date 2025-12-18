@@ -8,6 +8,103 @@ USE_MODULE(Arcana);
 
 
 
+using SymbolMap = Support::AbstractKeywordMap<std::string>;
+
+
+
+static SymbolMap builtin_symbols = 
+{
+    { "__main__"       , "None"                                              },
+    { "__root__"       , std::filesystem::current_path().string()            },
+    { "__version__"    , __ARCANA__VERSION__                                 },
+    { "__profile__"    , "None"                                              },
+    { "__threads__"    , "None"                                              },
+    { "__max_threads__", std::to_string(std::thread::hardware_concurrency()) },
+
+#if defined(_WIN32)
+    { "__os__"         , "windows"  },
+#elif defined(__APPLE__) && defined(__MACH__)
+    { "__os__"         , "macos"    },
+#elif defined(__linux__)
+    { "__os__"         , "linux"    },
+#elif defined(__FreeBSD__)
+    { "__os__"         , "freeBSD"  },
+#elif defined(__unix__)
+    { "__os__"         , "unix"     },
+#else
+    { "__os__"         , "unknown"  },
+#endif
+
+#if defined(__x86_64__) || defined(_M_X64)
+    { "__arch__"       , "x86_64"   },
+#elif defined(__i386__) || defined(_M_IX86)
+    { "__arch__"       , "x86"      },
+#elif defined(__aarch64__) || defined(_M_ARM64)
+    { "__arch__"       , "aarch64"  },
+#elif defined(__arm__) || defined(_M_ARM)
+    { "__arch__"       , "arm"      },
+#elif defined(__riscv) || defined(__riscv__)
+    { "__arch__"       , "riscv"    },
+#elif defined(__powerpc64__) || defined(__ppc64__)
+    { "__arch__"       , "ppc64"    },
+#elif defined(__powerpc__) || defined(__ppc__)
+    { "__arch__"       , "ppc"      },
+#else
+    { "__arch__"       , "unknown"  },
+#endif
+};
+
+
+static std::map<Core::SymbolType, std::string> Known_Symbols_By_Token = 
+{
+    { Core::SymbolType::MAIN       , "__main__"        },
+    { Core::SymbolType::ROOT       , "__root__"        },
+    { Core::SymbolType::VERSION    , "__version__"     },
+    { Core::SymbolType::PROFILE    , "__profile__"     },
+    { Core::SymbolType::THREADS    , "__threads__"     },
+    { Core::SymbolType::MAX_THREADS, "__max_threads__" },
+    { Core::SymbolType::OS         , "__os__"          },
+    { Core::SymbolType::ARCH       , "__arch__"        },
+};
+
+
+static std::map<std::string, Core::SymbolType> Known_Symbols_By_String = 
+{
+    { "__main__"        , Core::SymbolType::MAIN        },
+    { "__root__"        , Core::SymbolType::ROOT        },
+    { "__version__"     , Core::SymbolType::VERSION     },
+    { "__profile__"     , Core::SymbolType::PROFILE     },
+    { "__threads__"     , Core::SymbolType::THREADS     },
+    { "__max_threads__" , Core::SymbolType::MAX_THREADS },
+    { "__os__"          , Core::SymbolType::OS          },
+    { "__arch__"        , Core::SymbolType::ARCH        },
+};
+
+
+
+static std::vector<std::string> Known_OSs = 
+{
+    "windows",
+    "macos"  ,
+    "linux"  ,
+    "freeBSD",
+    "unix"   ,
+};
+
+
+static std::vector<std::string> Known_ARCHs = 
+{
+    "x86_64" ,
+    "x86"    ,
+    "aarch64",
+    "arm"    ,
+    "riscv"  ,
+    "ppc64"  ,
+    "ppc"    ,
+};
+
+
+
 //    ██████╗ ██████╗ ██╗██╗   ██╗ █████╗ ████████╗███████╗███████╗
 //    ██╔══██╗██╔══██╗██║██║   ██║██╔══██╗╚══██╔══╝██╔════╝██╔════╝
 //    ██████╔╝██████╔╝██║██║   ██║███████║   ██║   █████╗  ███████╗
@@ -41,7 +138,7 @@ static Core::InstructionResult run_instruction(const std::string& jobname,
     }
     else
     {
-        res.exit_code = WEXITSTATUS(ret);
+        res.exit_code = ret;
     }
 
     return res;
@@ -188,3 +285,53 @@ std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::Run
 
     return results;
 }
+
+
+std::string& Core::symbol(Core::SymbolType type) noexcept
+{
+    const std::string symbol = Known_Symbols_By_Token[type];
+
+    return builtin_symbols[symbol];
+}
+
+
+
+Core::SymbolType Core::is_symbol(const std::string& symbol) noexcept
+{
+    Core::SymbolType type = Core::SymbolType::UNDEFINED;
+
+    if (auto it = Known_Symbols_By_String.find(symbol); it != Known_Symbols_By_String.end())
+    {
+        type = it->second;
+    }
+
+    return type;
+}
+
+
+
+void Core::update_symbol(Core::SymbolType type, const std::string& val) noexcept
+{
+    const std::string symbol = Known_Symbols_By_Token[type];
+
+    builtin_symbols[symbol] = val;
+
+    return;
+}
+
+
+bool Core::is_os(const std::string& param) noexcept
+{
+    return (std::find(Known_OSs.begin(), Known_OSs.end(), param) != Known_OSs.end());
+}
+
+
+
+bool Core::is_arch(const std::string& param) noexcept
+{
+    return (std::find(Known_ARCHs.begin(), Known_ARCHs.end(), param) != Known_ARCHs.end());
+}
+
+
+
+

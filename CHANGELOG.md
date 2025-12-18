@@ -2,7 +2,13 @@
 
 All relevant changes to this project will be documented in this file.
 
+## [0.4.0] - 2025-12-18
 
+### Added
+- Custom Glob engine [BETA]
+- Windows compatibility (minGW) [BETA]
+- New attribute **@ifos**
+- New allocator for builtin symbols
 
 ## [0.3.1] - 2025-12-13
 

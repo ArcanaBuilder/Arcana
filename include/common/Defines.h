@@ -35,7 +35,7 @@
 #define _I(enum)                                ((size_t) enum) 
 
 
-#define __ARCANA__VERSION__                     "0.3.1"
+#define __ARCANA__VERSION__                     "0.4.0"
 
 
 
@@ -149,6 +149,7 @@ enum class Semantic_Result : int32_t
     AST_RESULT__OK  =  0,
     AST_RESULT__NOK = -1,
 };
+
 
 
 
