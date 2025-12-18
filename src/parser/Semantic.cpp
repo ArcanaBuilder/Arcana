@@ -185,7 +185,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
 
     if (attr == Attr::Type::ATTRIBUTE__UNKNOWN)
     {
-        ss << "Attribute " << "‘" << TOKEN_MAGENTA(name) << "’" << " not recognized";
+        ss << "Attribute " << TOKEN_MAGENTA(name) << " not recognized";
         return SEM_NOK_HINT(ss.str(), Support::FindClosest(_attributes, name));
     }
 
@@ -199,12 +199,12 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         // CHECK THE NUMBER OF PROPERTIES
         if (props_count == 0)
         {
-            ss << "Attribute " << "‘" << TOKEN_MAGENTA(name) << "’" << " requires at least one option";
+            ss << "Attribute " << TOKEN_MAGENTA(name) << " requires at least one option";
             return SEM_NOK(ss.str());
         }
         else if (props_count != 1 && rule.count == Attr::Count::ONE)
         {
-            ss << "Attribute " << "‘" << TOKEN_MAGENTA(name) << "’" << " requires one option, not " << props_count;
+            ss << "Attribute " << TOKEN_MAGENTA(name) << " requires one option, not " << props_count;
             return SEM_NOK(ss.str());
         }
     }
@@ -213,7 +213,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         // CHECK FOR PROPERTIES PRESENCE, BUT THE RULE NOT ADMIT THEM
         if (props_count > 0)
         {
-            ss << "Attribute " << "‘" << TOKEN_MAGENTA(name) << "’" << " requires no option";
+            ss << "Attribute " << TOKEN_MAGENTA(name) << " requires no option";
             return SEM_NOK(ss.str());
         }
     }
@@ -226,7 +226,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
 
         if (std::find(profiles.begin(), profiles.end(), property[0]) == profiles.end())
         {
-            ss << "Profile " << "‘" << TOKEN_MAGENTA(property[0]) << "’" << " must be declared via " << ANSI_BMAGENTA << "‘using profile <profilenames>’" << ANSI_RESET;
+            ss << "Profile " << TOKEN_MAGENTA(property[0]) << " must be declared via " << ANSI_BMAGENTA << "using profile <profilenames>" << ANSI_RESET;
             return SEM_NOK_HINT(ss.str(), Support::FindClosest(profiles, property[0]));
         }
     }
@@ -238,7 +238,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
 
         if (std::find(keys.begin(), keys.end(), property[0]) == keys.end())
         {
-            ss << "Invalid " << name << " ‘" << TOKEN_MAGENTA(property[0]) << "’" << ": undeclared variable";
+            ss << "Invalid " << name << " " << TOKEN_MAGENTA(property[0]) << ": undeclared variable";
             return SEM_NOK_HINT(ss.str(), Support::FindClosest(keys, name));
         }
     }
@@ -248,7 +248,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         // CHECK FOR THE UNIQUENESS
         if (_main_count > 0)
         {
-            ss << "Cannot tag multiple tasks with attribute " << "‘" << TOKEN_MAGENTA(name) << "’";
+            ss << "Cannot tag multiple tasks with attribute " << TOKEN_MAGENTA(name);
             return SEM_NOK(ss.str());
         }
 
@@ -260,7 +260,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         // CHECK IF THE INTERPRETER EXISTS
         if (!Support::file_exists(property[0]))
         {
-            ss << "Interpreter " << "‘" << TOKEN_MAGENTA(property[0]) << "’ is missing or unknown";
+            ss << "Interpreter " << TOKEN_MAGENTA(property[0]) << " is missing or unknown";
             return SEM_NOK(ss.str());
         }
     }
@@ -269,7 +269,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
     {
         if (!Core::is_os(property[0]))
         {
-            ss << "Invalid OS " << "‘" << TOKEN_MAGENTA(property[0]) << "’";
+            ss << "Invalid OS " << TOKEN_MAGENTA(property[0]);
             return SEM_NOK(ss.str());
         }
     }
@@ -302,7 +302,7 @@ SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::st
 
         if (std::find(rule.targets.begin(), rule.targets.end(), Attr::Target::VARIABLE) == rule.targets.end())
         {
-            ss << "Attribute " << "‘" << TOKEN_MAGENTA(attr.name) << "’" << " is not valid for variable assignment";
+            ss << "Attribute " << TOKEN_MAGENTA(attr.name) << " is not valid for variable assignment";
             return SEM_NOK(ss.str());
         }
     }
@@ -348,7 +348,7 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& 
 
         if (std::find(rule.targets.begin(), rule.targets.end(), Attr::Target::TASK) == rule.targets.end())
         {
-            ss << "Attribute " << "‘" << TOKEN_MAGENTA(attr.name) << "’" << " is not valid for tasks";
+            ss << "Attribute " << TOKEN_MAGENTA(attr.name) << " is not valid for tasks";
             return SEM_NOK(ss.str());
         }
     }
@@ -359,7 +359,7 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& 
 
         if (std::find(properties.begin(), properties.end(), name) != properties.end())
         {
-            ss << "Attribute " << TOKEN_MAGENTA("@requires") << " with property " << "‘" << TOKEN_MAGENTA(name) << "’ cannot be auto referencing";
+            ss << "Attribute " << TOKEN_MAGENTA("@requires") << " with property " << TOKEN_MAGENTA(name) << " cannot be auto referencing";
             return SEM_NOK(ss.str());
         }
 
@@ -395,7 +395,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
     }
     else
     {
-        ss << "Unknown " << "‘" << TOKEN_MAGENTA(what) << "’ for statement " << TOKEN_MAGENTA("using") ;
+        ss << "Unknown " << TOKEN_MAGENTA(what) << " for statement " << TOKEN_MAGENTA("using") ;
         return SEM_NOK_HINT(ss.str(), Support::FindClosest(_usings, what));
     }
 
@@ -416,7 +416,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
                 ss1 << TOKEN_MAGENTA(rule.valid_attr[iter]); 
             }
 
-            ss << "Statement " << "‘" << TOKEN_MAGENTA("using " << what ) << "’ must be followed by " << ss1.str();
+            ss << "Statement " << TOKEN_MAGENTA("using " << what ) << " must be followed by " << ss1.str();
             return SEM_NOK(ss.str());
         }
 
@@ -425,21 +425,21 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
 
         if (attr == rule.valid_attr.end())
         {
-            ss << "Unknown attribute " << "‘" << TOKEN_MAGENTA(options[0]) << "’ for statement " << TOKEN_MAGENTA("using " << what ) ;
+            ss << "Unknown attribute " << TOKEN_MAGENTA(options[0]) << " for statement " << TOKEN_MAGENTA("using " << what ) ;
             return SEM_NOK_HINT(ss.str(), Support::FindClosest(rule.valid_attr, options[0]));
         }
         
         // CHECK IF THE ATTRIBUTE IS FOLLOWER BY TASKS NAME
         if (options.size() == 1)
         {
-            ss << "Statement " << "‘" << TOKEN_MAGENTA("using default " << options[0] ) << "’ must be followed by interpeter path";
+            ss << "Statement " << TOKEN_MAGENTA("using default " << options[0] ) << " must be followed by interpeter path";
             return SEM_NOK(ss.str());
         }
 
         // CHECK IF THE INTERPRETER EXISTS
         if (!Support::file_exists(options[1]))
         {
-            ss << "Interpreter " << "‘" << TOKEN_MAGENTA(options[1]) << "’ is missing or unknown";
+            ss << "Interpreter " << TOKEN_MAGENTA(options[1]) << " is missing or unknown";
             return SEM_NOK(ss.str());
         }
 
@@ -452,7 +452,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
         // CHECK FOR THE SIZE
         if (options.size() == 0)
         {
-            ss << "Statement " << "‘" << TOKEN_MAGENTA("using profiles") << "’ must be followed by profiles name";
+            ss << "Statement " << TOKEN_MAGENTA("using profiles") << " must be followed by profiles name";
             return SEM_NOK(ss.str());
         }
 
@@ -461,7 +461,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
         {
             if (Core::is_os(options[iter]) || Core::is_arch(options[iter]))
             {
-                ss << "Profile " << "‘" << TOKEN_MAGENTA(options[iter]) << "’ cannot be the OS or ARCH name";
+                ss << "Profile " << TOKEN_MAGENTA(options[iter]) << " cannot be the OS or ARCH name";
                 return SEM_NOK(ss.str());
             }
             else if (std::find(_env.profile.profiles.begin(), _env.profile.profiles.end(), options[iter]) == _env.profile.profiles.end())
@@ -470,7 +470,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
             }
             else
             {
-                ss << "Duplicate item in statement " << "‘" << TOKEN_MAGENTA("using profiles") << "’: ‘" << TOKEN_MAGENTA(options[iter]) <<"’" << ANSI_RESET ;
+                ss << "Duplicate item in statement " << TOKEN_MAGENTA("using profiles") << ": " << TOKEN_MAGENTA(options[iter]) << ANSI_RESET ;
                 return SEM_NOK(ss.str());
             }
         }
@@ -482,7 +482,7 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
         // CHECK FOR THE SIZE
         if (options.size() != 1)
         {
-            ss << "Statement " << "‘" << TOKEN_MAGENTA("using multithread") << "’ must be followed maximum threads allowed";
+            ss << "Statement " << TOKEN_MAGENTA("using multithread") << " must be followed maximum threads allowed";
             return SEM_NOK(ss.str());
         }
 
@@ -667,7 +667,7 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
                 {
                     auto closest = Support::FindClosest(Table::Keys(ftable), p);
     
-                    ss << "Invalid dependecy ‘" << TOKEN_MAGENTA(p) << "’ for task " << TOKEN_MAGENTA(task.task_name) << std::endl;
+                    ss << "Invalid dependecy " << TOKEN_MAGENTA(p) << " for task " << TOKEN_MAGENTA(task.task_name) << std::endl;
                     if (closest) ss << "[" << ANSI_BGREEN << "HINT" << ANSI_RESET << "]  Did you mean " << ANSI_BCYAN << closest.value() << ANSI_RESET << "?";
                     return ss.str();
                 }

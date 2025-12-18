@@ -40,11 +40,26 @@ USE_MODULE(Arcana);
 static Semantic::Enviroment env;
 
 
+static const char* ARCANA_HEADER = 
+#if defined(_WIN32)
+R"HEADER(
+         Arcana - the modern alternative to make.
+)HEADER";
+#else
+R"HEADER(
+         ▄████▄ █████▄  ▄█████ ▄████▄ ███  ██ ▄████▄ 
+         ██▄▄██ ██▄▄██▄ ██     ██▄▄██ ██ ▀▄██ ██▄▄██ 
+         ██  ██ ██   ██ ▀█████ ██  ██ ██   ██ ██  ██ 
+                                         
+         Arcana — the modern alternative to make.
+)HEADER";
+#endif 
+
 
 
 static Arcana_Result Version(void)
 {
-    MSG("Arcana — the modern alternative to make.");
+    MSG(ARCANA_HEADER);
     MSG("Version: " << __ARCANA__VERSION__);
 
     return Arcana_Result::ARCANA_RESULT__OK;
@@ -56,13 +71,6 @@ static Arcana_Result Version(void)
 static Arcana_Result Help(void)
 {
     static const char* ARCANA_HELP = R"HELP(
-                                                
-         ▄████▄ █████▄  ▄█████ ▄████▄ ███  ██ ▄████▄ 
-         ██▄▄██ ██▄▄██▄ ██     ██▄▄██ ██ ▀▄██ ██▄▄██ 
-         ██  ██ ██   ██ ▀█████ ██  ██ ██   ██ ██  ██ 
-                                         
-         Arcana — the modern alternative to make.
-
 
 DESCRIPTION
   Arcana lets you build your project in a simple and modern way.
@@ -228,6 +236,7 @@ EXAMPLES:
   arcana <TASK> -p Debug
 )HELP";
 
+    MSG(ARCANA_HEADER);
     MSG(ARCANA_HELP);
 
     return Arcana_Result::ARCANA_RESULT__OK;

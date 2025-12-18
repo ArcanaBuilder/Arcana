@@ -87,14 +87,14 @@ Arcana_Result Support::ParserError::operator() (const std::string& ctx, const Gr
     std::string       symbol(token.end, '^');
     std::stringstream ss;
 
-    ss << "[" << ANSI_BRED << "SYNTAX ERROR" << ANSI_RESET << "] In file ‘" << ANSI_BOLD << ctx << ANSI_RESET << "’, line " << ANSI_BOLD << token.line << ": ‘" << lexer[token]  << ANSI_RESET << "’" << std::endl;
+    ss << "[" << ANSI_BRED << "SYNTAX ERROR" << ANSI_RESET << "] In file " << ANSI_BOLD << ctx << ANSI_RESET << ", line " << ANSI_BOLD << token.line << ": " << lexer[token]  << ANSI_RESET << std::endl;
     ss << ANSI_RED << "               +~~~~~~~~~~~~~~~~~~~~~~~~~~~" << s << symbol << ANSI_RESET << std::endl;
 
     escaping = (token.lexeme == "\n") ? "<New Line>" : token.lexeme;
 
     if (token.type == Scan::TokenType::UNKNOWN)
     {
-        ss << "        Found undefined symbol: ‘" << escaping << "’" << std::endl;
+        ss << "        Found undefined symbol: " << escaping  << std::endl;
     }
     else
     {
@@ -120,7 +120,7 @@ Arcana_Result Support::SemanticError::operator() (const std::string& ctx, const 
 
     std::stringstream ss;
 
-    ss << "[" << ANSI_BRED << "SEMANTIC ERROR" << ANSI_RESET << "] In file ‘" << ANSI_BOLD << ctx << ANSI_RESET << "’, line " << ANSI_BOLD << token.line << ": ‘" << lexer[token]  << ANSI_RESET << "’" << std::endl;
+    ss << "[" << ANSI_BRED << "SEMANTIC ERROR" << ANSI_RESET << "] In file " << ANSI_BOLD << ctx << ANSI_RESET << ", line " << ANSI_BOLD << token.line << ": " << lexer[token]  << ANSI_RESET << std::endl;
     ss << "                 " << ao.err << std::endl;
 
     if (!ao.hint.empty())
@@ -138,7 +138,7 @@ Arcana_Result Support::PostProcError::operator() (const std::string& ctx, const 
 {
     std::stringstream ss;
 
-    ss << "[" << ANSI_BRED << "SEMANTIC ERROR" << ANSI_RESET << "] In file: ‘" << ANSI_BOLD << ctx << ANSI_RESET << "’" << std::endl;
+    ss << "[" << ANSI_BRED << "SEMANTIC ERROR" << ANSI_RESET << "] In file: " << ANSI_BOLD << ctx << ANSI_RESET  << std::endl;
     ss << "                 " << err << std::endl;
     std::cerr << ss.str();
 
@@ -542,7 +542,7 @@ std::string Support::TerminalRepr(const Grammar::Terminal& type)
     {
         if (i > 0) ss << " or ";
 
-        ss << "‘" << ANSI_GREEN << TokenTypeRepr(type[i]) << ANSI_RESET << "’";
+        ss << ANSI_GREEN << TokenTypeRepr(type[i]) << ANSI_RESET;
     }
 
     return ss.str();
