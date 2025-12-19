@@ -307,6 +307,7 @@ struct AssertCheck
     std::string lvalue;
     std::string rvalue;
     CheckType   check;
+    std::string reason;
 };
 
 
@@ -480,7 +481,8 @@ public:
     SemanticOutput Collect_Task      (const std::string& name, const std::string& inputs, const Task::Instrs& instrs);
     SemanticOutput Collect_Using     (const std::string& what, const std::string&  opt); 
     SemanticOutput Collect_Mapping   (const std::string& item_1, const std::string& item_2);
-    SemanticOutput Collect_Assert    (std::size_t line, const std::string& stmt, const std::string& lvalue, const std::string& op, const std::string& rvalue);
+    SemanticOutput Collect_Assert    (std::size_t line, const std::string& stmt, const std::string& lvalue, 
+                                      const std::string& op, const std::string& rvalue, const std::string& reason);
 
     Enviroment                       GetEnvironment()  const noexcept { return _env; }
     Enviroment&                      EnvRef()                         { return _env; }

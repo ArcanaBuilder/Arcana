@@ -111,6 +111,8 @@ LANGUAGE:
   The only exception is the ability to expand variables declared in Arcana within task statements.
 
   NATIVE STATEMENTS:
+    import <file.arc>                               Import an arcscript as acana source file.
+    
     using profiles <Profile list>                   Allows the user to define a set of profiles to use 
                                                     in the arcana code.
                                                     Any use of profiles not declared in this way will 
@@ -127,7 +129,7 @@ LANGUAGE:
 
     map <SOURCE> -> <TARGET>                        Same as attribute @map. 
 
-    assert "lvalue" <op> "rvalue"                   Execute assert equal operation. 
+    assert "lvalue" <op> "rvalue" -> "reason"       Execute assert equal operation. 
 
   
   BUILTIN SYMBOLS:

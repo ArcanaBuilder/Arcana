@@ -172,6 +172,11 @@ static Rules rule_ASSERT =
     Scan::TokenType::DQUOTE                         |
     Scan::TokenType::ANY                            |
     Scan::TokenType::DQUOTE                         |
+    Scan::TokenType::MINUS                          |
+    Scan::TokenType::ANGULARRP                      |
+    Scan::TokenType::DQUOTE                         |
+    Scan::TokenType::ANY                            |
+    Scan::TokenType::DQUOTE                         |
     ( Scan::TokenType::NEWLINE || Scan::TokenType::SEMICOLON || Scan::TokenType::ENDOFFILE )  
 };
 

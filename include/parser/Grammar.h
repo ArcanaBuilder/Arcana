@@ -139,6 +139,11 @@ enum class ASSERT : uint32_t
     RESERVED4             , 
     ITEM_2                , 
     RESERVED5             , 
+    RESERVED6             , 
+    RESERVED7             , 
+    RESERVED8             , 
+    REASON                ,
+    RESERVED9             ,
     GRAMMAR_END           ,
 };
 

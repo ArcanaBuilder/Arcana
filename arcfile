@@ -17,7 +17,7 @@ INCLUDES = -Iinclude/common -Iinclude/core -Iinclude/parser -Iinclude/parser/uti
 
 map SOURCES -> OBJECTS;
 
-assert "{arc:__os__}" eq "windows";
+assert "{arc:__os__}" eq "linux" -> "This project can only build under linux, {arc:__os__} not admitted";
 
 @ifos linux;   RM       = rm
 @ifos linux;   COMPILER = g++

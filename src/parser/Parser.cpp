@@ -276,9 +276,10 @@ Arcana::Support::SemanticOutput Parser::Handle_Assert(Grammar::Match& match)
 {
     // EXTRACT THE STRINGS FROM THE INPUT AND PASS THEM INTO THE SEMANTIC ENGINE
     Point  pStart = match[_I(Grammar::ASSERT::RESERVED2)];
-    Point  p1     = match[_I(Grammar::ASSERT::ITEM_1)];
-    Point  p2     = match[_I(Grammar::ASSERT::OP)    ];
-    Point  p3     = match[_I(Grammar::ASSERT::ITEM_2)];
+    Point  p1     = match[_I(Grammar::ASSERT::ITEM_1)   ];
+    Point  p2     = match[_I(Grammar::ASSERT::OP)       ];
+    Point  p3     = match[_I(Grammar::ASSERT::ITEM_2)   ];
+    Point  p4     = match[_I(Grammar::ASSERT::REASON)   ];
     Point  pStop  = match[_I(Grammar::ASSERT::RESERVED5)];
 
     
@@ -288,6 +289,7 @@ Arcana::Support::SemanticOutput Parser::Handle_Assert(Grammar::Match& match)
     Lexeme lvalue = input.substr(p1->start, p1->end - p1->start);
     Lexeme op     = input.substr(p2->start, p2->end - p2->start);
     Lexeme rvalue = input.substr(p3->start, p3->end - p3->start);
+    Lexeme reason = input.substr(p4->start, p4->end - p4->start);
 
-    return instr_engine.Collect_Assert(p1->token.line, stmt, lvalue, op, rvalue);
+    return instr_engine.Collect_Assert(p1->token.line, stmt, lvalue, op, rvalue, reason);
 }

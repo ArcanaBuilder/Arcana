@@ -14,7 +14,7 @@ All relevant changes to this project will be documented in this file.
 - Variable expasion support for attribute @interpreter
 - new **assert** statement:
 ```arcana
-assert "{arc:__os__}" eq "linux";
+assert "{arc:__os__}" eq "linux" -> "reason message";
 ```
 
 ### Fixed Bugs

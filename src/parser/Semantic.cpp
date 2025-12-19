@@ -531,13 +531,15 @@ SemanticOutput Engine::Collect_Mapping(const std::string& item_1, const std::str
 
 
 
-SemanticOutput Engine::Collect_Assert(std::size_t line, const std::string& stmt, const std::string& lvalue, const std::string& op, const std::string& rvalue)
+SemanticOutput Engine::Collect_Assert(std::size_t line, const std::string& stmt, const std::string& lvalue, 
+                                      const std::string& op, const std::string& rvalue, const std::string& reason)
 {
     AssertCheck acheck;
     acheck.line   = line;
     acheck.stmt   = stmt;
     acheck.lvalue = lvalue;
     acheck.rvalue = rvalue;
+    acheck.reason = reason;
 
     if (op == "eq")
     {
@@ -831,6 +833,11 @@ const std::optional<std::string> Enviroment::Expand() noexcept
         {
             return err;
         }
+
+        if (const auto err = expand_one(assert.reason); err.has_value())
+        {
+            return err;
+        }
     }
 
     // ITERATE THE VTABLE AND TRY TO EXPAND
@@ -940,7 +947,8 @@ const std::optional<std::string> Enviroment::CheckAsserts() noexcept
         if (assert_failed)
         {
             std::stringstream ss;
-            ss << "Assert failed on line " << assert.line << ": " << TOKEN_MAGENTA(assert.stmt) << " with lvalue: " << TOKEN_MAGENTA(assert.lvalue) << ", rvalue: " << TOKEN_MAGENTA(assert.rvalue);
+            ss << "Assert failed on line " << assert.line << ": " << TOKEN_MAGENTA(assert.stmt) << " with lvalue: " << TOKEN_MAGENTA(assert.lvalue) << ", rvalue: " << TOKEN_MAGENTA(assert.rvalue) << std::endl;
+            ss << "Reason: " << assert.reason;
             return ss.str();
         }
     }
