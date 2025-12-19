@@ -17,12 +17,16 @@ INCLUDES = -Iinclude/common -Iinclude/core -Iinclude/parser -Iinclude/parser/uti
 
 map SOURCES -> OBJECTS;
 
+assert "{arc:__os__}" eq "windows";
 
 @ifos linux;   RM       = rm
 @ifos linux;   COMPILER = g++
+@ifos linux;   PYTHON   = /bin/python3
+
 
 @ifos windows; RM       = del.exe
 @ifos windows; COMPILER = msvc.exe
+@ifos windows; PYTHON   = C:\Users\sfattore\AppData\Local\Microsoft\WindowsApps\python3.exe
 
 
 ###########################
@@ -37,7 +41,7 @@ task MakeFolders()
 }
 
 @pub
-@interpreter /bin/python3
+@interpreter {arc:PYTHON}
 task Message() 
 {
 if '{arc:__profile__}' == 'Release':

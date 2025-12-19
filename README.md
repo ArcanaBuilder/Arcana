@@ -12,7 +12,7 @@
 [![forthebadge](https://img.shields.io/badge/GNU%2FLinux-Support-gray?labelColor=FFC602&logo=linux&logoColor=black&link=https://www.getgnulinux.org/en/)](https://www.getgnulinux.org/en/)  
 [![forthebadge](https://img.shields.io/badge/Windows-Support%20[BETA]-gray?labelColor=0078D6&logo=windows&logoColor=black)]()  
 
-[![forthebadge](https://img.shields.io/badge/Version-0.4.0-green)](https://gitlab.com/MastroGibbs/arcana)
+[![forthebadge](https://img.shields.io/badge/Version-0.4.1-green)](https://gitlab.com/MastroGibbs/arcana)
 ---
 
 # Arcana — an alternative to traditional build systems

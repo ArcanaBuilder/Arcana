@@ -37,8 +37,10 @@ USE_MODULE(Arcana);
 //     
 
 
-static Semantic::Enviroment env;
+#define CHECK_RESULT(op)                if (auto res = op; res.has_value()) { ERR(res.value()); return Arcana_Result::ARCANA_RESULT__NOK; }
 
+
+static Semantic::Enviroment env;
 
 static const char* ARCANA_HEADER = 
 #if defined(_WIN32)
@@ -124,6 +126,8 @@ LANGUAGE:
                                                     the cores on your machine.
 
     map <SOURCE> -> <TARGET>                        Same as attribute @map. 
+
+    assert "lvalue" <op> "rvalue"                   Execute assert equal operation. 
 
   
   BUILTIN SYMBOLS:
@@ -277,13 +281,7 @@ static Arcana_Result Parse(const Support::Arguments& args)
         return result;
     }
 
-    auto alignment_result = env.AlignEnviroment();
-    
-    if (alignment_result)
-    {
-        ERR(alignment_result.value());
-        return Arcana_Result::ARCANA_RESULT__NOK;
-    }
+    CHECK_RESULT(env.AlignEnviroment());
 
     if (args.debug)
     {
@@ -293,13 +291,8 @@ static Arcana_Result Parse(const Support::Arguments& args)
         Debug::FTable(env.ftable);
     }
     
-    auto expand_result = env.Expand();
-
-    if (expand_result)
-    {
-        ERR(expand_result.value());
-        return Arcana_Result::ARCANA_RESULT__NOK;
-    }
+    CHECK_RESULT(env.Expand());
+    CHECK_RESULT(env.CheckAsserts());
     
     if (args.debug)
     {

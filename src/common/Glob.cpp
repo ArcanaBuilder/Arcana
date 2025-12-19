@@ -374,9 +374,6 @@ static bool StartsWithDot(const std::string& name) noexcept
 
 static bool SegmentAllowsDotfiles(const Segment& seg) noexcept
 {
-    // Se il primo atom è literal che inizia con '.' => permette dotfiles
-    // Se il primo atom è CHARCLASS e include '.' come primo match... non lo sappiamo qui.
-    // Regola semplice e stabile: "pattern-segment inizia con '.'" => dotfiles ok.
     if (seg.atoms.empty())
     {
         return true;
@@ -437,8 +434,6 @@ static bool CharClassMatch(const CharClass& cc, char ch) noexcept
 
 static bool MatchSegmentAtoms(const Segment& seg, const std::string& name) noexcept
 {
-    // DP su posizione atom e posizione char
-    // dp[i][j] = match fino atom i e char j
     const std::size_t A = seg.atoms.size();
     const std::size_t N = name.size();
 
@@ -566,25 +561,6 @@ static bool IsDir(const fs::directory_entry& de, bool follow_symlinks) noexcept
     return de.is_directory(ec);
 }
 
-
-/*
-static bool IsReg(const fs::directory_entry& de, bool follow_symlinks) noexcept
-{
-    std::error_code ec;
-
-    if (follow_symlinks)
-    {
-        return de.is_regular_file(ec);
-    }
-
-    if (de.is_symlink(ec))
-    {
-        return false;
-    }
-
-    return de.is_regular_file(ec);
-}
-*/
 
 
 static void ExpandRec(const Pattern& pattern, const ExpandOptions& opt, const fs::path& cur_dir, std::size_t seg_index, std::vector<std::string>& out) noexcept
@@ -1189,7 +1165,8 @@ bool Arcana::Glob:: MapGlobToGlob(std::string_view  from_glob,
                     const std::vector<std::string>& src_list,
                     std::vector<std::string>&       out_list,
                     ParseError&       err_from,
-                    ParseError&       err_to) noexcept
+                    ParseError&       err_to,
+                    MapError&         err_map) noexcept
 {
     Pattern from_pat;
     Pattern to_pat;
@@ -1211,12 +1188,14 @@ bool Arcana::Glob:: MapGlobToGlob(std::string_view  from_glob,
         std::vector<Arcana::Glob::Capture> caps;
         if (!MatchCapture(from_pat, src, caps))
         {
+            err_map.code = MapError::Code::CAPTURE;
             return false;
         }
 
         std::string out;
         if (!Instantiate(to_pat, caps, out))
         {
+            err_map.code = MapError::Code::INSTANTIATE;
             return false;
         }
 

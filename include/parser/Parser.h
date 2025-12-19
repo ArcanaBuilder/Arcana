@@ -63,6 +63,7 @@ private:
     Support::SemanticOutput Handle_TaskDecl(Grammar::Match& match);
     Support::SemanticOutput Handle_Using(Grammar::Match& match);
     Support::SemanticOutput Handle_Mapping(Grammar::Match& match);
+    Support::SemanticOutput Handle_Assert(Grammar::Match& match);
     
     Arcana_Result           Handle_Import(Grammar::Match& match, Semantic::Enviroment& new_env);
 };

@@ -187,6 +187,21 @@ struct Capture
 
 
 
+struct MapError
+{
+    
+    enum class Code : std::uint8_t
+    {
+        NONE,
+        CAPTURE,
+        INSTANTIATE,
+    };
+
+    Code        code  = Code::NONE;
+};
+
+
+
 
 //    ██████╗ ██╗   ██╗██████╗     ███████╗██╗   ██╗███╗   ██╗ ██████╗███████╗
 //    ██╔══██╗██║   ██║██╔══██╗    ██╔════╝██║   ██║████╗  ██║██╔════╝██╔════╝
@@ -211,7 +226,35 @@ bool MapGlobToGlob(std::string_view          from_glob,
                     const std::vector<std::string>& src_list,
                     std::vector<std::string>&       out_list,
                     ParseError&       err_from,
-                    ParseError&       err_to) noexcept;
+                    ParseError&       err_to,
+                    MapError&         err_map) noexcept;
+
+
+inline std::string ParseErrorRepr(const ParseError e)
+{
+    switch(e.code)
+    {
+        case ParseError::Code::EMPTY_PATTERN:         return "Empty Pattern";
+        case ParseError::Code::INVALID_ESCAPE:        return "Invalid Escape";
+        case ParseError::Code::UNCLOSED_CHARCLASS:    return "Unclosed Char Class";
+        case ParseError::Code::EMPTY_CHARCLASS:       return "Empty Char Class";
+        case ParseError::Code::INVALID_RANGE:         return "Invalid Range";
+        case ParseError::Code::INVALID_DOUBLESTAR:    return "Invalid DoubleStar";
+        default:                                      return "Not An Error";
+    }
+}
+
+
+
+inline std::string MapErrorRepr(const MapError e)
+{
+    switch(e.code)
+    {
+        case MapError::Code::CAPTURE:         return "Capture Error";
+        case MapError::Code::INSTANTIATE:     return "Instantiation Error";
+        default:                              return "Not An Error";
+    }
+}
 
 
 END_MODULE(Glob)

@@ -58,6 +58,7 @@ Token Lexer::next()
     switch (current_) 
     {
         case '=':  return simpleToken(TokenType::ASSIGN);
+        case '"':  return simpleToken(TokenType::DQUOTE);
         case '+':  return simpleToken(TokenType::PLUS);
         case '-':  return simpleToken(TokenType::MINUS);
         case '*':  return simpleToken(TokenType::STAR);
@@ -222,6 +223,18 @@ Token Lexer::identifier()
     else if (lower.compare("map") == 0)
     {
         tt = TokenType::MAPPING;
+    }
+    else if (lower.compare("assert") == 0)
+    {
+        tt = TokenType::ASSERT;
+    }
+    else if (lower.compare("ne") == 0)
+    {
+        tt = TokenType::NE;
+    }
+    else if (lower.compare("eq") == 0)
+    {
+        tt = TokenType::EQ;
     }
 
     // GENERATE THE TOKEN

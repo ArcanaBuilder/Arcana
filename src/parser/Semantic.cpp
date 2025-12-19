@@ -254,16 +254,6 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
 
         _main_count = 1;
     }
-    // IF THE ATTRIBUTE IS 'INTERPRETER'
-    else if (attr == Attr::Type::INTERPRETER)
-    {
-        // CHECK IF THE INTERPRETER EXISTS
-        if (!Support::file_exists(property[0]))
-        {
-            ss << "Interpreter " << TOKEN_MAGENTA(property[0]) << " is missing or unknown";
-            return SEM_NOK(ss.str());
-        }
-    }
     // IF THE ATTRIBUTE IS 'IFOS'
     else if (attr == Attr::Type::IFOS)
     {
@@ -541,6 +531,29 @@ SemanticOutput Engine::Collect_Mapping(const std::string& item_1, const std::str
 
 
 
+SemanticOutput Engine::Collect_Assert(std::size_t line, const std::string& stmt, const std::string& lvalue, const std::string& op, const std::string& rvalue)
+{
+    AssertCheck acheck;
+    acheck.line   = line;
+    acheck.stmt   = stmt;
+    acheck.lvalue = lvalue;
+    acheck.rvalue = rvalue;
+
+    if (op == "eq")
+    {
+        acheck.check = AssertCheck::CheckType::EQUAL;
+    }
+    else if (op == "ne")
+    {
+        acheck.check = AssertCheck::CheckType::NOT_EQUAL;
+    }
+
+    _env.atable.push_back(acheck);
+
+    return SemanticOutput{};
+}
+
+
 
 Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noexcept
 {
@@ -688,7 +701,11 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
     // CHECK FOR INTERPRETERS
     if (default_interpreter.empty())
     {
+#if defined(_WIN32)
+        default_interpreter = "C:\\Windows\\System32\\cmd.exe";
+#else
         default_interpreter = "/bin/bash";
+#endif
     }
 
     for (auto& [_, task] : ftable)
@@ -800,6 +817,22 @@ const std::optional<std::string> Enviroment::Expand() noexcept
         return a.size() > b.size();
     });
 
+
+    Glob::ExpandOptions opt;
+
+    for (auto& assert : atable)
+    {
+        if (const auto err = expand_one(assert.lvalue); err.has_value())
+        {
+            return err;
+        }
+
+        if (const auto err = expand_one(assert.rvalue); err.has_value())
+        {
+            return err;
+        }
+    }
+
     // ITERATE THE VTABLE AND TRY TO EXPAND
     for (auto& [name, var] : vtable)
     {
@@ -807,11 +840,46 @@ const std::optional<std::string> Enviroment::Expand() noexcept
         {
             return err;
         }
+
+        Glob::Pattern    pattern;
+        Glob::ParseError error;
+
+        if (!Glob::Parse(var.var_value, pattern, error))
+        {
+            std::stringstream ss;
+            ss << "While expanding " << TOKEN_MAGENTA(name) << " an invalid glob was detected " << TOKEN_MAGENTA(pattern.normalized) << ": " << ParseErrorRepr(error);
+            return ss.str();
+        }
+
+        if (!Arcana::Glob::Expand(pattern, ".", var.glob_expansion, opt))
+        {
+            // HOW CAN WE REACH THIS?
+        }
     }
 
     // ITERATE THE FTABLE AND TRY TO EXPAND
     for (auto& [name, task] : ftable)
     {
+        if (task.hasAttribute(Attr::Type::INTERPRETER))
+        {
+            std::stringstream ss;
+            auto properties = task.getProperties(Attr::Type::INTERPRETER);
+
+            if (const auto err = expand_one(properties[0]); err.has_value())
+            {
+                return err;
+            }
+
+            task.interpreter = properties[0];
+
+            // CHECK IF THE INTERPRETER EXISTS
+            if (!Support::file_exists(properties[0]))
+            {
+                ss << "Interpreter " << TOKEN_MAGENTA(properties[0]) << " is missing or unknown";
+                return ss.str();
+            }
+        }
+
         for (const auto& input : task.task_inputs)
         {
             if (std::find(var_keys.begin(), var_keys.end(), input) == var_keys.end())
@@ -831,42 +899,48 @@ const std::optional<std::string> Enviroment::Expand() noexcept
         }
     }
 
-    // HANDLE GLOB EXPANSION
-    Glob::ExpandOptions opt;
-
-    for (auto& [name, var] : vtable)
-    {
-        Glob::Pattern    pattern;
-        Glob::ParseError error;
-
-        if (!Glob::Parse(var.var_value, pattern, error))
-        {
-            std::stringstream ss;
-            return ss.str();
-        }
-
-        if (!Arcana::Glob::Expand(pattern, ".", var.glob_expansion, opt))
-        {
-            std::stringstream ss;
-            return ss.str();
-        }
-    }
-
-
     // HANDLE MAPPED VARS EXPANSION
     auto map_required = Table::GetValues(vtable, Semantic::Attr::Type::MAP);
 
     for (auto& stmt : map_required.value())
     {
         Glob::ParseError e1, e2;
+        Glob::MapError   m1;
 
         auto& map_to   = stmt.get();
         auto& map_from = vtable[map_to.getProperties(Semantic::Attr::Type::MAP).at(0)];
 
         if (!Arcana::Glob::MapGlobToGlob(map_from.var_value,      map_to.var_value, 
-                                         map_from.glob_expansion, map_to.glob_expansion, e1, e2))
+                                         map_from.glob_expansion, map_to.glob_expansion, e1, e2, m1))
         {
             std::stringstream ss;
+            ss << "While mapping " << TOKEN_MAGENTA(map_from.var_name) << " to " << TOKEN_MAGENTA(map_to.var_name) << ": incompatible globs";
+            return ss.str();
+        }
+    }
+
+
+    return std::nullopt;
+}
+
+
+
+const std::optional<std::string> Enviroment::CheckAsserts() noexcept
+{
+    bool assert_failed = false;
+
+    for (const auto& assert : atable)
+    {
+        switch (assert.check)
+        {
+            case AssertCheck::CheckType::EQUAL:     assert_failed = (assert.lvalue != assert.rvalue); break;
+            case AssertCheck::CheckType::NOT_EQUAL: assert_failed = (assert.lvalue == assert.rvalue); break;
+        }
+
+        if (assert_failed)
+        {
+            std::stringstream ss;
+            ss << "Assert failed on line " << assert.line << ": " << TOKEN_MAGENTA(assert.stmt) << " with lvalue: " << TOKEN_MAGENTA(assert.lvalue) << ", rvalue: " << TOKEN_MAGENTA(assert.rvalue);
             return ss.str();
         }
     }

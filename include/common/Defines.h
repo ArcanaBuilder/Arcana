@@ -35,7 +35,7 @@
 #define _I(enum)                                ((size_t) enum) 
 
 
-#define __ARCANA__VERSION__                     "0.4.0"
+#define __ARCANA__VERSION__                     "0.4.1"
 
 
 
@@ -103,6 +103,8 @@
 // utils
 #define TOKEN_MAGENTA(token)                    ANSI_BMAGENTA << token << ANSI_RESET
 #define TOKEN_CYAN(token)                       ANSI_BCYAN    << token << ANSI_RESET
+#define TOKEN_RED(token)                        ANSI_BRED     << token << ANSI_RESET
+#define TOKEN_GREEN(token)                      ANSI_BGREEN   << token << ANSI_RESET
 
 
 
@@ -122,6 +124,7 @@
 #define MSG(msg)                              std::cout << msg << std::endl
 #define ERR(msg)                              std::cerr << "[" << ANSI_BRED << "ERROR" << ANSI_RESET << "] " << msg << std::endl
 #define HINT(msg)                             std::cout << "[" << ANSI_BGREEN << "HINT" << ANSI_RESET << "]  " << msg << std::endl
+
 
 
 

@@ -1,5 +1,6 @@
 #include "Core.h"
 #include "Cache.h"
+#include "Common.h"
 #include "Semantic.h"
 
 #include <mutex>
@@ -15,7 +16,7 @@ using SymbolMap = Support::AbstractKeywordMap<std::string>;
 static SymbolMap builtin_symbols = 
 {
     { "__main__"       , "None"                                              },
-    { "__root__"       , std::filesystem::current_path().string()            },
+    { "__root__"       , std::filesystem::current_path().generic_string()    },
     { "__version__"    , __ARCANA__VERSION__                                 },
     { "__profile__"    , "None"                                              },
     { "__threads__"    , "None"                                              },
@@ -119,16 +120,31 @@ static Core::InstructionResult run_instruction(const std::string& jobname,
                                                const std::string& command, 
                                                const bool         echo) noexcept
 {
+    std::string             full_cmd;
+    std::filesystem::path   script;
     Core::InstructionResult res { command, 0 };
+    Cache::Manager&         cache = Cache::Manager::Instance();
 
     if (echo)
     {
         MSG(command);
     }
 
-    Cache::Manager&         cache    = Cache::Manager::Instance();
-    std::filesystem::path   script   = cache.WriteScript(jobname, idx, command);
-    std::string             full_cmd = interpreter + " \"" + script.string() + "\"";
+#if defined(_WIN32)
+    if (interpreter.find("cmd.exe") != std::string::npos)
+    {
+        script   = cache.WriteScript(jobname, idx, command, ".bat");
+        full_cmd = interpreter + " /d /s /c \"" + script.string() + "\"";
+    }
+    else
+    {
+        script   = cache.WriteScript(jobname, idx, command);
+        full_cmd = interpreter + " \"" + script.string() + "\"";
+    }
+#else
+    script   = cache.WriteScript(jobname, idx, command);
+    full_cmd = interpreter + " \"" + script.string() + "\"";
+#endif
     
     int ret = std::system(full_cmd.c_str());
 
@@ -257,7 +273,11 @@ std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::Run
     bool ok = true;
     std::vector<Core::Result> results;
 
+    Stopwatch sw;
+
     results.reserve(jobs.All().size());
+
+    sw.start();
 
     // RUN EACH JOB 
     for (auto &job : jobs.All())
@@ -278,10 +298,13 @@ std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::Run
         }
     }
 
+    sw.stop();
+    auto ms = sw.elapsed<>();
+
     if (ok && !opt.silent)
     {
-        ARC("Action '" << jobs.main_job << "' done!");
-    }
+        ARC("Action '" << jobs.main_job << "' done in " << Stopwatch::format(ms));
+    } 
 
     return results;
 }

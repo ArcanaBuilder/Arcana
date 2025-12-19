@@ -2,6 +2,25 @@
 
 All relevant changes to this project will be documented in this file.
 
+
+## [0.4.1] - 2025-12-19
+
+### Changes
+- Improved windows support
+- Reworked Makefile in order to include windows compilation 
+- Messages error printing
+
+### Added
+- Variable expasion support for attribute @interpreter
+- new **assert** statement:
+```arcana
+assert "{arc:__os__}" eq "linux";
+```
+
+### Fixed Bugs
+- Fixed script generation and execution
+
+
 ## [0.4.0] - 2025-12-18
 
 ### Added

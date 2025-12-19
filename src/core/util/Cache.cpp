@@ -570,10 +570,19 @@ bool Manager::HasFileChanged(const std::string& path) noexcept
 
 
 
-fs::path Manager::WriteScript(const std::string& jobname, const std::size_t idx, const std::string& content) noexcept
+fs::path Manager::WriteScript(const std::string& jobname, const std::size_t idx, const std::string& content, const std::string& ext) noexcept
 {
+    fs::path    script_path;
     std::string md5_filename = MD5(jobname);
-    fs::path    script_path  = _script_path / (md5_filename + std::to_string(idx));
+
+    if (ext.empty())
+    {
+        script_path = _script_path / (md5_filename + std::to_string(idx));
+    }
+    else
+    {
+        script_path = _script_path / (md5_filename + std::to_string(idx) + ext);
+    }
 
     if (file_exists(script_path))
     {

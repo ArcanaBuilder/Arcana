@@ -52,6 +52,7 @@ Arcana_Result Parser::Parse(Semantic::Enviroment& env)
                 case Grammar::Rule::TASK_DECL:         astout = Handle_TaskDecl(match);    match.valid = false;  break;
                 case Grammar::Rule::USING:             astout = Handle_Using(match);       match.valid = false;  break;
                 case Grammar::Rule::MAPPING:           astout = Handle_Mapping(match);     match.valid = false;  break;
+                case Grammar::Rule::ASSERT:            astout = Handle_Assert(match);      match.valid = false;  break;
                 default:                                                                   match.valid = false;  break;
             }
 
@@ -269,3 +270,24 @@ Arcana::Support::SemanticOutput Parser::Handle_Mapping(Grammar::Match& match)
     return instr_engine.Collect_Mapping(item1, item2);
 }
 
+
+
+Arcana::Support::SemanticOutput Parser::Handle_Assert(Grammar::Match& match)
+{
+    // EXTRACT THE STRINGS FROM THE INPUT AND PASS THEM INTO THE SEMANTIC ENGINE
+    Point  pStart = match[_I(Grammar::ASSERT::RESERVED2)];
+    Point  p1     = match[_I(Grammar::ASSERT::ITEM_1)];
+    Point  p2     = match[_I(Grammar::ASSERT::OP)    ];
+    Point  p3     = match[_I(Grammar::ASSERT::ITEM_2)];
+    Point  pStop  = match[_I(Grammar::ASSERT::RESERVED5)];
+
+    
+    Input  input  = lexer[p1->token];
+
+    Lexeme stmt   = input.substr(pStart->start, pStop->end - pStart->start);
+    Lexeme lvalue = input.substr(p1->start, p1->end - p1->start);
+    Lexeme op     = input.substr(p2->start, p2->end - p2->start);
+    Lexeme rvalue = input.substr(p3->start, p3->end - p3->start);
+
+    return instr_engine.Collect_Assert(p1->token.line, stmt, lvalue, op, rvalue);
+}

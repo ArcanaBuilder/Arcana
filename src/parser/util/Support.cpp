@@ -87,8 +87,8 @@ Arcana_Result Support::ParserError::operator() (const std::string& ctx, const Gr
     std::string       symbol(token.end, '^');
     std::stringstream ss;
 
-    ss << "[" << ANSI_BRED << "SYNTAX ERROR" << ANSI_RESET << "] In file " << ANSI_BOLD << ctx << ANSI_RESET << ", line " << ANSI_BOLD << token.line << ": " << lexer[token]  << ANSI_RESET << std::endl;
-    ss << ANSI_RED << "               +~~~~~~~~~~~~~~~~~~~~~~~~~~~" << s << symbol << ANSI_RESET << std::endl;
+    ss << "[" << TOKEN_RED("SYNTAX ERROR") << "] In file " << ANSI_BOLD << ctx << ANSI_RESET << ", line " << ANSI_BOLD << token.line << ": " << lexer[token] << ANSI_RESET << std::endl;
+    ss << TOKEN_RED("               +~~~~~~~~~~~~~~~~~~~~~~~~" << s << symbol) << std::endl;
 
     escaping = (token.lexeme == "\n") ? "<New Line>" : token.lexeme;
 
@@ -98,14 +98,17 @@ Arcana_Result Support::ParserError::operator() (const std::string& ctx, const Gr
     }
     else
     {
-        ss << "        Found:    " << ANSI_RED << escaping << ANSI_RESET << " (" << Support::TokenTypeRepr(token.type) << ")" << std::endl;
-        ss << "        Expected: " << Support::UniqueNonTerminalRepr(found);
-        ss << " for statement(s)"  << std::endl;
+        ss << "Found:    " << TOKEN_RED(escaping) << " (" << Support::TokenTypeRepr(token.type) << ")" << std::endl;
+        ss << "Expected: " << Support::UniqueNonTerminalRepr(found) << " for statement(s): ";
         
+        uint32_t i = 0;
         for (const auto& stmt : semtypes)
         {
-            ss << "                  - " << ANSI_CYAN << Support::RuleRepr(stmt) << ANSI_RESET  << std::endl;
+            if (i) ss << ", ";
+            ss << TOKEN_CYAN(Support::RuleRepr(stmt));
+            i++;
         }
+        ss << std::endl;
     }
     
     std::cerr << ss.str();
@@ -120,12 +123,12 @@ Arcana_Result Support::SemanticError::operator() (const std::string& ctx, const 
 
     std::stringstream ss;
 
-    ss << "[" << ANSI_BRED << "SEMANTIC ERROR" << ANSI_RESET << "] In file " << ANSI_BOLD << ctx << ANSI_RESET << ", line " << ANSI_BOLD << token.line << ": " << lexer[token]  << ANSI_RESET << std::endl;
-    ss << "                 " << ao.err << std::endl;
+    ss << "[" << TOKEN_RED("SEMANTIC ERROR") << "] In file " << ANSI_BOLD << ctx << ANSI_RESET << ", line " << ANSI_BOLD << token.line << ": " << lexer[token]  << ANSI_RESET << std::endl;
+    ss << ao.err << std::endl;
 
     if (!ao.hint.empty())
     {
-        ss << "[" << ANSI_BGREEN << "HINT" << ANSI_RESET << "] Did you mean " << ANSI_BCYAN << ao.hint << ANSI_RESET "?" << std::endl;
+        ss << "[" << TOKEN_GREEN("HINT") << "] Did you mean " << TOKEN_CYAN(ao.hint) << "?" << std::endl;
     }
 
     std::cerr << ss.str();
@@ -138,8 +141,8 @@ Arcana_Result Support::PostProcError::operator() (const std::string& ctx, const 
 {
     std::stringstream ss;
 
-    ss << "[" << ANSI_BRED << "SEMANTIC ERROR" << ANSI_RESET << "] In file: " << ANSI_BOLD << ctx << ANSI_RESET  << std::endl;
-    ss << "                 " << err << std::endl;
+    ss << "[" << TOKEN_RED("SEMANTIC ERROR") << "] In file: " << ANSI_BOLD << ctx << ANSI_RESET << std::endl;
+    ss << err << std::endl;
     std::cerr << ss.str();
 
     return Arcana_Result::ARCANA_RESULT__NOK;
@@ -508,6 +511,9 @@ std::string Support::TokenTypeRepr(const Scan::TokenType type)
         case Scan::TokenType::IMPORT:      return "import";      
         case Scan::TokenType::USING:       return "using";      
         case Scan::TokenType::NUMBER:      return "number";  
+        case Scan::TokenType::DQUOTE:      return "Double Quote";  
+        case Scan::TokenType::MAPPING:     return "map";      
+        case Scan::TokenType::ASSERT:      return "assert";
         case Scan::TokenType::ASSIGN:      return "assignment";  
         case Scan::TokenType::PLUS:        return "plus";
         case Scan::TokenType::MINUS:       return "minus"; 
@@ -522,6 +528,8 @@ std::string Support::TokenTypeRepr(const Scan::TokenType type)
         case Scan::TokenType::ANGULARLP:   return "left angular parenthesis";   
         case Scan::TokenType::ANGULARRP:   return "right angular parenthesis"; 
         case Scan::TokenType::AT:          return "at sign";   
+        case Scan::TokenType::EQ:          return "eq";   
+        case Scan::TokenType::NE:          return "ne";   
         case Scan::TokenType::SEMICOLON:   return "semicolon";   
         case Scan::TokenType::NEWLINE:     return "<new line>";   
         case Scan::TokenType::ENDOFFILE:   return "EOF";     
@@ -597,6 +605,7 @@ std::string Support::RuleRepr(const Grammar::Rule type)
         case Grammar::Rule::IMPORT:            return "Import";
         case Grammar::Rule::USING:             return "Using";
         case Grammar::Rule::MAPPING:           return "Mapping";
+        case Grammar::Rule::ASSERT:            return "Assert";
         default:                               return "<INVALID>";
     }
 }

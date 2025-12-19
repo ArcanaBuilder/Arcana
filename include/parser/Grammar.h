@@ -51,6 +51,7 @@ enum class Rule : uint32_t
     IMPORT                ,
     USING                 ,
     MAPPING               ,
+    ASSERT                ,
 };
 
 
@@ -124,6 +125,20 @@ enum class MAPPING : uint32_t
     RESERVED2             ,
     RESERVED3             ,
     ITEM_2                , 
+    GRAMMAR_END           ,
+};
+
+
+enum class ASSERT : uint32_t 
+{
+    RESERVED1          = 0, 
+    RESERVED2             , 
+    ITEM_1                ,
+    RESERVED3             , 
+    OP                    ,
+    RESERVED4             , 
+    ITEM_2                , 
+    RESERVED5             , 
     GRAMMAR_END           ,
 };
 

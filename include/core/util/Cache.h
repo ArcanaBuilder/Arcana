@@ -56,7 +56,7 @@ public:
     void     LoadCache()                                     noexcept;
     bool     HasFileChanged(const std::string& path)         noexcept;
     void     HandleProfileChange(const std::string& profile) noexcept;
-    fs::path WriteScript(const std::string& jobname, const std::size_t idx, const std::string& path) noexcept;
+    fs::path WriteScript(const std::string& jobname, const std::size_t idx, const std::string& content, const std::string& ext = "") noexcept;
 
 
 private:

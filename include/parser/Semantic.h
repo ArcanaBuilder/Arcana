@@ -237,6 +237,7 @@ END_NAMESPACE(Using)
 //                                                                                                                                                                                                  
 
 class  Engine;
+struct AssertCheck;
 struct Instruction;
 struct InstructionAssign;
 struct InstructionTask;
@@ -264,6 +265,7 @@ using CRef = std::reference_wrapper<const T>;
 
 using VTable      = std::map<std::string, InstructionAssign>; 
 using FTable      = std::map<std::string, InstructionTask>; 
+using ATable      = std::vector<AssertCheck>;
 using VList       = std::vector<InstructionAssign>;
 using FList       = std::vector<InstructionTask>;
 using FListCRef   = std::vector<CRef<InstructionTask>>;
@@ -288,6 +290,23 @@ struct Rule
     Attr::Targets      targets;
 
     bool operator == (const Attr::Qualificator q) const { return this->qual == q; }
+};
+
+
+
+struct AssertCheck
+{
+    enum class CheckType : std::uint8_t
+    {
+        EQUAL,
+        NOT_EQUAL,
+    };
+
+    std::size_t line;
+    std::string stmt;
+    std::string lvalue;
+    std::string rvalue;
+    CheckType   check;
 };
 
 
@@ -410,10 +429,12 @@ public:
 
     VTable   vtable;
     FTable   ftable;
+    ATable   atable;
 
     const std::optional<std::string> AlignEnviroment() noexcept;
           Arcana_Result              CheckArgs(const Arcana::Support::Arguments& args) noexcept;
     const std::optional<std::string> Expand() noexcept;
+    const std::optional<std::string> CheckAsserts() noexcept;
     
     Interpreter                      GetInterpreter() noexcept { return default_interpreter; }
     uint32_t                         GetThreads()     noexcept { return max_threads;         }
@@ -443,6 +464,9 @@ inline void EnvMerge(Enviroment& dst, Enviroment& src)
     {
         dst.max_threads = src.max_threads;
     }
+
+    for (auto& a : src.atable)
+        dst.atable.push_back(a);
 }
 
 
@@ -456,7 +480,7 @@ public:
     SemanticOutput Collect_Task      (const std::string& name, const std::string& inputs, const Task::Instrs& instrs);
     SemanticOutput Collect_Using     (const std::string& what, const std::string&  opt); 
     SemanticOutput Collect_Mapping   (const std::string& item_1, const std::string& item_2);
-
+    SemanticOutput Collect_Assert    (std::size_t line, const std::string& stmt, const std::string& lvalue, const std::string& op, const std::string& rvalue);
 
     Enviroment                       GetEnvironment()  const noexcept { return _env; }
     Enviroment&                      EnvRef()                         { return _env; }

@@ -162,6 +162,20 @@ static Rules rule_MAP =
 
 
 
+static Rules rule_ASSERT = 
+{
+    Scan::TokenType::ASSERT                         |
+    Scan::TokenType::DQUOTE                         |
+    Scan::TokenType::ANY                            |
+    Scan::TokenType::DQUOTE                         |
+    ( Scan::TokenType::EQ || Scan::TokenType::NE )  |
+    Scan::TokenType::DQUOTE                         |
+    Scan::TokenType::ANY                            |
+    Scan::TokenType::DQUOTE                         |
+    ( Scan::TokenType::NEWLINE || Scan::TokenType::SEMICOLON || Scan::TokenType::ENDOFFILE )  
+};
+
+
 
 
 
@@ -184,6 +198,7 @@ Engine::Engine()
     _rules[Rule::IMPORT           ] = rule_IMPORT.buffer;
     _rules[Rule::USING            ] = rule_USING.buffer;
     _rules[Rule::MAPPING          ] = rule_MAP.buffer;
+    _rules[Rule::ASSERT           ] = rule_ASSERT.buffer;
 
     _index[Rule::VARIABLE_ASSIGN  ] = std::vector<Index>(rule_VARIABLE_ASSIGNMENT.buffer.size());
     _index[Rule::EMPTY_LINE       ] = std::vector<Index>(rule_EMPTY_LINE.buffer.size());
@@ -192,6 +207,7 @@ Engine::Engine()
     _index[Rule::IMPORT           ] = std::vector<Index>(rule_IMPORT.buffer.size());
     _index[Rule::USING            ] = std::vector<Index>(rule_USING.buffer.size());
     _index[Rule::MAPPING          ] = std::vector<Index>(rule_MAP.buffer.size());
+    _index[Rule::ASSERT           ] = std::vector<Index>(rule_ASSERT.buffer.size());
 }
 
 
