@@ -13,123 +13,92 @@
 #include <filesystem>
 #include <unordered_map>
 
-
 USE_MODULE(Arcana::Semantic);
-
-
-
-//    ███████╗████████╗██████╗ ██╗   ██╗ ██████╗████████╗███████╗
-//    ██╔════╝╚══██╔══╝██╔══██╗██║   ██║██╔════╝╚══██╔══╝██╔════╝
-//    ███████╗   ██║   ██████╔╝██║   ██║██║        ██║   ███████╗
-//    ╚════██║   ██║   ██╔══██╗██║   ██║██║        ██║   ╚════██║
-//    ███████║   ██║   ██║  ██║╚██████╔╝╚██████╗   ██║   ███████║
-//    ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝  ╚═════╝   ╚═╝   ╚══════╝
-//                                                                                                                                                                                                
-                                                                                                      
-
-struct ExpandMatch
-{
-    const std::string* text;  
-    std::size_t        start;  
-    std::size_t        end;  
-
-    ExpandMatch(const std::string& s, std::size_t a, std::size_t b) noexcept
-        : text(&s), start(a), end(b)
-    {}
-};
-
-
-
-//    ██╗   ██╗███████╗██╗███╗   ██╗ ██████╗ ███████╗
-//    ██║   ██║██╔════╝██║████╗  ██║██╔════╝ ██╔════╝
-//    ██║   ██║███████╗██║██╔██╗ ██║██║  ███╗███████╗
-//    ██║   ██║╚════██║██║██║╚██╗██║██║   ██║╚════██║
-//    ╚██████╔╝███████║██║██║ ╚████║╚██████╔╝███████║
-//     ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
-//                                                   
-
-
-using AttributeMap   = Arcana::Support::AbstractKeywordMap<Attr::Type>;
-using UsingMap       = Arcana::Support::AbstractKeywordMap<Using::Rule>;
 
 namespace fs = std::filesystem;
 
 
-
-//    ██████╗ ██╗   ██╗██╗     ███████╗███████╗
-//    ██╔══██╗██║   ██║██║     ██╔════╝██╔════╝
-//    ██████╔╝██║   ██║██║     █████╗  ███████╗
-//    ██╔══██╗██║   ██║██║     ██╔══╝  ╚════██║
-//    ██║  ██║╚██████╔╝███████╗███████╗███████║
-//    ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝╚══════╝
-//                                                                                                                                                            
+using AttributeMap = Arcana::Support::AbstractKeywordMap<Attr::Type>;
+using UsingMap     = Arcana::Support::AbstractKeywordMap<Using::Rule>;
 
 
-static const AttributeMap Known_Attributes = 
-{         
-    { "profile"        , Attr::Type::PROFILE      },          
-    { "pub"            , Attr::Type::PUBLIC       },                   
-    { "always"         , Attr::Type::ALWAYS       },          
-    { "requires"       , Attr::Type::REQUIRES     },   
-    { "then"           , Attr::Type::THEN         },          
-    { "map"            , Attr::Type::MAP          },    
-    { "multithread"    , Attr::Type::MULTITHREAD  },     
-    { "main"           , Attr::Type::MAIN         },  
-    { "interpreter"    , Attr::Type::INTERPRETER  },  
-    { "flushcache"     , Attr::Type::FLUSHCACHE   },       
-    { "echo"           , Attr::Type::ECHO         },    
-    { "exclude"        , Attr::Type::EXCLUDE      },   
-    { "ifos"           , Attr::Type::IFOS         },          
+
+// ------------------------------
+// STATIC TABLES
+// ------------------------------
+
+
+/**
+ * @brief Map of attribute name -> normalized Attr::Type.
+ */
+static const AttributeMap Known_Attributes =
+{
+    { "profile"     , Attr::Type::PROFILE     },
+    { "pub"         , Attr::Type::PUBLIC      },
+    { "always"      , Attr::Type::ALWAYS      },
+    { "requires"    , Attr::Type::REQUIRES    },
+    { "then"        , Attr::Type::THEN        },
+    { "map"         , Attr::Type::MAP         },
+    { "multithread" , Attr::Type::MULTITHREAD },
+    { "main"        , Attr::Type::MAIN        },
+    { "interpreter" , Attr::Type::INTERPRETER },
+    { "flushcache"  , Attr::Type::FLUSHCACHE  },
+    { "echo"        , Attr::Type::ECHO        },
+    { "exclude"     , Attr::Type::EXCLUDE     },
+    { "ifos"        , Attr::Type::IFOS        },
 };
 
 
 
-static const UsingMap Known_Usings = 
-{        
-    { "profiles"       , { {               },  Using::Type::PROFILES    } },   
-    { "default"        , { { "interpreter" },  Using::Type::INTERPRETER } },   
-    { "threads"        , { {               },  Using::Type::THREADS     } },   
+/**
+ * @brief Map of using keyword -> semantic using rule.
+ */
+static const UsingMap Known_Usings =
+{
+    { "profiles", { {               }, Using::Type::PROFILES    } },
+    { "default" , { { "interpreter" }, Using::Type::INTERPRETER } },
+    { "threads" , { {               }, Using::Type::THREADS     } },
 };
 
 
 
+/**
+ * @brief Canonical attribute names list for hinting/closest-match.
+ */
 static const std::vector<std::string> _attributes =
 {
-    "profile"       ,
-    "pub"           ,
-    "always"        ,
-    "requires"      ,
-    "then"          ,
-    "map"           ,
-    "multithread"   ,
-    "main"          ,
-    "interpreter"   ,
-    "flushcache"    ,
-    "echo"          ,
-    "exclude"       ,
-    "ifos"          ,
+    "profile",
+    "pub",
+    "always",
+    "requires",
+    "then",
+    "map",
+    "multithread",
+    "main",
+    "interpreter",
+    "flushcache",
+    "echo",
+    "exclude",
+    "ifos",
 };
 
 
 
+/**
+ * @brief Canonical using keywords list for hinting/closest-match.
+ */
 static const std::vector<std::string> _usings =
 {
     "profiles",
-    "default" ,
+    "default",
+    "threads",
 };
 
 
 
-
-
-//    ███╗   ███╗ █████╗  ██████╗██████╗  ██████╗ ███████╗
-//    ████╗ ████║██╔══██╗██╔════╝██╔══██╗██╔═══██╗██╔════╝
-//    ██╔████╔██║███████║██║     ██████╔╝██║   ██║███████╗
-//    ██║╚██╔╝██║██╔══██║██║     ██╔══██╗██║   ██║╚════██║
-//    ██║ ╚═╝ ██║██║  ██║╚██████╗██║  ██║╚██████╔╝███████║
-//    ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝
-//                                                        
-
+// ------------------------------
+// OUTPUT MACROS
+// ------------------------------
 
 #define SEM_OK()                 SemanticOutput{}
 #define SEM_NOK(err)             { Semantic_Result::AST_RESULT__NOK, err       }
@@ -140,65 +109,72 @@ static const std::vector<std::string> _usings =
 
 
 
+//    ███████╗███╗   ██╗ ██████╗ ██╗███╗   ██╗███████╗
+//    ██╔════╝████╗  ██║██╔════╝ ██║████╗  ██║██╔════╝
+//    █████╗  ██╔██╗ ██║██║  ███╗██║██╔██╗ ██║█████╗  
+//    ██╔══╝  ██║╚██╗██║██║   ██║██║██║╚██╗██║██╔══╝  
+//    ███████╗██║ ╚████║╚██████╔╝██║██║ ╚████║███████╗
+//    ╚══════╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝╚═╝  ╚═══╝╚══════╝
+//                                                    
 
-
-//     ██████╗██╗      █████╗ ███████╗███████╗    ██╗███╗   ███╗██████╗ ██╗     
-//    ██╔════╝██║     ██╔══██╗██╔════╝██╔════╝    ██║████╗ ████║██╔══██╗██║     
-//    ██║     ██║     ███████║███████╗███████╗    ██║██╔████╔██║██████╔╝██║     
-//    ██║     ██║     ██╔══██║╚════██║╚════██║    ██║██║╚██╔╝██║██╔═══╝ ██║     
-//    ╚██████╗███████╗██║  ██║███████║███████║    ██║██║ ╚═╝ ██║██║     ███████╗
-//     ╚═════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝    ╚═╝╚═╝     ╚═╝╚═╝     ╚══════╝
-//                                                                              
-
-
+/**
+ * @brief Construct semantic engine and initialize attribute rule table.
+ */
 Engine::Engine()
     :
     _main_count(0)
 {
-    // ATTRIBUTE RULES      
-    _attr_rules[_I(Attr::Type::PROFILE     )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK, Attr::Target::VARIABLE } };           
-    _attr_rules[_I(Attr::Type::PUBLIC      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK, Attr::Target::VARIABLE } };    
-    _attr_rules[_I(Attr::Type::ALWAYS      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
-    _attr_rules[_I(Attr::Type::REQUIRES    )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } }; 
-    _attr_rules[_I(Attr::Type::THEN        )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } };           
-    _attr_rules[_I(Attr::Type::MAP         )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };  
-    _attr_rules[_I(Attr::Type::EXCLUDE     )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };     
-    _attr_rules[_I(Attr::Type::MULTITHREAD )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };    
-    _attr_rules[_I(Attr::Type::MAIN        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };     
-    _attr_rules[_I(Attr::Type::INTERPRETER )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK,                        } };       
-    _attr_rules[_I(Attr::Type::FLUSHCACHE  )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } }; 
-    _attr_rules[_I(Attr::Type::ECHO        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };   
-    _attr_rules[_I(Attr::Type::IFOS        )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };         
+    // INITIALIZE ATTRIBUTE RULES TABLE
+    _attr_rules[_I(Attr::Type::PROFILE     )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK, Attr::Target::VARIABLE } };
+    _attr_rules[_I(Attr::Type::PUBLIC      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK, Attr::Target::VARIABLE } };
+    _attr_rules[_I(Attr::Type::ALWAYS      )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };
+    _attr_rules[_I(Attr::Type::REQUIRES    )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } };
+    _attr_rules[_I(Attr::Type::THEN        )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } };
+    _attr_rules[_I(Attr::Type::MAP         )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };
+    _attr_rules[_I(Attr::Type::EXCLUDE     )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };
+    _attr_rules[_I(Attr::Type::MULTITHREAD )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };
+    _attr_rules[_I(Attr::Type::MAIN        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };
+    _attr_rules[_I(Attr::Type::INTERPRETER )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK,                        } };
+    _attr_rules[_I(Attr::Type::FLUSHCACHE  )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };
+    _attr_rules[_I(Attr::Type::ECHO        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };
+    _attr_rules[_I(Attr::Type::IFOS        )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };
 }
 
 
-SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::string&  prop)
+
+/**
+ * @brief Collect an attribute statement and stage it for the next entity.
+ * @param name Raw attribute name.
+ * @param prop Raw properties string (tokenized via split()).
+ * @return SemanticOutput with status and optional hint.
+ */
+SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::string& prop)
 {
     std::stringstream ss;
 
     Attr::Type       attr     = Attr::Type::ATTRIBUTE__UNKNOWN;
     Attr::Properties property = Arcana::Support::split(prop);
 
-    // CHECK IF THE ATTRIBUTE IS KNOWN
+    // RESOLVE ATTRIBUTE NAME TO TYPE
     if (auto it = Known_Attributes.find(name); it != Known_Attributes.end())
     {
         attr = it->second;
     }
 
+    // HANDLE UNKNOWN ATTRIBUTE
     if (attr == Attr::Type::ATTRIBUTE__UNKNOWN)
     {
         ss << "Attribute " << TOKEN_MAGENTA(name) << " not recognized";
         return SEM_NOK_HINT(ss.str(), Support::FindClosest(_attributes, name));
     }
 
-    // ITERATE THE RULE OF THE ATTRIBUTE AND CHECK FOR THE CONGRUENCY
-    const auto& rule = _attr_rules[_I(attr)];
-    auto props_count = property.size();
+    // VALIDATE PROPERTIES AGAINST RULES
+    const auto& rule       = _attr_rules[_I(attr)];
+    auto        props_count = property.size();
 
-    // IF THE PROPERTY OF THE ATTRIBUTE IS REQUIRED
     if (rule == Attr::Qualificator::REQUIRED_PROPERTY)
     {
-        // CHECK THE NUMBER OF PROPERTIES
+        // ENFORCE REQUIRED PROPERTIES
         if (props_count == 0)
         {
             ss << "Attribute " << TOKEN_MAGENTA(name) << " requires at least one option";
@@ -212,7 +188,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
     }
     else
     {
-        // CHECK FOR PROPERTIES PRESENCE, BUT THE RULE NOT ADMIT THEM
+        // ENFORCE NO PROPERTIES
         if (props_count > 0)
         {
             ss << "Attribute " << TOKEN_MAGENTA(name) << " requires no option";
@@ -220,10 +196,10 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         }
     }
 
-    // IF THE ATTRIBUTE IS 'PROFILE'
+    // ATTRIBUTE-SPECIFIC VALIDATION
     if (attr == Attr::Type::PROFILE)
     {
-        // CHECK IF THE PROFILE IS KNOWN
+        // VALIDATE PROFILE EXISTS
         const auto& profiles = _env.profile.profiles;
 
         if (std::find(profiles.begin(), profiles.end(), property[0]) == profiles.end())
@@ -232,22 +208,20 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
             return SEM_NOK_HINT(ss.str(), Support::FindClosest(profiles, property[0]));
         }
     }
-    // IF THE ATTRBUTE IS 'MAP' or 'EXCLUDE'
     else if (attr == Attr::Type::MAP || attr == Attr::Type::EXCLUDE)
     {
-        // CHECK THE VTABLE FOR THE MAPPING VARIABLE
+        // VALIDATE REFERENCED VARIABLE EXISTS
         auto keys = Table::Keys(_env.vtable);
 
         if (std::find(keys.begin(), keys.end(), property[0]) == keys.end())
         {
             ss << "Invalid " << name << " " << TOKEN_MAGENTA(property[0]) << ": undeclared variable";
-            return SEM_NOK_HINT(ss.str(), Support::FindClosest(keys, name));
+            return SEM_NOK_HINT(ss.str(), Support::FindClosest(keys, property[0]));
         }
     }
-    // IF THE ATTRIBUTE IS 'MAIN'
     else if (attr == Attr::Type::MAIN)
     {
-        // CHECK FOR THE UNIQUENESS
+        // ENFORCE SINGLE MAIN
         if (_main_count > 0)
         {
             ss << "Cannot tag multiple tasks with attribute " << TOKEN_MAGENTA(name);
@@ -256,9 +230,9 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
 
         _main_count = 1;
     }
-    // IF THE ATTRIBUTE IS 'IFOS'
     else if (attr == Attr::Type::IFOS)
     {
+        // VALIDATE OS NAME
         if (!Core::is_os(property[0]))
         {
             ss << "Invalid OS " << TOKEN_MAGENTA(property[0]);
@@ -266,28 +240,34 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         }
     }
 
-    // ENQUEUE THE ATTRIBUTE
-    _attr_pending.push_back({ 
+    // ENQUEUE ATTRIBUTE FOR NEXT ENTITY
+    _attr_pending.push_back({
         name,
-        attr, 
+        attr,
         property
     });
 
-    return SemanticOutput{};
+    return SEM_OK();
 }
 
 
 
-SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::string&  val)
+/**
+ * @brief Collect a variable assignment into the environment VTable.
+ * @param name Variable name.
+ * @param val  Raw value.
+ * @return SemanticOutput with status.
+ */
+SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::string& val)
 {
-    std::stringstream ss;
-    InstructionAssign assign { name, val };
+    std::stringstream  ss;
+    InstructionAssign  assign { name, val };
 
-    // DEQUE THE ATTRIBUTES
+    // ATTACH PENDING ATTRIBUTES AND CLEAR PENDING QUEUE
     assign.attributes = _attr_pending;
     _attr_pending.clear();
 
-    // CHECK IF THE ATTRIBUTES ARE VALID FOR ASSIGN STATEMENT
+    // VALIDATE ATTRIBUTES TARGET VARIABLES
     for (const auto& attr : assign.attributes)
     {
         const auto& rule = _attr_rules[_I(attr.type)];
@@ -298,8 +278,8 @@ SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::st
             return SEM_NOK(ss.str());
         }
     }
-    
-    // GENERATE A MANGLING IF THE ASSIGNMENT IS TAGGED WITH THE ATTRIBUTE PROFILE
+
+    // APPLY MANGLING FOR PROFILE/IFOS
     const auto& attr_profile = std::find(assign.attributes.begin(), assign.attributes.end(), Attr::Type::PROFILE);
     const auto& attr_if      = std::find(assign.attributes.begin(), assign.attributes.end(), Attr::Type::IFOS);
 
@@ -316,24 +296,34 @@ SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::st
         _env.vtable[name] = assign;
     }
 
-    return SemanticOutput{};
-} 
+    return SEM_OK();
+}
 
 
 
+/**
+ * @brief Collect a task declaration into the environment FTable.
+ * @param name   Task name.
+ * @param inputs Raw inputs string (split into tokens).
+ * @param instrs Instruction lines.
+ * @return SemanticOutput with status.
+ */
 SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& inputs, const Task::Instrs& instrs)
 {
     std::stringstream ss;
 
-    Task::Inputs      task_inputs = Support::split(inputs);
+    // PARSE INPUTS LIST
+    Task::Inputs    task_inputs = Support::split(inputs);
 
-    InstructionTask   task { name, task_inputs, instrs };
-    FTable&           ftable = _env.ftable;
+    // BUILD TASK INSTRUCTION
+    InstructionTask task { name, task_inputs, instrs };
+    FTable&         ftable = _env.ftable;
 
+    // ATTACH PENDING ATTRIBUTES AND CLEAR PENDING QUEUE
     task.attributes = _attr_pending;
     _attr_pending.clear();
 
-    // CHECK FOR ATTRIBUTES ARE VALID FOR TASK DECLARATIONS STATEMENT
+    // VALIDATE ATTRIBUTES TARGET TASKS
     for (const auto& attr : task.attributes)
     {
         const auto& rule = _attr_rules[_I(attr.type)];
@@ -345,6 +335,7 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& 
         }
     }
 
+    // VALIDATE @requires DOES NOT SELF-REFERENCE
     if (task.hasAttribute(Attr::Type::REQUIRES))
     {
         auto& properties = task.getProperties(Attr::Type::REQUIRES);
@@ -354,10 +345,9 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& 
             ss << "Attribute " << TOKEN_MAGENTA("@requires") << " with property " << TOKEN_MAGENTA(name) << " cannot be auto referencing";
             return SEM_NOK(ss.str());
         }
-
     }
 
-    // GENERATE A MANGLING IF THE ASSIGNMENT IS TAGGED WITH THE ATTRIBUTE PROFILE
+    // APPLY MANGLING FOR PROFILE
     const auto& attr = std::find(task.attributes.begin(), task.attributes.end(), Attr::Type::PROFILE);
 
     if (attr != task.attributes.end())
@@ -369,32 +359,38 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& 
         ftable[name] = task;
     }
 
-    return SemanticOutput{};
-} 
+    return SEM_OK();
+}
 
 
 
+/**
+ * @brief Collect a `using` directive and update environment configuration.
+ * @param what Directive keyword (e.g. profiles/default/threads).
+ * @param opt  Directive option string.
+ * @return SemanticOutput with status and optional hint.
+ */
 SemanticOutput Engine::Collect_Using(const std::string& what, const std::string& opt)
 {
     std::stringstream ss;
     Attr::Properties  options = Arcana::Support::split(opt);
     Using::Rule       rule;
 
-    // CHECK IF THE USING IS KNOWN 
+    // RESOLVE USING RULE
     if (auto it = Known_Usings.find(what); it != Known_Usings.end())
     {
         rule = it->second;
     }
     else
     {
-        ss << "Unknown " << TOKEN_MAGENTA(what) << " for statement " << TOKEN_MAGENTA("using") ;
+        ss << "Unknown " << TOKEN_MAGENTA(what) << " for statement " << TOKEN_MAGENTA("using");
         return SEM_NOK_HINT(ss.str(), Support::FindClosest(_usings, what));
     }
 
-    // IF 'INTERPRETER' IS SELECTED
+    // HANDLE DEFAULT INTERPRETER
     if (rule.using_type == Using::Type::INTERPRETER)
     {
-        // CHECK FOR THE PROPERTIES SIZE
+        // VALIDATE OPTIONS PRESENCE
         if (options.size() == 0)
         {
             std::stringstream ss1;
@@ -405,50 +401,49 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
                     ss1 << ", or ";
                 }
 
-                ss1 << TOKEN_MAGENTA(rule.valid_attr[iter]); 
+                ss1 << TOKEN_MAGENTA(rule.valid_attr[iter]);
             }
 
-            ss << "Statement " << TOKEN_MAGENTA("using " << what ) << " must be followed by " << ss1.str();
+            ss << "Statement " << TOKEN_MAGENTA("using " << what) << " must be followed by " << ss1.str();
             return SEM_NOK(ss.str());
         }
 
-        // CHECK IF PROPERTY[0] (ATTRIBUTE) IS KNOWN
+        // VALIDATE ATTRIBUTE NAME
         const auto& attr = std::find(rule.valid_attr.begin(), rule.valid_attr.end(), options[0]);
 
         if (attr == rule.valid_attr.end())
         {
-            ss << "Unknown attribute " << TOKEN_MAGENTA(options[0]) << " for statement " << TOKEN_MAGENTA("using " << what ) ;
+            ss << "Unknown attribute " << TOKEN_MAGENTA(options[0]) << " for statement " << TOKEN_MAGENTA("using " << what);
             return SEM_NOK_HINT(ss.str(), Support::FindClosest(rule.valid_attr, options[0]));
         }
-        
-        // CHECK IF THE ATTRIBUTE IS FOLLOWER BY TASKS NAME
+
+        // VALIDATE INTERPRETER PATH PRESENT
         if (options.size() == 1)
         {
-            ss << "Statement " << TOKEN_MAGENTA("using default " << options[0] ) << " must be followed by interpeter path";
+            ss << "Statement " << TOKEN_MAGENTA("using default " << options[0]) << " must be followed by interpeter path";
             return SEM_NOK(ss.str());
         }
 
-        // CHECK IF THE INTERPRETER EXISTS
+        // VALIDATE INTERPRETER EXISTS
         if (!Support::file_exists(options[1]))
         {
             ss << "Interpreter " << TOKEN_MAGENTA(options[1]) << " is missing or unknown";
             return SEM_NOK(ss.str());
         }
 
+        // SET DEFAULT INTERPRETER
         _env.default_interpreter = options[1];
     }
-
-    // IF 'PROFILES' IS SELECTED
     else if (rule.using_type == Using::Type::PROFILES)
     {
-        // CHECK FOR THE SIZE
+        // VALIDATE PROFILES PRESENT
         if (options.size() == 0)
         {
             ss << "Statement " << TOKEN_MAGENTA("using profiles") << " must be followed by profiles name";
             return SEM_NOK(ss.str());
         }
 
-        // COLLECT THEM AND CHECK FOR ERRORS
+        // COLLECT UNIQUE PROFILES
         for (uint32_t iter = 0; iter < options.size(); ++iter)
         {
             if (Core::is_os(options[iter]) || Core::is_arch(options[iter]))
@@ -462,26 +457,24 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
             }
             else
             {
-                ss << "Duplicate item in statement " << TOKEN_MAGENTA("using profiles") << ": " << TOKEN_MAGENTA(options[iter]) << ANSI_RESET ;
+                ss << "Duplicate item in statement " << TOKEN_MAGENTA("using profiles") << ": " << TOKEN_MAGENTA(options[iter]) << ANSI_RESET;
                 return SEM_NOK(ss.str());
             }
         }
     }
-
-    // IF 'THREADS' IS SELECTED
     else if (rule.using_type == Using::Type::THREADS)
     {
-        // CHECK FOR THE SIZE
+        // VALIDATE THREADS ARGUMENT
         if (options.size() != 1)
         {
             ss << "Statement " << TOKEN_MAGENTA("using multithread") << " must be followed maximum threads allowed";
             return SEM_NOK(ss.str());
         }
 
-        // CHECK IF ITS A NUMBER
-        int max_threads = 0;
-        const char* begin = options[0].data();
-        const char* end   = options[0].data() + options[0].size();
+        // PARSE INT VALUE
+        int         max_threads = 0;
+        const char* begin       = options[0].data();
+        const char* end         = options[0].data() + options[0].size();
 
         auto [ptr, ec] = std::from_chars(begin, end, max_threads);
 
@@ -491,24 +484,31 @@ SemanticOutput Engine::Collect_Using(const std::string& what, const std::string&
             return SEM_NOK(ss.str());
         }
 
+        // STORE THREADS CONFIG
         _env.max_threads = max_threads;
-
         Core::update_symbol(Core::SymbolType::THREADS, std::to_string(max_threads));
     }
 
-    return SemanticOutput{};
+    return SEM_OK();
 }
 
 
 
+/**
+ * @brief Collect a mapping statement (item_1 -> item_2) and annotate item_2 with @map(item_1).
+ * @param item_1 Source variable name.
+ * @param item_2 Destination variable name.
+ * @return SemanticOutput with status/hint.
+ */
 SemanticOutput Engine::Collect_Mapping(const std::string& item_1, const std::string& item_2)
 {
     std::stringstream ss;
 
-    auto&       vtable   = _env.vtable;
-    const auto  keys     = Table::Keys(vtable);
-    auto        it_item1 = vtable.find(item_1);
-    auto        it_item2 = vtable.find(item_2);
+    // VALIDATE VARIABLES PRESENCE
+    auto&      vtable   = _env.vtable;
+    const auto keys     = Table::Keys(vtable);
+    auto       it_item1 = vtable.find(item_1);
+    auto       it_item2 = vtable.find(item_2);
 
     if (it_item1 == vtable.end())
     {
@@ -522,27 +522,45 @@ SemanticOutput Engine::Collect_Mapping(const std::string& item_1, const std::str
         return SEM_NOK_HINT(ss.str(), Support::FindClosest(keys, item_2));
     }
 
+    // ATTACH @map ATTRIBUTE TO DESTINATION VARIABLE
     it_item2->second.attributes.push_back({
         "map",
         Attr::Type::MAP,
-        {item_1}
+        { item_1 }
     });
 
-    return SemanticOutput{};
+    return SEM_OK();
 }
 
 
 
-SemanticOutput Engine::Collect_Assert(std::size_t line, const std::string& stmt, const std::string& lvalue, 
-                                      const std::string& op, const std::string& rvalue, const std::string& reason)
+/**
+ * @brief Collect an assert statement into the environment.
+ * @param line   Line number.
+ * @param stmt   Raw statement string.
+ * @param lvalue Left side.
+ * @param op     Operator token (eq/ne/in).
+ * @param rvalue Right side.
+ * @param reason Reason string.
+ * @return SemanticOutput with status.
+ */
+SemanticOutput Engine::Collect_Assert(std::size_t line,
+                                     const std::string& stmt,
+                                     const std::string& lvalue,
+                                     const std::string& op,
+                                     const std::string& rvalue,
+                                     const std::string& reason)
 {
     AssertCheck acheck;
+
+    // FILL ASSERT STRUCT
     acheck.line   = line;
     acheck.stmt   = stmt;
     acheck.lvalue = lvalue;
     acheck.rvalue = rvalue;
     acheck.reason = reason;
 
+    // MAP OPERATOR
     if (op == "eq")
     {
         acheck.check = AssertCheck::CheckType::EQUAL;
@@ -556,26 +574,36 @@ SemanticOutput Engine::Collect_Assert(std::size_t line, const std::string& stmt,
         acheck.check = AssertCheck::CheckType::IN;
     }
 
+    // STORE ASSERT
     _env.atable.push_back(acheck);
 
-    return SemanticOutput{};
+    return SEM_OK();
 }
 
 
 
+// ------------------------------
+// ENVIRONMENT
+// ------------------------------
+
+/**
+ * @brief Validate CLI arguments against the collected environment and apply overrides.
+ * @param args Parsed CLI arguments.
+ * @return ARCANA_RESULT__OK on success, ARCANA_RESULT__NOK on error.
+ */
 Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noexcept
 {
-    // CHECK IF TASK IS PASSED VIA CLI
+    // HANDLE TASK OVERRIDE
     if (args.task.found)
     {
-        // CHECK IF THE TASK IS KNOWN, IF NOT THEN GIVA AN HINT
+        // RESOLVE TASK (PROFILE-AWARE)
         auto task = Table::GetValue(ftable, args.task.value, profile.profiles);
 
         if (!task)
         {
             ERR("Unknown task " << TOKEN_MAGENTA(args.task.value));
 
-            auto keys    = Table::Keys(ftable);             
+            auto keys    = Table::Keys(ftable);
             auto closest = Support::FindClosest(keys, args.task.value);
 
             if (closest)
@@ -585,16 +613,16 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
 
             return Arcana_Result::ARCANA_RESULT__NOK;
         }
-        // CHECK IF THE SELECTED TASK HAS THE ATTRIBUTE 'PUBLIC'
         else if (!task.value().get().hasAttribute(Semantic::Attr::Type::PUBLIC))
         {
-            ERR("Requested task " << TOKEN_MAGENTA(args.task.value << ANSI_RESET << " does not have " << ANSI_BMAGENTA << "public" ) << " attribute");
+            // REQUIRE PUBLIC WHEN REQUESTED VIA CLI
+            ERR("Requested task " << TOKEN_MAGENTA(args.task.value << ANSI_RESET << " does not have " << ANSI_BMAGENTA << "public") << " attribute");
             return Arcana_Result::ARCANA_RESULT__NOK;
         }
-        
-        // TOOGLE ATTRIBUTE 'MAIN' IF TASK IS SPECIFIED
+
+        // TOGGLE MAIN TO REQUESTED TASK
         auto old_main_task = Table::GetValue(ftable, Attr::Type::MAIN);
-        
+
         if (old_main_task)
         {
             old_main_task.value().get().removeAttribute(Attr::Type::MAIN);
@@ -602,7 +630,7 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
 
         task.value().get().attributes.push_back({
             "main",
-            Attr::Type::MAIN, 
+            Attr::Type::MAIN,
             {}
         });
 
@@ -610,6 +638,7 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
     }
     else
     {
+        // REQUIRE EXPLICIT MAIN IF NO CLI TASK
         auto main_task = Table::GetValues(ftable, profile.profiles, Attr::Type::MAIN);
 
         if (!main_task.size())
@@ -619,10 +648,9 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
         }
     }
 
-    // IF A PROFILE IS PASSED VIA CLI
+    // HANDLE PROFILE OVERRIDE
     if (args.profile.found)
     {
-        // CHECK FOR THE PRESENCE, IF NOT THEN GIVA AN HINT
         if (std::find(profile.profiles.begin(), profile.profiles.end(), args.profile.value) == profile.profiles.end())
         {
             ERR("Requested profile " << TOKEN_MAGENTA(args.profile.value) << " is invalid!");
@@ -638,70 +666,76 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
         }
 
         profile.selected = args.profile.value;
-
     }
     else
     {
-        // IF NO PROFILES ARE SPECFIED, JUST RETURN
-        if (profile.profiles.empty()) return Arcana_Result::ARCANA_RESULT__OK;
-        
-        // FOR THE DEFAULT GET THE FIRST OF THEM
+        // DEFAULT PROFILE SELECTION
+        if (profile.profiles.empty())
+        {
+            return Arcana_Result::ARCANA_RESULT__OK;
+        }
+
         profile.selected = profile.profiles[0];
     }
 
+    // HANDLE THREADS OVERRIDE
     if (args.threads)
     {
+        max_threads = args.threads.ivalue;
         Core::update_symbol(Core::SymbolType::THREADS, args.threads.svalue);
     }
 
+    // UPDATE PROFILE SYMBOL
     Core::update_symbol(Core::SymbolType::PROFILE, profile.selected);
-    
-    // AFTER THE PROFILE SELECTION, REMOVE THE UNWANTED KEYS FROM THE TABLES AND
-    // REMOVE THE MANGLINGS   
+
+    // ALIGN TABLES AFTER PROFILE SELECTION
     Table::AlignOnProfile(vtable, profile.selected);
     Table::AlignOnProfile(ftable, profile.selected);
     Table::AlignOnOS(vtable);
-    
+
     return Arcana_Result::ARCANA_RESULT__OK;
 }
 
 
 
+/**
+ * @brief Resolve dependencies/then links and finalize interpreter defaults.
+ * @return Empty optional on success, error string on failure.
+ */
 const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
 {
     std::stringstream ss;
 
+    // RESOLVE REQUIRES/THEN LINKS
     const std::array<Attr::Type, 2> attributes = { Attr::Type::REQUIRES, Attr::Type::THEN };
-    
+
     for (const auto attr : attributes)
     {
-        // IF ATTRIBUTE IS FOUND FROM FTABLE
         auto tasks = Table::GetValues(ftable, profile.profiles, attr);
-        
-        // FOR EACH TASK 
+
         for (auto& ref : tasks)
         {
-            auto& task = ref.get();
-            auto props = task.getProperties(attr);
-    
-            // CHECK IF THE DEPENDECY IS CONGRUENT, OTHERWISE RAISE AN ERROR
+            auto& task  = ref.get();
+            auto  props = task.getProperties(attr);
+
+            // VALIDATE AND LINK REFERENCED TASKS
             for (auto& p : props)
             {
                 auto it = ftable.find(p);
-    
+
                 if (it == ftable.end())
                 {
                     auto closest = Support::FindClosest(Table::Keys(ftable), p);
-    
+
                     ss << "Invalid dependecy " << TOKEN_MAGENTA(p) << " for task " << TOKEN_MAGENTA(task.task_name) << std::endl;
                     if (closest) ss << "[" << ANSI_BGREEN << "HINT" << ANSI_RESET << "]  Did you mean " << ANSI_BCYAN << closest.value() << ANSI_RESET << "?";
                     return ss.str();
                 }
-        
-                // ENQUEUE THE DEPENDECY IN ORDER
+
+                // APPEND LINK IN ORDER
                 if (attr == Attr::Type::REQUIRES)
                 {
-                    task.dependecies.push_back(std::cref(ftable.at(p)));
+                    task.dependencies.push_back(std::cref(ftable.at(p)));
                 }
                 else
                 {
@@ -711,7 +745,7 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
         }
     }
 
-    // CHECK FOR INTERPRETERS
+    // SET DEFAULT INTERPRETER IF MISSING
     if (default_interpreter.empty())
     {
 #if defined(_WIN32)
@@ -721,6 +755,7 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
 #endif
     }
 
+    // ASSIGN INTERPRETER TO EACH TASK
     for (auto& [_, task] : ftable)
     {
         if (task.hasAttribute(Attr::Type::INTERPRETER))
@@ -738,14 +773,15 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
 
 
 
-const std::optional<std::string>
-Enviroment::Expand() noexcept
+/**
+ * @brief Expand variables/internals, compute glob expansions, expand tasks and asserts.
+ * @return Empty optional on success, error string on failure.
+ */
+const std::optional<std::string> Enviroment::Expand() noexcept
 {
     Expander ex(*this);
 
-    // ------------------------------------------------------------
-    // HANDLE MAX THREADS
-    // ------------------------------------------------------------
+    // COMPUTE MAX THREADS DEFAULT
     auto machine_max_threads = std::thread::hardware_concurrency();
 
     if (max_threads == 0 || max_threads > machine_max_threads)
@@ -753,9 +789,7 @@ Enviroment::Expand() noexcept
         max_threads = machine_max_threads;
     }
 
-    // ------------------------------------------------------------
-    // FOR EACH KEY IN VTABLE (per validare task_inputs)
-    // ------------------------------------------------------------
+    // COLLECT VARIABLE KEYS FOR INPUT VALIDATION
     auto var_keys = Table::Keys(vtable);
 
     if (var_keys.empty())
@@ -763,22 +797,23 @@ Enviroment::Expand() noexcept
         return std::nullopt;
     }
 
+    // SORT BY LENGTH (LONGEST FIRST)
     std::sort(var_keys.begin(), var_keys.end(), [] (const std::string& a, const std::string& b) {
         return a.size() > b.size();
     });
 
-    // ------------------------------------------------------------
-    // EXPAND VTABLE + GLOB EXPAND
-    // ------------------------------------------------------------
+    // EXPAND VTABLE AND COMPUTE GLOB EXPANSIONS
     Glob::ExpandOptions opt;
 
     for (auto& [name, var] : vtable)
     {
+        // EXPAND TEXT TOKENS
         if (auto err = ex.ExpandText(var.var_value); err.has_value())
         {
             return err;
         }
 
+        // PARSE GLOB PATTERN
         Glob::Pattern    pattern;
         Glob::ParseError error;
 
@@ -792,18 +827,12 @@ Enviroment::Expand() noexcept
             return ss.str();
         }
 
+        // EXPAND GLOB TO LIST
         var.glob_expansion.clear();
-
-        if (!Arcana::Glob::Expand(pattern, ".", var.glob_expansion, opt))
-        {
-            // qui la tua Glob::Expand ritorna bool; se false significa "nessun match"? o errore?
-            // Io non posso inventare semantica: se vuoi trattarlo come errore, fai return.
-        }
+        Arcana::Glob::Expand(pattern, ".", var.glob_expansion, opt);
     }
 
-    // ------------------------------------------------------------
-    // ASSERTS
-    // ------------------------------------------------------------
+    // EXPAND ASSERTS
     for (auto& assert : atable)
     {
         if (auto err = ex.ExpandAssertSide(assert.lvalue, assert); err.has_value())
@@ -822,11 +851,10 @@ Enviroment::Expand() noexcept
         }
     }
 
-    // ------------------------------------------------------------
-    // FTABLE
-    // ------------------------------------------------------------
+    // EXPAND FTABLE
     for (auto& [name, task] : ftable)
     {
+        // EXPAND TASK INTERPRETER OVERRIDE
         if (task.hasAttribute(Attr::Type::INTERPRETER))
         {
             std::stringstream ss;
@@ -849,6 +877,7 @@ Enviroment::Expand() noexcept
             }
         }
 
+        // VALIDATE TASK INPUTS ARE DECLARED VARIABLES
         for (const auto& input : task.task_inputs)
         {
             if (std::find(var_keys.begin(), var_keys.end(), input) == var_keys.end())
@@ -861,6 +890,7 @@ Enviroment::Expand() noexcept
             }
         }
 
+        // EXPAND INSTRUCTION LINES
         for (auto& instr : task.task_instrs)
         {
             if (auto err = ex.ExpandText(instr); err.has_value())
@@ -870,9 +900,7 @@ Enviroment::Expand() noexcept
         }
     }
 
-    // ------------------------------------------------------------
     // HANDLE MAPPED VARS EXPANSION
-    // ------------------------------------------------------------
     auto map_required = Table::GetValues(vtable, Semantic::Attr::Type::MAP);
 
     for (auto& stmt : map_required.value())
@@ -899,6 +927,11 @@ Enviroment::Expand() noexcept
 }
 
 
+
+/**
+ * @brief Evaluate all collected asserts after expansion.
+ * @return Empty optional on success, error string on first failure.
+ */
 const std::optional<std::string> Enviroment::ExecuteAsserts() noexcept
 {
     bool assert_failed = false;
@@ -907,18 +940,18 @@ const std::optional<std::string> Enviroment::ExecuteAsserts() noexcept
     {
         assert_failed = false;
 
+        // EVALUATE ASSERT
         switch (assert.check)
         {
-            case AssertCheck::CheckType::EQUAL:     
-                assert_failed = (assert.lvalue != assert.rvalue);                         
+            case AssertCheck::CheckType::EQUAL:
+                assert_failed = (assert.lvalue != assert.rvalue);
                 break;
-            case AssertCheck::CheckType::NOT_EQUAL: 
-                assert_failed = (assert.lvalue == assert.rvalue);                         
+            case AssertCheck::CheckType::NOT_EQUAL:
+                assert_failed = (assert.lvalue == assert.rvalue);
                 break;
-            case AssertCheck::CheckType::IN:        
-                assert_failed = (assert.rvalue.find(assert.lvalue) == std::string::npos); 
+            case AssertCheck::CheckType::IN:
+                assert_failed = (assert.rvalue.find(assert.lvalue) == std::string::npos);
                 break;
-
             case AssertCheck::CheckType::DEPENDENCIES:
                 assert_failed = !fs::exists(assert.search_path);
                 break;
@@ -926,6 +959,7 @@ const std::optional<std::string> Enviroment::ExecuteAsserts() noexcept
 
         if (assert_failed)
         {
+            // BUILD ERROR MESSAGE
             std::stringstream ss;
             ss << "Assert failed on line " << assert.line << ": " << TOKEN_CYAN(assert.stmt);
 
@@ -949,6 +983,9 @@ const std::optional<std::string> Enviroment::ExecuteAsserts() noexcept
 
 
 
+
+
+
 //    ███████╗██╗  ██╗██████╗  █████╗ ███╗   ██╗██████╗ ███████╗██████╗ 
 //    ██╔════╝╚██╗██╔╝██╔══██╗██╔══██╗████╗  ██║██╔══██╗██╔════╝██╔══██╗
 //    █████╗   ╚███╔╝ ██████╔╝███████║██╔██╗ ██║██║  ██║█████╗  ██████╔╝
@@ -958,11 +995,16 @@ const std::optional<std::string> Enviroment::ExecuteAsserts() noexcept
 //                                                                      
 
 
-
+/**
+ * @brief Expand internal symbols `{arc:__...__}`.
+ * @param s String to expand in-place.
+ * @return Empty optional on success, error string on failure.
+ */
 std::optional<std::string> Enviroment::Expander::ExpandInternals(std::string& s) noexcept
 {
     for (int depth = 0; depth < 32; ++depth)
     {
+        // SEARCH NEXT INTERNAL TOKEN
         std::smatch m;
         if (!std::regex_search(s, m, re_intern))
         {
@@ -971,10 +1013,10 @@ std::optional<std::string> Enviroment::Expander::ExpandInternals(std::string& s)
 
         const std::string sym = m[1].str();
 
+        // RESOLVE SYMBOL AND REPLACE
         if (auto st = Core::is_symbol(sym); st != Core::SymbolType::UNDEFINED)
         {
             const std::string rep = Core::symbol(st);
-
             s.replace(static_cast<std::size_t>(m.position(0)), static_cast<std::size_t>(m.length(0)), rep);
         }
         else
@@ -988,10 +1030,16 @@ std::optional<std::string> Enviroment::Expander::ExpandInternals(std::string& s)
 
 
 
+/**
+ * @brief Expand variable references `{arc:NAME}` using env.vtable.
+ * @param s String to expand in-place.
+ * @return Empty optional on success, error string on failure.
+ */
 std::optional<std::string> Enviroment::Expander::ExpandArcAll(std::string& s) noexcept
 {
     for (int depth = 0; depth < 32; ++depth)
     {
+        // SEARCH NEXT VARIABLE TOKEN
         std::smatch m;
         if (!std::regex_search(s, m, re_arc))
         {
@@ -1000,6 +1048,7 @@ std::optional<std::string> Enviroment::Expander::ExpandArcAll(std::string& s) no
 
         const std::string name = m[1].str();
 
+        // LOOKUP VARIABLE VALUE
         auto it = env.vtable.find(name);
         if (it == env.vtable.end())
         {
@@ -1010,8 +1059,8 @@ std::optional<std::string> Enviroment::Expander::ExpandArcAll(std::string& s) no
             return err.str();
         }
 
+        // REPLACE TOKEN WITH VALUE
         const std::string& value = it->second.var_value;
-
         s.replace(static_cast<std::size_t>(m.position(0)), static_cast<std::size_t>(m.length(0)), value);
     }
 
@@ -1020,13 +1069,20 @@ std::optional<std::string> Enviroment::Expander::ExpandArcAll(std::string& s) no
 
 
 
+/**
+ * @brief Expand a text using internals + variable expansion.
+ * @param s String to expand in-place.
+ * @return Empty optional on success, error string on failure.
+ */
 std::optional<std::string> Enviroment::Expander::ExpandText(std::string& s) noexcept
 {
+    // EXPAND INTERNALS
     if (auto err = ExpandInternals(s); err.has_value())
     {
         return err;
     }
 
+    // EXPAND VARIABLES
     if (auto err = ExpandArcAll(s); err.has_value())
     {
         return err;
@@ -1037,10 +1093,16 @@ std::optional<std::string> Enviroment::Expander::ExpandText(std::string& s) noex
 
 
 
+/**
+ * @brief Extract `{fs:...}` paths from a string.
+ * @param s Input string.
+ * @param out Output list of extracted paths.
+ */
 void Enviroment::Expander::ExtractFsPaths(const std::string& s, std::vector<fs::path>& out) noexcept
 {
     std::smatch m;
 
+    // ITERATE ALL FS TOKENS
     for (auto it = s.cbegin(); std::regex_search(it, s.cend(), m, re_fs); )
     {
         out.push_back(fs::path(m[1].str()));
@@ -1050,13 +1112,21 @@ void Enviroment::Expander::ExtractFsPaths(const std::string& s, std::vector<fs::
 
 
 
+/**
+ * @brief Expand one assert side and update dependency-mode if `{fs:...}` is present.
+ * @param stmt Assert side string (lvalue/rvalue), expanded in-place.
+ * @param assert Assert object to update.
+ * @return Empty optional on success, error string on failure.
+ */
 std::optional<std::string> Enviroment::Expander::ExpandAssertSide(std::string& stmt, AssertCheck& assert) noexcept
-{ 
+{
+    // EXPAND TEXT TOKENS
     if (auto err = ExpandText(stmt); err.has_value())
     {
         return err;
     }
-    
+
+    // EXTRACT FS PATHS AND UPDATE ASSERT MODE
     std::vector<fs::path> paths;
     ExtractFsPaths(stmt, paths);
 

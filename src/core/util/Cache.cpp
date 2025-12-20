@@ -1,7 +1,5 @@
 #include "Cache.h"
 
-
-
 #include <cstdint>
 #include <cstring>
 #include <string>
@@ -10,44 +8,48 @@
 #include <fstream>
 #include <functional>
 
-
-
 USE_MODULE(Arcana::Cache);
 
-
-
-
-#define _P(_path)                            (fs::path(_path))
+#define _P(_path) (fs::path(_path))
 
 
 
 
-//    ██████╗ ██████╗ ██╗██╗   ██╗ █████╗ ████████╗███████╗    ███████╗██╗   ██╗███╗   ██╗ ██████╗███████╗    
-//    ██╔══██╗██╔══██╗██║██║   ██║██╔══██╗╚══██╔══╝██╔════╝    ██╔════╝██║   ██║████╗  ██║██╔════╝██╔════╝    
-//    ██████╔╝██████╔╝██║██║   ██║███████║   ██║   █████╗      █████╗  ██║   ██║██╔██╗ ██║██║     ███████╗    
-//    ██╔═══╝ ██╔══██╗██║╚██╗ ██╔╝██╔══██║   ██║   ██╔══╝      ██╔══╝  ██║   ██║██║╚██╗██║██║     ╚════██║    
-//    ██║     ██║  ██║██║ ╚████╔╝ ██║  ██║   ██║   ███████╗    ██║     ╚██████╔╝██║ ╚████║╚██████╗███████║    
-//    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚══════╝    ╚═╝      ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝╚══════╝    
-//                                                                                                            
+//    ███████╗███████╗    ██╗  ██╗███████╗██╗     ██████╗ ███████╗██████╗ 
+//    ██╔════╝██╔════╝    ██║  ██║██╔════╝██║     ██╔══██╗██╔════╝██╔══██╗
+//    █████╗  ███████╗    ███████║█████╗  ██║     ██████╔╝█████╗  ██████╔╝
+//    ██╔══╝  ╚════██║    ██╔══██║██╔══╝  ██║     ██╔═══╝ ██╔══╝  ██╔══██╗
+//    ██║     ███████║    ██║  ██║███████╗███████╗██║     ███████╗██║  ██║
+//    ╚═╝     ╚══════╝    ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝
+//                                                                        
 
-
-
+/**
+ * @brief Check if a directory exists.
+ * @param p Path to check.
+ * @return True if `p` exists and is a directory.
+ */
 inline bool dir_exists(const fs::path& p) noexcept
 {
     std::error_code ec;
     return fs::exists(p, ec) && fs::is_directory(p, ec);
 }
 
-
-
+/**
+ * @brief Check if a regular file exists.
+ * @param p Path to check.
+ * @return True if `p` exists and is a regular file.
+ */
 inline bool file_exists(const fs::path& p) noexcept
 {
     std::error_code ec;
     return fs::exists(p, ec) && fs::is_regular_file(p, ec);
 }
 
-
-
+/**
+ * @brief Create a directory tree if missing.
+ * @param p Directory path.
+ * @return True on success (or if already exists as directory).
+ */
 inline bool create_dir(const fs::path& p) noexcept
 {
     std::error_code ec;
@@ -60,11 +62,16 @@ inline bool create_dir(const fs::path& p) noexcept
     return fs::create_directories(p, ec);
 }
 
-
-
+/**
+ * @brief Create (or overwrite) a file with content, creating parent dirs if needed.
+ * @param p Target file path.
+ * @param content Bytes to write.
+ * @return True on success.
+ */
 inline bool create_file(const fs::path& p, const std::string& content) noexcept
 {
     std::error_code ec;
+
     if (!p.parent_path().empty())
     {
         if (!fs::exists(p.parent_path(), ec))
@@ -86,8 +93,11 @@ inline bool create_file(const fs::path& p, const std::string& content) noexcept
     return out.good();
 }
 
-
-
+/**
+ * @brief Remove a directory (non-recursive).
+ * @param p Directory path.
+ * @return True on success.
+ */
 inline bool remove_dir(const fs::path& p) noexcept
 {
     std::error_code ec;
@@ -105,8 +115,11 @@ inline bool remove_dir(const fs::path& p) noexcept
     return fs::remove(p, ec);
 }
 
-
-
+/**
+ * @brief Remove a file.
+ * @param p File path.
+ * @return True on success.
+ */
 inline bool remove_file(const fs::path& p) noexcept
 {
     std::error_code ec;
@@ -124,12 +137,15 @@ inline bool remove_file(const fs::path& p) noexcept
     return fs::remove(p, ec);
 }
 
-
-
+/**
+ * @brief Remove a directory recursively.
+ * @param p Directory path.
+ * @return True on success.
+ */
 inline bool remove_dir_recursive(const fs::path& p) noexcept
 {
     std::error_code ec;
-    
+
     if (!fs::exists(p, ec))
     {
         return false;
@@ -144,10 +160,17 @@ inline bool remove_dir_recursive(const fs::path& p) noexcept
     return !ec;
 }
 
-
-
-inline bool for_each_file(const fs::path& dir, 
-                          const std::function<void(const fs::path& filepath, const std::string& filename, const std::string& content)>& callback) noexcept
+/**
+ * @brief Iterate all regular files in a directory and invoke callback with their content.
+ * @param dir Directory to scan.
+ * @param callback Callback invoked for each regular file.
+ * @return True if the iteration succeeds, false on directory errors.
+ */
+inline bool for_each_file(
+    const fs::path& dir,
+    const std::function<void(const fs::path& filepath,
+                             const std::string& filename,
+                             const std::string& content)>& callback) noexcept
 {
     std::error_code ec;
 
@@ -156,7 +179,7 @@ inline bool for_each_file(const fs::path& dir,
         return false;
     }
 
-    for (const auto &entry : fs::directory_iterator(dir, ec))
+    for (const auto& entry : fs::directory_iterator(dir, ec))
     {
         if (ec)
         {
@@ -168,10 +191,10 @@ inline bool for_each_file(const fs::path& dir,
             continue;
         }
 
-        const fs::path &p = entry.path();
+        const fs::path& p = entry.path();
         std::string filename = p.filename().string();
 
-        // leggi il file
+        // READ FILE CONTENT AS BINARY
         std::ifstream in(p, std::ios::binary);
         if (!in)
         {
@@ -195,11 +218,15 @@ inline bool for_each_file(const fs::path& dir,
     return true;
 }
 
-
-
+/**
+ * @brief Read an entire file into a string (binary).
+ * @param p File path.
+ * @return File content, or empty string on failure.
+ */
 std::string read_file(const fs::path& p) noexcept
 {
     std::error_code ec;
+    UNUSED(ec);
 
     std::ifstream file(p, std::ios::binary);
     if (!file)
@@ -222,7 +249,11 @@ std::string read_file(const fs::path& p) noexcept
     return data;
 }
 
-
+/**
+ * @brief Compute MD5 of a file content.
+ * @param p File path.
+ * @return MD5 hex string of the file content, empty if file can't be read.
+ */
 std::string MD5_file(const fs::path& p) noexcept
 {
     return Cache::MD5(read_file(p));
@@ -231,9 +262,19 @@ std::string MD5_file(const fs::path& p) noexcept
 
 
 
+//    ███╗   ███╗██████╗ ███████╗
+//    ████╗ ████║██╔══██╗██╔════╝
+//    ██╔████╔██║██║  ██║███████╗
+//    ██║╚██╔╝██║██║  ██║╚════██║
+//    ██║ ╚═╝ ██║██████╔╝███████║
+//    ╚═╝     ╚═╝╚═════╝ ╚══════╝
+//                               
 
 namespace
 {
+    /**
+     * @brief Internal MD5 state.
+     */
     struct MD5Context
     {
         std::uint32_t h[4];
@@ -242,12 +283,18 @@ namespace
         std::size_t   buffer_len;
     };
 
+    /**
+     * @brief Left rotate a 32-bit integer.
+     */
     inline std::uint32_t leftrotate(std::uint32_t x, std::uint32_t c) noexcept
     {
         return (x << c) | (x >> (32U - c));
     }
 
-    void md5_init(MD5Context &ctx) noexcept
+    /**
+     * @brief Initialize MD5 context.
+     */
+    void md5_init(MD5Context& ctx) noexcept
     {
         ctx.h[0]        = 0x67452301U;
         ctx.h[1]        = 0xefcdab89U;
@@ -257,6 +304,9 @@ namespace
         ctx.buffer_len  = 0U;
     }
 
+    /**
+     * @brief MD5 block transform (64 bytes).
+     */
     void md5_transform(MD5Context& ctx, const std::uint8_t block[64]) noexcept
     {
         static const std::uint32_t K[64] =
@@ -289,13 +339,14 @@ namespace
 
         std::uint32_t w[16];
 
+        // DECODE 64-BYTE BLOCK INTO 16 WORDS (LITTLE ENDIAN)
         for (int i = 0; i < 16; i++)
         {
-            int j         = i * 4;
-            w[i]          = static_cast<std::uint32_t>(block[j]) |
-                            (static_cast<std::uint32_t>(block[j + 1]) << 8U) |
-                            (static_cast<std::uint32_t>(block[j + 2]) << 16U) |
-                            (static_cast<std::uint32_t>(block[j + 3]) << 24U);
+            int j = i * 4;
+            w[i]  = static_cast<std::uint32_t>(block[j]) |
+                    (static_cast<std::uint32_t>(block[j + 1]) << 8U) |
+                    (static_cast<std::uint32_t>(block[j + 2]) << 16U) |
+                    (static_cast<std::uint32_t>(block[j + 3]) << 24U);
         }
 
         std::uint32_t a = ctx.h[0];
@@ -303,6 +354,7 @@ namespace
         std::uint32_t c = ctx.h[2];
         std::uint32_t d = ctx.h[3];
 
+        // MAIN MD5 ROUND
         for (std::uint32_t i = 0; i < 64U; i++)
         {
             std::uint32_t f;
@@ -337,21 +389,27 @@ namespace
             a                  = temp;
         }
 
+        // ADD THIS CHUNK'S HASH TO RESULT SO FAR
         ctx.h[0] += a;
         ctx.h[1] += b;
         ctx.h[2] += c;
         ctx.h[3] += d;
     }
 
+    /**
+     * @brief Update MD5 context with data bytes.
+     */
     void md5_update(MD5Context& ctx, const std::uint8_t* data, std::size_t len) noexcept
     {
         ctx.total_bytes += static_cast<std::uint64_t>(len);
 
         std::size_t offset = 0U;
 
+        // IF BUFFER HAS DATA, FILL UP TO 64 AND TRANSFORM
         if (ctx.buffer_len > 0U)
         {
             std::size_t to_copy = 64U - ctx.buffer_len;
+
             if (to_copy > len)
             {
                 to_copy = len;
@@ -368,12 +426,14 @@ namespace
             }
         }
 
+        // PROCESS FULL 64-BYTE BLOCKS
         while (offset + 64U <= len)
         {
             md5_transform(ctx, data + offset);
             offset += 64U;
         }
 
+        // STORE REMAINDER
         if (offset < len)
         {
             std::size_t remain = len - offset;
@@ -382,10 +442,14 @@ namespace
         }
     }
 
+    /**
+     * @brief Finalize MD5 and write 16-byte digest.
+     */
     void md5_final(MD5Context& ctx, std::uint8_t out[16]) noexcept
     {
-        std::uint8_t padding[64] = {0x80U};
+        std::uint8_t padding[64] = { 0x80U };
 
+        // PAD TO 56 BYTES MOD 64
         std::size_t pad_len;
 
         if (ctx.buffer_len < 56U)
@@ -399,6 +463,7 @@ namespace
 
         md5_update(ctx, padding, pad_len);
 
+        // APPEND LENGTH IN BITS (LITTLE ENDIAN)
         std::uint64_t total_bits = ctx.total_bytes * 8U;
         std::uint8_t  length_bytes[8];
 
@@ -409,29 +474,41 @@ namespace
 
         md5_update(ctx, length_bytes, 8U);
 
+        // OUTPUT DIGEST
         for (int i = 0; i < 4; i++)
         {
             std::uint32_t word = ctx.h[i];
-            out[i * 4 + 0]     = static_cast<std::uint8_t>(word & 0xFFU);
-            out[i * 4 + 1]     = static_cast<std::uint8_t>((word >> 8U) & 0xFFU);
-            out[i * 4 + 2]     = static_cast<std::uint8_t>((word >> 16U) & 0xFFU);
-            out[i * 4 + 3]     = static_cast<std::uint8_t>((word >> 24U) & 0xFFU);
+
+            out[i * 4 + 0] = static_cast<std::uint8_t>(word & 0xFFU);
+            out[i * 4 + 1] = static_cast<std::uint8_t>((word >> 8U) & 0xFFU);
+            out[i * 4 + 2] = static_cast<std::uint8_t>((word >> 16U) & 0xFFU);
+            out[i * 4 + 3] = static_cast<std::uint8_t>((word >> 24U) & 0xFFU);
         }
     }
 }
 
 
 
-
+/**
+ * @brief Compute MD5 for a string buffer.
+ * @param data Input bytes.
+ * @return Lowercase hex string (32 chars).
+ */
 std::string Cache::MD5(const std::string& data) noexcept
 {
     MD5Context ctx;
+
+    // INIT STATE
     md5_init(ctx);
+
+    // UPDATE WITH INPUT
     md5_update(ctx, reinterpret_cast<const std::uint8_t*>(data.data()), data.size());
 
+    // FINALIZE DIGEST
     std::uint8_t digest[16];
     md5_final(ctx, digest);
 
+    // FORMAT AS LOWERCASE HEX
     std::ostringstream oss;
     oss << std::hex << std::setfill('0') << std::nouppercase;
 
@@ -448,94 +525,118 @@ std::string Cache::MD5(const std::string& data) noexcept
 
 
 
+//     ██████╗ █████╗  ██████╗██╗  ██╗███████╗
+//    ██╔════╝██╔══██╗██╔════╝██║  ██║██╔════╝
+//    ██║     ███████║██║     ███████║█████╗  
+//    ██║     ██╔══██║██║     ██╔══██║██╔══╝  
+//    ╚██████╗██║  ██║╚██████╗██║  ██║███████╗
+//     ╚═════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝
+//                                            
 
-
-//     ██████╗██╗      █████╗ ███████╗███████╗    ██╗███╗   ███╗██████╗ ██╗     
-//    ██╔════╝██║     ██╔══██╗██╔════╝██╔════╝    ██║████╗ ████║██╔══██╗██║     
-//    ██║     ██║     ███████║███████╗███████╗    ██║██╔████╔██║██████╔╝██║     
-//    ██║     ██║     ██╔══██║╚════██║╚════██║    ██║██║╚██╔╝██║██╔═══╝ ██║     
-//    ╚██████╗███████╗██║  ██║███████║███████║    ██║██║ ╚═╝ ██║██║     ███████╗
-//     ╚═════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝    ╚═╝╚═╝     ╚═╝╚═╝     ╚══════╝
-//                                                                             
-
-
-
+/**
+ * @brief Construct cache manager with default cache paths.
+ */
 Manager::Manager()
     :
     _cache_folder(".arcana"),
-    _script_path (_P(_cache_folder) / _P("script")),
-    _input_path  (_P(_cache_folder) / _P("input")),
-    _profile     (_P(_cache_folder) / _P("profile"))
+    _script_path(_P(_cache_folder) / _P("script")),
+    _input_path(_P(_cache_folder) / _P("input")),
+    _profile(_P(_cache_folder) / _P("profile"))
 {}
 
-
-
+/**
+ * @brief Erase the entire cache folder.
+ */
 void Manager::EraseCache() noexcept
 {
+    // REMOVE WHOLE CACHE TREE
     if (dir_exists(_cache_folder))
     {
         remove_dir_recursive(_cache_folder);
     }
 }
 
-
-
+/**
+ * @brief Clear runtime cache content but keep cache root.
+ *
+ * This clears:
+ * - generated scripts
+ * - input hashes
+ * - in-memory cached inputs
+ *
+ * Then it reloads the cache state from disk.
+ */
 void Manager::ClearCache() noexcept
 {
+    // WIPE SCRIPT FOLDER
     if (dir_exists(_script_path))
     {
         remove_dir_recursive(_script_path);
     }
 
+    // WIPE INPUT FOLDER
     if (dir_exists(_input_path))
     {
         remove_dir_recursive(_input_path);
     }
 
+    // RESET IN-MEMORY CACHE
     _cached_inputs.clear();
 
+    // RELOAD DISK STATE
     LoadCache();
 }
 
-
-
+/**
+ * @brief Ensure cache layout exists and load cached input hashes and profile marker.
+ */
 void Manager::LoadCache() noexcept
 {
-    // CHECK IF PATHS EXISTS
+    // ENSURE CACHE ROOT EXISTS
     if (!dir_exists(_cache_folder))
     {
         create_dir(_cache_folder);
     }
 
+    // ENSURE SCRIPT PATH EXISTS
     if (!dir_exists(_script_path))
     {
         create_dir(_script_path);
     }
 
+    // ENSURE INPUT PATH EXISTS
     if (!dir_exists(_input_path))
     {
         create_dir(_input_path);
     }
 
+    // ENSURE PROFILE MARKER EXISTS
     if (!file_exists(_profile))
     {
         create_file(_profile, "");
     }
 
-    for_each_file(_input_path, [this] (const std::filesystem::path& fullpath, const std::string& fname, const std::string& content)
+    // LOAD ALL CACHED INPUT HASHES
+    for_each_file(_input_path, [this] (const std::filesystem::path& fullpath,
+                                       const std::string& fname,
+                                       const std::string& content)
     {
         UNUSED(fullpath);
-        
+
         _cached_inputs[fname] = content;
     });
 
+    // LOAD CURRENT PROFILE MARKER
     _cached_profile = read_file(_profile);
 }
 
-
-
+/**
+ * @brief Invalidate cached inputs when profile changes.
+ * @param profile Selected profile name.
+ */
 void Manager::HandleProfileChange(const std::string& profile) noexcept
 {
+    // IF PROFILE CHANGED, DROP INPUT CACHE
     if (_cached_profile.compare(profile) != 0)
     {
         if (dir_exists(_input_path))
@@ -546,20 +647,35 @@ void Manager::HandleProfileChange(const std::string& profile) noexcept
         _cached_inputs.clear();
     }
 
+    // UPDATE PROFILE MARKER
     create_file(_profile, profile);
 }
 
-
-
+/**
+ * @brief Check if a file changed since last cache snapshot.
+ *
+ * The file path string is hashed to form the key filename inside input cache.
+ * The file content MD5 is stored as cache value for that key.
+ *
+ * @param path File path (string).
+ * @return True if the file is new or changed, false otherwise.
+ */
 bool Manager::HasFileChanged(const std::string& path) noexcept
 {
+    // HASH PATH TO GET STABLE CACHE KEY
     std::string md5_file    = MD5(path);
-    std::string md5_content = MD5_file(path);
-    fs::path    md5_path    = _input_path / md5_file;
 
+    // HASH CONTENT TO DETECT CHANGES
+    std::string md5_content = MD5_file(path);
+
+    // COMPUTE CACHE FILE PATH
+    fs::path md5_path = _input_path / md5_file;
+
+    // LOOKUP CACHED HASH
     const auto it = _cached_inputs.find(md5_file);
 
-    if ( (it == _cached_inputs.end()) || (it->second.compare(md5_content) != 0) )
+    // IF NEW OR DIFFERENT, UPDATE CACHE
+    if ((it == _cached_inputs.end()) || (it->second.compare(md5_content) != 0))
     {
         create_file(md5_path, md5_content);
         return true;
@@ -568,13 +684,26 @@ bool Manager::HasFileChanged(const std::string& path) noexcept
     return false;
 }
 
-
-
-fs::path Manager::WriteScript(const std::string& jobname, const std::size_t idx, const std::string& content, const std::string& ext) noexcept
+/**
+ * @brief Write a script file for an instruction, using a stable name derived from job name and index.
+ *
+ * If the target script already exists, its content is compared via MD5 and rewritten only if different.
+ *
+ * @param jobname Job identifier.
+ * @param idx Instruction index.
+ * @param content Script content to write.
+ * @param ext Optional extension (e.g. ".bat").
+ * @return Path to generated script file.
+ */
+fs::path Manager::WriteScript(const std::string& jobname,
+                              const std::size_t idx,
+                              const std::string& content,
+                              const std::string& ext) noexcept
 {
     fs::path    script_path;
     std::string md5_filename = MD5(jobname);
 
+    // BUILD SCRIPT PATH
     if (ext.empty())
     {
         script_path = _script_path / (md5_filename + std::to_string(idx));
@@ -584,6 +713,7 @@ fs::path Manager::WriteScript(const std::string& jobname, const std::size_t idx,
         script_path = _script_path / (md5_filename + std::to_string(idx) + ext);
     }
 
+    // UPDATE FILE ONLY IF CONTENT CHANGED
     if (file_exists(script_path))
     {
         std::string md5_oldcontent = MD5_file(script_path);

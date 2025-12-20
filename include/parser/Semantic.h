@@ -1,20 +1,39 @@
-#ifndef __ARCANA_INSTRUCTION__H__
-#define __ARCANA_INSTRUCTION__H__
+#ifndef __ARCANA_SEMANTIC__H__
+#define __ARCANA_SEMANTIC__H__
 
 
-#include <set>
 #include <array>
 #include <regex>
 #include <vector>
-#include <variant>
+#include <optional>
 #include <algorithm>
 #include <filesystem>
 
+#include "Support.h"
 #include "Defines.h"
-#include "Grammar.h"
 
 
 BEGIN_MODULE(Semantic)
+
+
+
+/**
+ * @file Semantic.h
+ * @brief Semantic data model and collector for Arcana DSL.
+ *
+ * This header defines the *semantic layer* used after lexing/parsing:
+ * - attribute model (`Attr::Attribute`) and validation rules (`Semantic::Rule`)
+ * - task / variable instruction containers (`InstructionTask`, `InstructionAssign`)
+ * - assertion model (`AssertCheck`)
+ * - environment container (`Enviroment`) holding all collected artifacts
+ * - semantic engine (`Semantic::Engine`) responsible for collecting and building the environment
+ *
+ * The semantic layer is meant to be fed by the parser and then post-processed
+ * (alignment, expansion, asserts execution) before producing runnable jobs.
+ *
+ * @note The code intentionally keeps storage as simple STL containers (maps/vectors)
+ *       to preserve deterministic behavior and predictable iteration order.
+ */
 
 
 
@@ -26,7 +45,9 @@ BEGIN_MODULE(Semantic)
 //    ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
 //                                                                                                                                                                                                    
 
+
 struct Rule;
+
 
 
 
@@ -50,102 +71,143 @@ struct Rule;
 BEGIN_NAMESPACE(Attr)
 
 
-//    ██████╗ ██╗   ██╗██████╗ ██╗     ██╗ ██████╗    ███████╗███╗   ██╗██╗   ██╗███╗   ███╗███████╗
-//    ██╔══██╗██║   ██║██╔══██╗██║     ██║██╔════╝    ██╔════╝████╗  ██║██║   ██║████╗ ████║██╔════╝
-//    ██████╔╝██║   ██║██████╔╝██║     ██║██║         █████╗  ██╔██╗ ██║██║   ██║██╔████╔██║███████╗
-//    ██╔═══╝ ██║   ██║██╔══██╗██║     ██║██║         ██╔══╝  ██║╚██╗██║██║   ██║██║╚██╔╝██║╚════██║
-//    ██║     ╚██████╔╝██████╔╝███████╗██║╚██████╗    ███████╗██║ ╚████║╚██████╔╝██║ ╚═╝ ██║███████║
-//    ╚═╝      ╚═════╝ ╚═════╝ ╚══════╝╚═╝ ╚═════╝    ╚══════╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝
-//                                                                                                       
 
+/**
+ * @brief Attribute kinds supported by Arcana DSL.
+ *
+ * These values represent recognized annotations for variables/tasks.
+ * The parser collects raw attributes, then semantic logic validates them
+ * using `Attr::Rules` (a per-Type rule table).
+ *
+ * @note `ATTRIBUTE__COUNT` is used for fixed-size arrays that map rules to types.
+ */
 enum class Type
 {
-    PROFILE          = 0,
-    PUBLIC              ,
-    ALWAYS              ,
-    REQUIRES            ,
-    THEN                ,
-    MAP                 ,
-    MULTITHREAD         ,
-    MAIN                ,
-    INTERPRETER         ,
-    FLUSHCACHE          ,
-    ECHO                ,
-    EXCLUDE             ,
-    IFOS                ,
+    PROFILE          = 0,   //!< Profile-scoped entity (mangled with @@<profile>)
+    PUBLIC              ,   //!< Expose task as public entrypoint
+    ALWAYS              ,   //!< Force task/job execution ignoring cache heuristics
+    REQUIRES            ,   //!< Task dependencies (must run before current task)
+    THEN                ,   //!< Successor tasks (run after current task)
+    MAP                 ,   //!< Mapping directive for glob mapping (SOURCES -> OBJECTS)
+    MULTITHREAD         ,   //!< Allow multi-thread expansion/execution semantics
+    MAIN                ,   //!< Marks the main task (entry)
+    INTERPRETER         ,   //!< Select interpreter for task (or default env interpreter)
+    FLUSHCACHE          ,   //!< Task triggers cache flush
+    ECHO                ,   //!< Control command echoing
+    EXCLUDE             ,   //!< Exclusion pattern(s) from glob/expansion
+    IFOS                ,   //!< OS-specific selection (mangled with @@<os>)
 
-    ATTRIBUTE__UNKNOWN  ,
-    ATTRIBUTE__COUNT    ,
+    ATTRIBUTE__UNKNOWN  ,   //!< Sentinel for invalid/unrecognized attribute
+    ATTRIBUTE__COUNT    ,   //!< Total number of attribute types (must be last valid index + 1)
 };
 
 
+
+/**
+ * @brief Requirement on whether an attribute must have properties.
+ *
+ * Example:
+ * - `@pub` -> NO_PROPERTY
+ * - `@requires A B` -> REQUIRED_PROPERTY
+ */
 enum class Qualificator
 {
-    NO_PROPERY       = 0,
-    REQUIRED_PROPERTY   ,
+    NO_PROPERY       = 0,   //!< Attribute must not carry extra properties
+    REQUIRED_PROPERTY   ,   //!< Attribute requires at least one property
 };
 
+
+
+/**
+ * @brief Cardinality constraint on number of properties for an attribute.
+ */
 enum class Count
 {
-    ZERO             = 0,
-    ONE                 ,
-    UNLIMITED           ,
+    ZERO             = 0,   //!< 0 properties
+    ONE                 ,   //!< exactly 1 property
+    UNLIMITED           ,   //!< 0..N properties depending on qualificator
 };
 
+
+
+/**
+ * @brief Entities that may host an attribute.
+ */
 enum class Target
 {
-    TASK             = 0,
-    VARIABLE            ,
+    TASK             = 0,   //!< Attribute applies to task declaration
+    VARIABLE            ,   //!< Attribute applies to variable assignment
 };
 
 
 
-//    ███████╗ ██████╗ ██████╗ ██╗    ██╗ █████╗ ██████╗ ██████╗ ███████╗
-//    ██╔════╝██╔═══██╗██╔══██╗██║    ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝
-//    █████╗  ██║   ██║██████╔╝██║ █╗ ██║███████║██████╔╝██║  ██║███████╗
-//    ██╔══╝  ██║   ██║██╔══██╗██║███╗██║██╔══██║██╔══██╗██║  ██║╚════██║
-//    ██║     ╚██████╔╝██║  ██║╚███╔███╔╝██║  ██║██║  ██║██████╔╝███████║
-//    ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
-//                                                                                                                              
-
+/**
+ * @brief Forward declaration for `Attr::Attribute`.
+ */
 struct Attribute;
 
 
-//    ██╗   ██╗███████╗██╗███╗   ██╗ ██████╗ ███████╗
-//    ██║   ██║██╔════╝██║████╗  ██║██╔════╝ ██╔════╝
-//    ██║   ██║███████╗██║██╔██╗ ██║██║  ███╗███████╗
-//    ██║   ██║╚════██║██║██║╚██╗██║██║   ██║╚════██║
-//    ╚██████╔╝███████║██║██║ ╚████║╚██████╔╝███████║
-//     ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
-//                                                                                                                                                                      
 
-
+/**
+ * @brief A list of strings used as attribute properties.
+ *
+ * Properties are already tokenized at parser level (based on grammar)
+ * and stored as-is.
+ */
 using Properties = std::vector<std::string>;
+
+/**
+ * @brief Attribute list attached to a semantic entity (task or variable).
+ */
 using List       = std::vector<Attribute>;
+
+/**
+ * @brief List of allowed targets for an attribute type.
+ */
 using Targets    = std::vector<Target>;
+
+/**
+ * @brief Table of semantic attribute rules indexed by `Attr::Type`.
+ *
+ * This structure is used by the semantic engine to validate that an attribute:
+ * - targets correct entity type (task/variable)
+ * - has correct number of properties
+ * - has correct qualificator requirements
+ */
 using Rules      = std::array<Semantic::Rule, _I(Type::ATTRIBUTE__COUNT)>;
 
 
-//    ███████╗████████╗██████╗ ██╗   ██╗ ██████╗████████╗███████╗
-//    ██╔════╝╚══██╔══╝██╔══██╗██║   ██║██╔════╝╚══██╔══╝██╔════╝
-//    ███████╗   ██║   ██████╔╝██║   ██║██║        ██║   ███████╗
-//    ╚════██║   ██║   ██╔══██╗██║   ██║██║        ██║   ╚════██║
-//    ███████║   ██║   ██║  ██║╚██████╔╝╚██████╗   ██║   ███████║
-//    ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝  ╚═════╝   ╚═╝   ╚══════╝
-//                                                               
 
-
+/**
+ * @brief Concrete attribute instance attached to a task or variable.
+ *
+ * It contains:
+ * - `name`: original spelling used in the script (useful for diagnostics)
+ * - `type`: normalized/recognized type
+ * - `props`: property strings (if any)
+ *
+ * @note Equality operator is intentionally limited to compare with `Attr::Type`.
+ */
 struct Attribute
 {
-    std::string name;
-    Type        type;
-    Properties  props;
+    std::string name;      //!< Raw attribute name as typed in source (e.g. "pub", "requires")
+    Type        type;      //!< Normalized attribute kind
+    Properties  props;     //!< Attribute property tokens
 
+    /**
+     * @brief Default constructor yields an unknown attribute.
+     */
     Attribute() 
         :
         type(Type::ATTRIBUTE__UNKNOWN)
     {}
 
+    /**
+     * @brief Construct an attribute with name/type and explicit properties.
+     * @param name Attribute name (raw)
+     * @param t    Normalized type
+     * @param p    Properties list
+     */
     Attribute(const std::string& name, const Type t, const Properties& p) 
         :
         name(name),
@@ -153,6 +215,11 @@ struct Attribute
         props(p)
     {}
 
+    /**
+     * @brief Compare attribute instance with a type.
+     * @param t The type to compare.
+     * @return true if this attribute has the given type.
+     */
     bool operator == (const Type t) const { return this->type == t; }
 };
 
@@ -172,13 +239,26 @@ END_NAMESPACE(Attr)
 //    ██║╚██╗██║██╔══██║██║╚██╔╝██║██╔══╝  ╚════██║██╔═══╝ ██╔══██║██║     ██╔══╝         ██║   ██╔══██║╚════██║██╔═██╗ 
 //    ██║ ╚████║██║  ██║██║ ╚═╝ ██║███████╗███████║██║     ██║  ██║╚██████╗███████╗       ██║   ██║  ██║███████║██║  ██╗
 //    ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝╚═╝     ╚═╝  ╚═╝ ╚═════╝╚══════╝       ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
-//                                                                                                                                                                                                     
+//                                                                                                                                                                                                      
 
                                                                                                                     
 
 BEGIN_NAMESPACE(Task)
-                                  
+
+/**
+ * @brief Task input variable names as declared in `task Name(INPUTS)`.
+ *
+ * Inputs are *names* of variables in the VTable; they are later resolved to values
+ * and possibly glob-expanded.
+ */
 using Inputs = std::vector<std::string>;
+
+/**
+ * @brief Task instruction lines (the command templates to be executed).
+ *
+ * Instructions are stored as strings and later expanded (`{arc:...}` placeholders, etc.)
+ * and eventually executed by the runtime/job system.
+ */
 using Instrs = std::vector<std::string>;
 
 END_NAMESPACE(Task)
@@ -202,20 +282,34 @@ END_NAMESPACE(Task)
 
 
 BEGIN_NAMESPACE(Using)
-                                                                                                                              
+
+/**
+ * @brief `using ...` directive kinds supported by Arcana DSL.
+ *
+ * They configure environment-wide defaults, e.g. list of profiles, default interpreter,
+ * max threads.
+ */
 enum class Type
 {
-    PROFILES             = 0,
-    INTERPRETER             ,
-    THREADS                 ,
+    PROFILES             = 0,  //!< `using profiles ...`
+    INTERPRETER             ,  //!< `using default interpreter ...`
+    THREADS                 ,  //!< `using threads ...`
 };
 
-                                                                                                                                     
 
+
+/**
+ * @brief Semantic rule for a `using` directive.
+ *
+ * `valid_attr` is used to validate which attributes may accompany that directive
+ * (if you support attributes on `using` lines).
+ *
+ * @note If attributes are not allowed on `using`, this still can be useful for future extension.
+ */
 struct Rule
 {
-    std::vector<std::string> valid_attr;
-    Type                     using_type;
+    std::vector<std::string> valid_attr;  //!< List of allowed attribute names
+    Type                     using_type;  //!< Normalized `using` kind
 };
 
 END_NAMESPACE(Using)
@@ -235,14 +329,12 @@ END_NAMESPACE(Using)
 //    ██╔══╝  ██║   ██║██╔══██╗██║███╗██║██╔══██║██╔══██╗██║  ██║╚════██║
 //    ██║     ╚██████╔╝██║  ██║╚███╔███╔╝██║  ██║██║  ██║██████╔╝███████║
 //    ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
-//                                                                                                                                                                                                  
+//                                                                                                                                                                                                   
 
 class  Engine;
 struct AssertCheck;
-struct Instruction;
 struct InstructionAssign;
 struct InstructionTask;
-struct InstructionCall;
 struct Enviroment;
 
 
@@ -256,21 +348,56 @@ struct Enviroment;
 //                                                                                                                                                                        
 
 
+/**
+ * @brief Bring Support symbols into Semantic scope.
+ *
+ * You use `SemanticOutput` and other utility types without prefixing.
+ */
 USE_MODULE(Arcana::Support);
 
+/**
+ * @brief Mutable reference wrapper alias.
+ */
 template<typename T>
 using Ref  = std::reference_wrapper<T>;
 
+/**
+ * @brief Const reference wrapper alias.
+ */
 template<typename T> 
 using CRef = std::reference_wrapper<const T>;
 
-using VTable      = std::map<std::string, InstructionAssign>; 
-using FTable      = std::map<std::string, InstructionTask>; 
+/**
+ * @brief Variable table: maps variable name to assignment instruction.
+ *
+ * @note `std::map` ensures stable ordering (useful for deterministic output).
+ */
+using VTable      = std::map<std::string, InstructionAssign>;
+
+/**
+ * @brief Task table: maps task name to task instruction.
+ */
+using FTable      = std::map<std::string, InstructionTask>;
+
+/**
+ * @brief Assertions list.
+ */
 using ATable      = std::vector<AssertCheck>;
+
+/**
+ * @brief Convenience list forms.
+ */
 using VList       = std::vector<InstructionAssign>;
 using FList       = std::vector<InstructionTask>;
 using FListCRef   = std::vector<CRef<InstructionTask>>;
+
+/**
+ * @brief Interpreter path/name, as a string.
+ *
+ * This is used both for env default and per-task override.
+ */
 using Interpreter = std::string;
+
 
 
 
@@ -284,49 +411,89 @@ using Interpreter = std::string;
 //    ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝  ╚═════╝   ╚═╝   ╚══════╝    ╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝      ╚═════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝╚══════╝
 //                                                                                                                                                                                                                                                                            
 
+/**
+ * @brief Attribute semantic rule descriptor.
+ *
+ * This models constraints for a given `Attr::Type`, such as:
+ * - whether properties are required
+ * - how many properties are allowed
+ * - which targets (task/variable) are valid
+ *
+ * @note This struct is used by `Engine` to validate collected attributes.
+ */
 struct Rule 
 {
-    Attr::Qualificator qual;
-    Attr::Count        count;
-    Attr::Targets      targets;
+    Attr::Qualificator qual;   //!< Whether the attribute needs properties
+    Attr::Count        count;  //!< How many properties are allowed
+    Attr::Targets      targets;//!< Which entities can carry the attribute
 
+    /**
+     * @brief Compare rule with a qualificator value.
+     */
     bool operator == (const Attr::Qualificator q) const { return this->qual == q; }
 };
 
 
 
+/**
+ * @brief Assertion statement collected from the script.
+ *
+ * An assert compares two sides with an operator, or triggers a dependency check.
+ * It can be evaluated after expansion.
+ *
+ * @note The `search_path` is used for dependency-related asserts (e.g. `{fs:...}`).
+ * @warning `search_path` is meaningful only if `check == DEPENDENCIES`.
+ */
 struct AssertCheck
 {
+    /**
+     * @brief Supported assert check types.
+     */
     enum class CheckType : std::uint8_t
     {
-        EQUAL,
-        NOT_EQUAL,
-        IN,
-        DEPENDENCIES,
+        EQUAL,         //!< Equality check (==)
+        NOT_EQUAL,     //!< Inequality check (!=)
+        IN,            //!< Membership check ("A" in "B")
+        DEPENDENCIES,  //!< File/dependency existence check under a base path
     };
 
-    std::size_t line;
-    std::string stmt;
-    std::string lvalue;
-    std::string rvalue;
-    CheckType   check;
-    std::string reason;
+    std::size_t line;                 //!< Source line number (1-based)
+    std::string stmt;                 //!< Raw assert statement string (for diagnostics)
+    std::string lvalue;               //!< Left side expression (expanded later)
+    std::string rvalue;               //!< Right side expression (expanded later)
+    CheckType   check;                //!< Operation kind
+    std::string reason;               //!< Human-readable failure reason template
 
-    std::filesystem::path search_path;
+    std::filesystem::path search_path;//!< Base path used for DEPENDENCIES (lvalue appended externally)
 };
 
 
 
+/**
+ * @brief Variable assignment instruction.
+ *
+ * Holds:
+ * - variable name and its text value
+ * - attributes attached to the variable
+ * - `glob_expansion`: computed list of filesystem matches for glob values
+ *
+ * @note `glob_expansion` is filled by environment expansion, not by the parser.
+ */
 struct InstructionAssign
 {
-    std::string var_name;
-    std::string var_value;
-    Attr::List  attributes;
+    std::string var_name;                     //!< Variable identifier
+    std::string var_value;                    //!< Raw value string (may contain `{arc:...}` tokens)
+    Attr::List  attributes;                   //!< Attributes attached to this variable
 
-    std::vector<std::string> glob_expansion;
+    std::vector<std::string> glob_expansion;  //!< Result of glob expansion (if var_value is a glob)
 
     InstructionAssign() = default;
 
+    /**
+     * @brief Construct a variable assignment.
+     * @param var Variable name.
+     * @param val Variable value (raw, not expanded).
+     */
     InstructionAssign(const std::string& var, const std::string& val)
         :
         var_name(var),
@@ -337,11 +504,23 @@ struct InstructionAssign
     InstructionAssign(const InstructionAssign& other)             = default;
     InstructionAssign& operator=(const InstructionAssign & other) = default;
 
+    /**
+     * @brief Check whether an attribute is present.
+     * @param attr Attribute type.
+     * @return true if attribute list contains `attr`.
+     */
     bool hasAttribute(const Attr::Type attr) const
     {
         return (std::find(attributes.begin(), attributes.end(), attr) != attributes.end());
     }
 
+    /**
+     * @brief Get properties for a given attribute type.
+     * @param attr Attribute type to search for.
+     * @return Properties list (copy). Empty if not present.
+     *
+     * @note This returns by value; if you need performance, consider returning a pointer/view.
+     */
     const Attr::Properties
     getProperties(const Attr::Type attr) const
     {
@@ -354,20 +533,38 @@ struct InstructionAssign
 };
 
 
+
+/**
+ * @brief Task declaration instruction.
+ *
+ * Holds:
+ * - name, declared input variables, and instruction strings
+ * - resolved dependencies (`dependencies`) and successor tasks (`thens`) as references
+ * - attached attributes
+ * - interpreter override and cache-related flags
+ *
+ * @note Dependencies are stored as const references to tasks, meaning they must refer
+ *       to tasks that outlive the `InstructionTask` instance (managed by `FTable`).
+ */
 struct InstructionTask
 {
-    std::string  task_name;
-    Task::Inputs task_inputs;
-    Task::Instrs task_instrs;
-    FListCRef    dependecies;
-    FListCRef    thens;
-    Attr::List   attributes;
-    Interpreter  interpreter;
-    bool         flush_cache = false;
-
+    std::string  task_name;     //!< Task identifier
+    Task::Inputs task_inputs;   //!< Names of variables used as inputs to the task
+    Task::Instrs task_instrs;   //!< Instruction strings (command templates)
+    FListCRef    dependencies;   //!< Resolved dependency tasks (const references)
+    FListCRef    thens;         //!< Resolved successor tasks (const references)
+    Attr::List   attributes;    //!< Attributes attached to task
+    Interpreter  interpreter;   //!< Interpreter override (if any)
+    bool         flush_cache = false; //!< Whether running this task flushes cache
 
     InstructionTask() = default;
 
+    /**
+     * @brief Construct task instruction with basic fields.
+     * @param name Task name.
+     * @param inputs Declared input variable names.
+     * @param instrs Task instruction templates.
+     */
     InstructionTask(const std::string&  name,
                     const Task::Inputs& inputs,
                     const Task::Instrs& instrs)
@@ -381,11 +578,21 @@ struct InstructionTask
     InstructionTask(const InstructionTask& other)            = default;
     InstructionTask& operator=(const InstructionTask& other) = default;
 
+    /**
+     * @brief Check whether an attribute is present.
+     * @param attr Attribute type.
+     * @return true if attribute list contains `attr`.
+     */
     bool hasAttribute(const Attr::Type attr) const
     {
         return (std::find(attributes.begin(), attributes.end(), attr) != attributes.end());
     }
 
+    /**
+     * @brief Get properties for a given attribute type.
+     * @param attr Attribute type to search for.
+     * @return Properties list (copy). Empty if not present.
+     */
     const Attr::Properties
     getProperties(const Attr::Type attr) const
     {
@@ -396,6 +603,12 @@ struct InstructionTask
         return {};
     }
 
+    /**
+     * @brief Remove the first occurrence of an attribute type.
+     * @param attr Attribute type to remove.
+     *
+     * @note This removes only the first match and returns immediately.
+     */
     void removeAttribute(const Attr::Type attr)
     {
         for (auto it = attributes.begin(); it != attributes.end(); ++it)
@@ -411,11 +624,25 @@ struct InstructionTask
 
 
 
+/**
+ * @brief Profile configuration extracted from `using profiles ...`.
+ *
+ * `profiles` holds all declared profile names.
+ * `selected` is the active profile chosen from CLI or defaults.
+ *
+ * @note `merge()` is used during environment import/merge.
+ */
 struct Profile
 {
-    std::vector<std::string> profiles;
-    std::string              selected;
+    std::vector<std::string> profiles; //!< Declared profiles
+    std::string              selected; //!< Active profile name
 
+    /**
+     * @brief Merge another profile list into this one.
+     * @param other Other profile container.
+     *
+     * @note This performs an append; it does not de-duplicate.
+     */
     void merge(Profile& other)
     {
         for (const auto& val : other.profiles)
@@ -425,40 +652,122 @@ struct Profile
 
 
 
+/**
+ * @brief Semantic environment produced by `Semantic::Engine`.
+ *
+ * This is the central state object after parsing:
+ * - variables (VTable)
+ * - tasks (FTable)
+ * - asserts (ATable)
+ * - selected profile / defaults
+ *
+ * It also provides post-processing:
+ * - alignment (`AlignEnviroment`) to resolve profile/OS mangling overlays
+ * - expansion (`Expand`) to replace `{arc:...}` symbols and compute globs
+ * - assert execution (`ExecuteAsserts`)
+ *
+ * @note `Expand()` has historically grown complex; the nested `Expander` helper
+ *       is a step toward isolating the transformation logic.
+ */
 struct Enviroment
 {
     friend class Engine;
     friend inline void EnvMerge(Enviroment& dst, Enviroment& src);
 
 public:
+    /**
+     * @brief Construct environment with no explicit max thread limit.
+     *
+     * `max_threads == 0` usually means "use machine default / hardware_concurrency".
+     */
     Enviroment() : max_threads(0) {}
 
-    VTable   vtable;
-    FTable   ftable;
-    ATable   atable;
+    VTable   vtable; //!< Collected variables
+    FTable   ftable; //!< Collected tasks
+    ATable   atable; //!< Collected assertions
 
+    /**
+     * @brief Align environment according to selected profile and OS.
+     *
+     * This typically resolves profile-scoped keys (mangled with @@<profile>)
+     * and OS-scoped keys (mangled with @@<os>).
+     *
+     * @return optional error message. Empty optional on success.
+     */
     const std::optional<std::string> AlignEnviroment() noexcept;
+
+    /**
+     * @brief Validate CLI arguments against the collected environment.
+     *
+     * Example checks:
+     * - selected task exists and is public (if required)
+     * - profile exists
+     * - thread count is valid
+     *
+     * @param args Parsed CLI arguments.
+     * @return ARCANA_RESULT__OK or ARCANA_RESULT__NOK (or other codes you define).
+     */
           Arcana_Result              CheckArgs(const Arcana::Support::Arguments& args) noexcept;
+
+    /**
+     * @brief Expand all strings in the environment.
+     *
+     * Typical operations:
+     * - expand internal symbols: `{arc:__profile__}`, `{arc:__os__}`, etc.
+     * - expand variables: `{arc:NAME}`
+     * - extract filesystem placeholders: `{fs:...}`
+     * - compute glob expansion lists for variables
+     * - expand strings inside tasks and asserts
+     *
+     * @return optional error message. Empty optional on success.
+     */
     const std::optional<std::string> Expand() noexcept;
+
+    /**
+     * @brief Evaluate collected assertions after expansion.
+     * @return optional error message. Empty optional on success.
+     */
     const std::optional<std::string> ExecuteAsserts() noexcept;
     
+    /**
+     * @brief Get the default interpreter configured by `using default interpreter`.
+     */
     Interpreter                      GetInterpreter() noexcept { return default_interpreter; }
+
+    /**
+     * @brief Get the configured max threads.
+     * @return Thread count (0 may mean "auto").
+     */
     uint32_t                         GetThreads()     noexcept { return max_threads;         }
+
+    /**
+     * @brief Get profile configuration and selection.
+     */
     Profile&                         GetProfile()     noexcept { return profile;             }
 
 private:
-    Profile     profile;
-    Interpreter default_interpreter;
-    uint32_t    max_threads;
+    Profile     profile;             //!< Profiles list and selected profile
+    Interpreter default_interpreter; //!< Default interpreter for tasks without override
+    uint32_t    max_threads;         //!< Max parallelism configured by `using threads`
 
+    /**
+     * @brief Helper that encapsulates expansion logic.
+     *
+     * The helper owns pre-compiled regex patterns, and operates on strings
+     * by reference, using the parent env for lookups.
+     */
     struct Expander
     {
-        Enviroment& env;
+        Enviroment& env;            //!< Reference to parent environment
 
-        const std::regex re_intern;
-        const std::regex re_arc;
-        const std::regex re_fs;
+        const std::regex re_intern; //!< Matches internal `{arc:__...__}` symbols
+        const std::regex re_arc;    //!< Matches `{arc:NAME}` variable references
+        const std::regex re_fs;     //!< Matches `{fs:...}` filesystem search path directives
 
+        /**
+         * @brief Construct an expander for the given environment.
+         * @param e Environment reference.
+         */
         explicit Expander(Enviroment& e) noexcept
             : env(e)
             , re_intern(R"(\{arc:(__profile__|__version__|__main__|__root__|__max_threads__|__threads__|__os__|__arch__)\})")
@@ -466,16 +775,69 @@ private:
             , re_fs(R"(\{fs:([^}]+)\})")
         {}
 
+        /**
+         * @brief Expand internal tokens (`{arc:__...__}`) inside a string.
+         * @param s String to modify in-place.
+         * @return optional error message.
+         */
         std::optional<std::string> ExpandInternals(std::string& s) noexcept;
+
+        /**
+         * @brief Expand all `{arc:NAME}` occurrences repeatedly (handles chaining/nesting).
+         * @param s String to modify in-place.
+         * @return optional error message (e.g. undefined variable or depth limit).
+         */
         std::optional<std::string> ExpandArcAll(std::string& s) noexcept;
+
+        /**
+         * @brief Expand one string:
+         * - internal expansion
+         * - variable expansion
+         *
+         * @param s String to modify in-place.
+         * @return optional error message.
+         */
         std::optional<std::string> ExpandText(std::string& s) noexcept;
+
+        /**
+         * @brief Extract all `{fs:...}` occurrences from an expanded string.
+         * @param s Expanded string to scan.
+         * @param out Output list of extracted filesystem base paths.
+         *
+         * @note This does *not* validate paths on filesystem; it only parses.
+         */
         void ExtractFsPaths(const std::string& s, std::vector<std::filesystem::path>& out) noexcept;
+
+        /**
+         * @brief Expand one side of an assert and update `AssertCheck` accordingly.
+         *
+         * This is typically responsible for:
+         * - expanding `{arc:...}` tokens inside assert side
+         * - collecting glob expansions for referenced variables (if needed)
+         * - extracting `{fs:...}` dependencies base path and setting assert.check
+         *
+         * @param stmt   String side (lvalue or rvalue) to expand in-place.
+         * @param assert Assert structure to mutate.
+         * @return optional error message.
+         */
         std::optional<std::string> ExpandAssertSide(std::string& stmt, AssertCheck& assert) noexcept;
     };
 };
 
 
 
+/**
+ * @brief Merge two environments.
+ *
+ * Semantics:
+ * - variables/tasks from `src` move into `dst` (overwriting same keys)
+ * - profile list merged (append)
+ * - default interpreter overwritten by src interpreter
+ * - max_threads overwritten only if src.max_threads != 0
+ * - asserts appended
+ *
+ * @warning This merge is destructive for `src` (moves out values).
+ */
 inline void EnvMerge(Enviroment& dst, Enviroment& src)
 {
     for (auto& [k, v] : src.vtable)
@@ -498,32 +860,107 @@ inline void EnvMerge(Enviroment& dst, Enviroment& src)
 }
 
 
+
+/**
+ * @brief Semantic engine collecting instructions from parser events.
+ *
+ * The parser calls `Collect_*` methods as it recognizes DSL statements.
+ * The engine:
+ * - validates and normalizes attributes
+ * - builds up VTable/FTable/ATable
+ * - enforces invariants (e.g. single MAIN task)
+ *
+ * @note The engine owns its environment; caller can obtain a copy via GetEnvironment()
+ *       or a mutable reference via EnvRef().
+ */
 class Engine
 {
 public:
+    /**
+     * @brief Construct semantic engine with attribute rule table initialized.
+     */
     Engine();
 
+    /**
+     * @brief Collect one attribute statement.
+     * @param name Attribute name (raw).
+     * @param prop Attribute property string (raw, may need splitting).
+     * @return SemanticOutput containing status and error/hint if any.
+     */
     SemanticOutput Collect_Attribute (const std::string& name, const std::string&  prop);
+
+    /**
+     * @brief Collect one variable assignment statement.
+     * @param name Variable name.
+     * @param val  Variable value (raw).
+     * @return SemanticOutput containing status and error/hint if any.
+     */
     SemanticOutput Collect_Assignment(const std::string& name, const std::string&  val); 
+
+    /**
+     * @brief Collect one task declaration.
+     * @param name   Task name.
+     * @param inputs Raw input list string (requires parsing/splitting).
+     * @param instrs Instruction lines.
+     * @return SemanticOutput containing status and error/hint if any.
+     */
     SemanticOutput Collect_Task      (const std::string& name, const std::string& inputs, const Task::Instrs& instrs);
+
+    /**
+     * @brief Collect a `using` directive.
+     * @param what Directive keyword (e.g. "profiles", "default interpreter", "threads").
+     * @param opt  Directive argument (raw string).
+     * @return SemanticOutput containing status and error/hint if any.
+     */
     SemanticOutput Collect_Using     (const std::string& what, const std::string&  opt); 
+
+    /**
+     * @brief Collect a mapping statement.
+     * @param item_1 Left item (source).
+     * @param item_2 Right item (destination).
+     * @return SemanticOutput containing status and error/hint if any.
+     */
     SemanticOutput Collect_Mapping   (const std::string& item_1, const std::string& item_2);
+
+    /**
+     * @brief Collect an assert statement.
+     * @param line   Source line number.
+     * @param stmt   Raw assert statement string.
+     * @param lvalue Left side text.
+     * @param op     Operator text (==, !=, in, etc.)
+     * @param rvalue Right side text.
+     * @param reason Reason string.
+     * @return SemanticOutput containing status and error/hint if any.
+     */
     SemanticOutput Collect_Assert    (std::size_t line, const std::string& stmt, const std::string& lvalue, 
                                       const std::string& op, const std::string& rvalue, const std::string& reason);
 
+    /**
+     * @brief Get a *copy* of the currently collected environment.
+     * @return Environment value copy.
+     *
+     * @note Copying may be expensive if tables are large.
+     */
     Enviroment                       GetEnvironment()  const noexcept { return _env; }
+
+    /**
+     * @brief Get a mutable reference to the collected environment.
+     * @return Environment reference.
+     *
+     * @warning Mutating the environment can break invariants expected by semantic engine.
+     */
     Enviroment&                      EnvRef()                         { return _env; }
 
 private:
-    Attr::Rules  _attr_rules;
-    Attr::List   _attr_pending;
-    std::uint8_t _main_count;
+    Attr::Rules  _attr_rules;   //!< Attribute rule table (indexed by Attr::Type)
+    Attr::List   _attr_pending; //!< Attributes pending attachment to next entity (variable/task)
+    std::uint8_t _main_count;   //!< Count of tasks marked MAIN (should be <= 1)
     
-    Enviroment   _env;
+    Enviroment   _env;          //!< Owned environment
 };
 
 
 END_MODULE(Semantic)
 
 
-#endif /* __ARCANA_INSTRUCTION__H__ */
+#endif /* __ARCANA_SEMANTIC__H__ */

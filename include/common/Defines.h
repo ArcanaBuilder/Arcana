@@ -12,14 +12,70 @@
 //                                                                                                                                                                                                                                                  
 
 
-#define BEGIN_NAMESPACE(ns)                     namespace ns {                 
-#define END_NAMESPACE(ns)                       }      
+/**
+ * @brief Begins a namespace block.
+ *
+ * Expands to a standard C++ namespace declaration.
+ *
+ * @param ns Namespace name.
+ */
+#define BEGIN_NAMESPACE(ns)         namespace ns {
 
 
-#define MAIN_MODULE                             Arcana
-#define BEGIN_MODULE(mod)                       BEGIN_NAMESPACE(MAIN_MODULE :: mod)
-#define END_MODULE(mod)                         END_NAMESPACE(mod)
-#define USE_MODULE(mod)                         using namespace mod
+
+/**
+ * @brief Ends a namespace block.
+ *
+ * Closes a namespace previously opened with BEGIN_NAMESPACE().
+ *
+ * @param ns Namespace name (unused, for symmetry and readability only).
+ */
+#define END_NAMESPACE(ns)           }
+
+
+
+/**
+ * @brief Name of the main Arcana module namespace.
+ */
+#define MAIN_MODULE Arcana
+
+
+
+/**
+ * @brief Begins a sub-module namespace inside the main module.
+ *
+ * Expands to a nested namespace declaration of the form:
+ * `namespace Arcana::mod {`
+ *
+ * @param mod Sub-module name.
+ */
+#define BEGIN_MODULE(mod)       BEGIN_NAMESPACE(MAIN_MODULE::mod)
+
+
+
+/**
+ * @brief Ends a sub-module namespace.
+ *
+ * Closes a namespace previously opened with BEGIN_MODULE().
+ *
+ * @param mod Module name (unused, for symmetry and readability only).
+ */
+#define END_MODULE(mod)         END_NAMESPACE(mod)
+
+
+
+/**
+ * @brief Imports a module namespace into the current scope.
+ *
+ * Expands to a using-directive for the specified namespace.
+ *
+ * @param mod Module namespace to import.
+ */
+#define USE_MODULE(mod)         using namespace mod
+
+
+
+
 
 
 
@@ -31,10 +87,34 @@
 //     ╚═════╝    ╚═╝   ╚═╝╚══════╝╚═╝   ╚═╝      ╚═╝       ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝
 //                                                                                                                                                                                                                          
 
+
+/**
+ * @brief Suppresses unused variable warnings.
+ *
+ * Explicitly marks a variable as intentionally unused.
+ *
+ * @param x Variable to mark as unused.
+ */
 #define UNUSED(x)                               ((void) x)
+
+
+
+
+/**
+ * @brief Casts an enum value to size_t.
+ *
+ * Intended for safe use when an enum value is used as an index
+ * (e.g. array or vector access).
+ *
+ * @param enum Enum value to cast.
+ */
 #define _I(enum)                                ((size_t) enum) 
 
 
+
+/**
+ * @brief Current Arcana version string.
+ */
 #define __ARCANA__VERSION__                     "0.4.2"
 
 
@@ -50,7 +130,7 @@
 
 #define ANSI_RESET                              "\x1b[0m"
 
-// ==== Foreground (testo) ====
+// ==== Foreground (text) ====
 #define ANSI_BLACK                              "\x1b[30m"
 #define ANSI_RED                                "\x1b[31m"
 #define ANSI_GREEN                              "\x1b[32m"
@@ -101,11 +181,41 @@
 
 
 // utils
+/**
+ * @brief Wraps a token with bright magenta ANSI color codes.
+ *
+ * Intended for stream output (e.g. std::cout / std::cerr).
+ *
+ * @param token Token or expression to be colorized.
+ */
 #define TOKEN_MAGENTA(token)                    ANSI_BMAGENTA << token << ANSI_RESET
-#define TOKEN_CYAN(token)                       ANSI_BCYAN    << token << ANSI_RESET
-#define TOKEN_RED(token)                        ANSI_BRED     << token << ANSI_RESET
-#define TOKEN_GREEN(token)                      ANSI_BGREEN   << token << ANSI_RESET
 
+/**
+ * @brief Wraps a token with bright cyan ANSI color codes.
+ *
+ * Intended for stream output (e.g. std::cout / std::cerr).
+ *
+ * @param token Token or expression to be colorized.
+ */
+#define TOKEN_CYAN(token)                       ANSI_BCYAN << token << ANSI_RESET
+
+/**
+ * @brief Wraps a token with bright red ANSI color codes.
+ *
+ * Intended for stream output (e.g. std::cout / std::cerr).
+ *
+ * @param token Token or expression to be colorized.
+ */
+#define TOKEN_RED(token)                        ANSI_BRED << token << ANSI_RESET
+
+/**
+ * @brief Wraps a token with bright green ANSI color codes.
+ *
+ * Intended for stream output (e.g. std::cout / std::cerr).
+ *
+ * @param token Token or expression to be colorized.
+ */
+#define TOKEN_GREEN(token)                      ANSI_BGREEN << token << ANSI_RESET
 
 
 
@@ -119,10 +229,60 @@
 
 #include <iostream>
 
+
+
+/**
+ * @brief Prints a formatted Arcana informational message to stdout.
+ *
+ * Prefixes the message with a colored "[ARCANA]" tag.
+ *
+ * @param msg Message to print.
+ */
 #define ARC(msg)                              std::cout << "[" << ANSI_BGREEN << ANSI_DIM << "ARCANA" << ANSI_RESET "] " << msg << std::endl
+
+
+
+/**
+ * @brief Prints a formatted debug message to stdout.
+ *
+ * Prefixes the message with a colored "[DEBUG]" tag and renders the message
+ * in gray for reduced visual prominence.
+ *
+ * @param msg Debug message to print.
+ */
 #define DBG(msg)                              std::cout << "[" << ANSI_BYELLOW << ANSI_DIM << "DEBUG" << ANSI_RESET "] " << ANSI_GRAY << msg << ANSI_RESET << std::endl
+
+
+
+/**
+ * @brief Prints a raw message to stdout.
+ *
+ * No prefix, no formatting beyond a trailing newline.
+ *
+ * @param msg Message to print.
+ */
 #define MSG(msg)                              std::cout << msg << std::endl
+
+
+
+/**
+ * @brief Prints a formatted error message to stderr.
+ *
+ * Prefixes the message with a colored "[ERROR]" tag.
+ *
+ * @param msg Error message to print.
+ */
 #define ERR(msg)                              std::cerr << "[" << ANSI_BRED << "ERROR" << ANSI_RESET << "] " << msg << std::endl
+
+
+
+/**
+ * @brief Prints a formatted hint message to stdout.
+ *
+ * Prefixes the message with a colored "[HINT]" tag.
+ *
+ * @param msg Hint message to print.
+ */
 #define HINT(msg)                             std::cout << "[" << ANSI_BGREEN << "HINT" << ANSI_RESET << "]  " << msg << std::endl
 
 
@@ -141,16 +301,30 @@
 #include <stdint.h>
 
 
+/**
+ * @brief Result codes returned by Arcana core operations.
+ *
+ * This enum represents the generic success or failure status
+ * of Arcana execution steps.
+ */
 enum Arcana_Result : int32_t
 {
-    ARCANA_RESULT__OK               =  0,
-    ARCANA_RESULT__NOK              = -1,
+    ARCANA_RESULT__OK  =  0,  ///< Operation completed successfully.
+    ARCANA_RESULT__NOK = -1,  ///< Operation failed.
 };
 
+
+
+/**
+ * @brief Result codes returned by semantic analysis stages.
+ *
+ * This enum class represents the outcome of semantic or AST-related
+ * operations.
+ */
 enum class Semantic_Result : int32_t
 {
-    AST_RESULT__OK  =  0,
-    AST_RESULT__NOK = -1,
+    AST_RESULT__OK  =  0,  ///< Semantic analysis completed successfully.
+    AST_RESULT__NOK = -1,  ///< Semantic analysis failed.
 };
 
 

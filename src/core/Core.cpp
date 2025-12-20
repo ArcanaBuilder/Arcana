@@ -7,17 +7,18 @@
 
 USE_MODULE(Arcana);
 
-
-
 using SymbolMap = Support::AbstractKeywordMap<std::string>;
 
-
-
-static SymbolMap builtin_symbols = 
+/**
+ * @brief Built-in symbol table used for `{arc:__...__}` expansions.
+ *
+ * Values are stored as strings and can be updated at runtime (e.g. profile selection, threads override).
+ */
+static SymbolMap builtin_symbols =
 {
     { "__main__"       , "None"                                              },
-    { "__root__"       , std::filesystem::current_path().generic_string()    },
-    { "__version__"    , __ARCANA__VERSION__                                 },
+    { "__root__"       , std::filesystem::current_path().generic_string()     },
+    { "__version__"    , __ARCANA__VERSION__                                  },
     { "__profile__"    , "None"                                              },
     { "__threads__"    , "None"                                              },
     { "__max_threads__", std::to_string(std::thread::hardware_concurrency()) },
@@ -56,20 +57,28 @@ static SymbolMap builtin_symbols =
 };
 
 
-static std::map<Core::SymbolType, std::string> Known_Symbols_By_Token = 
+
+/**
+ * @brief Map from SymbolType to its canonical token string (e.g. MAIN -> "__main__").
+ */
+static std::map<Core::SymbolType, std::string> Known_Symbols_By_Token =
 {
-    { Core::SymbolType::MAIN       , "__main__"        },
-    { Core::SymbolType::ROOT       , "__root__"        },
-    { Core::SymbolType::VERSION    , "__version__"     },
-    { Core::SymbolType::PROFILE    , "__profile__"     },
-    { Core::SymbolType::THREADS    , "__threads__"     },
-    { Core::SymbolType::MAX_THREADS, "__max_threads__" },
-    { Core::SymbolType::OS         , "__os__"          },
-    { Core::SymbolType::ARCH       , "__arch__"        },
+    { Core::SymbolType::MAIN        , "__main__"        },
+    { Core::SymbolType::ROOT        , "__root__"        },
+    { Core::SymbolType::VERSION     , "__version__"     },
+    { Core::SymbolType::PROFILE     , "__profile__"     },
+    { Core::SymbolType::THREADS     , "__threads__"     },
+    { Core::SymbolType::MAX_THREADS , "__max_threads__" },
+    { Core::SymbolType::OS          , "__os__"          },
+    { Core::SymbolType::ARCH        , "__arch__"        },
 };
 
 
-static std::map<std::string, Core::SymbolType> Known_Symbols_By_String = 
+
+/**
+ * @brief Map from canonical token string to SymbolType (e.g. "__main__" -> MAIN).
+ */
+static std::map<std::string, Core::SymbolType> Known_Symbols_By_String =
 {
     { "__main__"        , Core::SymbolType::MAIN        },
     { "__root__"        , Core::SymbolType::ROOT        },
@@ -83,41 +92,57 @@ static std::map<std::string, Core::SymbolType> Known_Symbols_By_String =
 
 
 
-static std::vector<std::string> Known_OSs = 
+/**
+ * @brief Supported OS names for `@ifos` and internal checks.
+ */
+static std::vector<std::string> Known_OSs =
 {
     "windows",
-    "macos"  ,
-    "linux"  ,
+    "macos",
+    "linux",
     "freeBSD",
-    "unix"   ,
+    "unix",
 };
 
 
-static std::vector<std::string> Known_ARCHs = 
+
+/**
+ * @brief Supported architecture names for internal checks.
+ */
+static std::vector<std::string> Known_ARCHs =
 {
-    "x86_64" ,
-    "x86"    ,
+    "x86_64",
+    "x86",
     "aarch64",
-    "arm"    ,
-    "riscv"  ,
-    "ppc64"  ,
-    "ppc"    ,
+    "arm",
+    "riscv",
+    "ppc64",
+    "ppc",
 };
 
 
 
-//    ██████╗ ██████╗ ██╗██╗   ██╗ █████╗ ████████╗███████╗███████╗
-//    ██╔══██╗██╔══██╗██║██║   ██║██╔══██╗╚══██╔══╝██╔════╝██╔════╝
-//    ██████╔╝██████╔╝██║██║   ██║███████║   ██║   █████╗  ███████╗
-//    ██╔═══╝ ██╔══██╗██║╚██╗ ██╔╝██╔══██║   ██║   ██╔══╝  ╚════██║
-//    ██║     ██║  ██║██║ ╚████╔╝ ██║  ██║   ██║   ███████╗███████║
-//    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚══════╝╚══════╝
-//                                                                 
+// ============================================================================
+// PRIVATE EXECUTION HELPERS
+// ============================================================================
 
-static Core::InstructionResult run_instruction(const std::string& jobname, 
-                                               const std::size_t  idx,  
-                                               const std::string& interpreter, 
-                                               const std::string& command, 
+/**
+ * @brief Execute a single instruction by generating a script and running it via the chosen interpreter.
+ *
+ * On Windows, if the interpreter is `cmd.exe`, a `.bat` script is generated and executed with `/d /s /c`.
+ * On other interpreters/OSes, a plain script is generated and passed as an argument.
+ *
+ * @param jobname     Task/job name (used for cache script naming).
+ * @param idx         Instruction index within the job.
+ * @param interpreter Interpreter executable path.
+ * @param command     Command text to persist into the script.
+ * @param echo        If true, print the command before executing.
+ * @return InstructionResult containing command and exit code.
+ */
+static Core::InstructionResult run_instruction(const std::string& jobname,
+                                               const std::size_t  idx,
+                                               const std::string& interpreter,
+                                               const std::string& command,
                                                const bool         echo) noexcept
 {
     std::string             full_cmd;
@@ -125,11 +150,13 @@ static Core::InstructionResult run_instruction(const std::string& jobname,
     Core::InstructionResult res { command, 0 };
     Cache::Manager&         cache = Cache::Manager::Instance();
 
+    // OPTIONALLY ECHO COMMAND
     if (echo)
     {
         MSG(command);
     }
 
+    // WRITE SCRIPT AND BUILD FULL COMMAND LINE
 #if defined(_WIN32)
     if (interpreter.find("cmd.exe") != std::string::npos)
     {
@@ -145,41 +172,70 @@ static Core::InstructionResult run_instruction(const std::string& jobname,
     script   = cache.WriteScript(jobname, idx, command);
     full_cmd = interpreter + " \"" + script.string() + "\"";
 #endif
-    
+
+    // EXECUTE COMMAND
     int ret = std::system(full_cmd.c_str());
 
+    // NORMALIZE EXIT CODE
     if (ret == -1)
     {
         res.exit_code = 127;
     }
     else
     {
-        res.exit_code = ret;
+#if defined(_WIN32)
+    res.exit_code = ret;
+#else
+    if (WIFEXITED(ret))
+    {
+        res.exit_code = WEXITSTATUS(ret);
+    }
+    else if (WIFSIGNALED(ret))
+    {
+        res.exit_code = 128 + WTERMSIG(ret);
+    }
+    else
+    {
+        res.exit_code = 127;
+    }
+#endif
     }
 
     return res;
 }
 
 
+
+/**
+ * @brief Execute a job either linearly or by spawning a thread per instruction.
+ *
+ * The decision is driven by `job.parallelizable`. In MT mode, results are stored by index.
+ *
+ * @param job Job to run.
+ * @param opt Runtime options (stop-on-error, max parallelism, etc.).
+ * @return Core::Result containing per-instruction results and summary status.
+ */
 static Core::Result run_job(const Jobs::Job& job, const Core::RunOptions& opt) noexcept
 {
     Core::Result result {};
 
+    // INIT RESULT HEADER
     result.name        = job.name;
     result.ok          = true;
     result.first_error = 0;
 
+    // LINEAR EXECUTION
     if (!job.parallelizable)
     {
         std::size_t idx = 0;
 
-        // LINEAR EXECUTION OF JOB: NO MT
-        for (const auto &cmd : job.instructions)
+        for (const auto& cmd : job.instructions)
         {
+            // RUN INSTRUCTION AND STORE RESULT
             auto r = run_instruction(job.name, idx, job.interpreter, cmd, job.echo);
             result.results.push_back(r);
 
-            // ON ERROR JUST QUIT
+            // HANDLE ERROR
             if (r.exit_code != 0)
             {
                 result.ok          = false;
@@ -196,33 +252,31 @@ static Core::Result run_job(const Jobs::Job& job, const Core::RunOptions& opt) n
     }
     else
     {
-        // PARALLEL JOB EXEUTION: MT
+        // PARALLEL EXECUTION (THREAD PER INSTRUCTION, WITH BATCH JOIN)
         std::vector<std::thread> threads;
         std::mutex               mutex;
 
         result.results.resize(job.instructions.size());
 
-        // LABDA USED AS WORKER THREAD BODY
+        // WORKER: RUN ONE INSTRUCTION AND WRITE RESULT SAFELY
         auto worker = [&] (std::size_t idx)
         {
             const auto& cmd = job.instructions[idx];
             auto        r   = run_instruction(job.name, idx, job.interpreter, cmd, job.echo);
 
-            // BE SURE TO USE A MUTEX TO WRITE IN THE RESULT ARRAY
             std::lock_guard<std::mutex> lock(mutex);
             result.results[idx] = r;
         };
 
-        // GENRATE A VECTOR OF EACH INSTRCTUION
+        // SPAWN THREADS UP TO MAX PARALLELISM
         for (std::size_t i = 0; i < job.instructions.size(); ++i)
         {
             threads.emplace_back(worker, i);
 
-            // IF THE MAX THRAD IS REACHED, JUST JOIN ALL THREAD IN THE VECTOR,
-            // THEN CONTINUE 
             if (threads.size() >= opt.max_parallelism)
             {
-                for (auto &t : threads)
+                // JOIN CURRENT BATCH
+                for (auto& t : threads)
                 {
                     t.join();
                 }
@@ -231,14 +285,14 @@ static Core::Result run_job(const Jobs::Job& job, const Core::RunOptions& opt) n
             }
         }
 
-        // IF THE VECTOR IS NOT EMPTY, JUST JOIN THEM
-        for (auto &t : threads)
+        // JOIN REMAINING THREADS
+        for (auto& t : threads)
         {
             t.join();
         }
 
-        // CHECK ALL RESULTS IN ORDER TO DISCOVER ERRORS
-        for (const auto &r : result.results)
+        // AGGREGATE ERRORS
+        for (const auto& r : result.results)
         {
             if (r.exit_code != 0)
             {
@@ -257,17 +311,19 @@ static Core::Result run_job(const Jobs::Job& job, const Core::RunOptions& opt) n
 
 
 
+// ============================================================================
+// CORE API
+// ============================================================================
 
-
-//    ██████╗ ██╗   ██╗██████╗ ██╗     ██╗ ██████╗███████╗
-//    ██╔══██╗██║   ██║██╔══██╗██║     ██║██╔════╝██╔════╝
-//    ██████╔╝██║   ██║██████╔╝██║     ██║██║     ███████╗
-//    ██╔═══╝ ██║   ██║██╔══██╗██║     ██║██║     ╚════██║
-//    ██║     ╚██████╔╝██████╔╝███████╗██║╚██████╗███████║
-//    ╚═╝      ╚═════╝ ╚═════╝ ╚══════╝╚═╝ ╚═════╝╚══════╝
-//                                                        
-
-
+/**
+ * @brief Execute the job list in order and return the collected results.
+ *
+ * Prints per-task progress and summary unless `opt.silent` is enabled.
+ *
+ * @param jobs Job list to execute.
+ * @param opt Execution options.
+ * @return Vector of per-job results.
+ */
 std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::RunOptions& opt) noexcept
 {
     bool ok = true;
@@ -275,21 +331,25 @@ std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::Run
 
     Stopwatch sw;
 
+    // PREALLOC RESULTS
     results.reserve(jobs.All().size());
 
+    // START TIMER
     sw.start();
 
-    // RUN EACH JOB 
-    for (auto &job : jobs.All())
+    // RUN EACH JOB
+    for (auto& job : jobs.All())
     {
         if (!opt.silent)
         {
-            ARC(ANSI_GRAY << "Running task: "  << job.name << ANSI_RESET);
+            ARC(ANSI_GRAY << "Running task: " << job.name << ANSI_RESET);
         }
 
+        // RUN JOB AND COLLECT RESULT
         auto r = run_job(job, opt);
         results.push_back(r);
 
+        // STOP EARLY ON ERROR IF REQUESTED
         if (!r.ok && opt.stop_on_error)
         {
             ok = false;
@@ -298,31 +358,47 @@ std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::Run
         }
     }
 
+    // STOP TIMER
     sw.stop();
     auto ms = sw.elapsed<>();
 
+    // PRINT SUMMARY
     if (ok && !opt.silent)
     {
         ARC("Action '" << jobs.main_job << "' done in " << Stopwatch::format(ms));
-    } 
+    }
 
     return results;
 }
 
 
+
+/**
+ * @brief Get the mutable value associated to a built-in symbol type.
+ * @param type Symbol type.
+ * @return Reference to the stored string.
+ */
 std::string& Core::symbol(Core::SymbolType type) noexcept
 {
+    // MAP TYPE TO TOKEN STRING
     const std::string symbol = Known_Symbols_By_Token[type];
 
+    // RETURN STORED VALUE
     return builtin_symbols[symbol];
 }
 
 
 
+/**
+ * @brief Check whether a string is a known built-in symbol token and return its type.
+ * @param symbol Token string (e.g. "__main__").
+ * @return SymbolType or UNDEFINED.
+ */
 Core::SymbolType Core::is_symbol(const std::string& symbol) noexcept
 {
     Core::SymbolType type = Core::SymbolType::UNDEFINED;
 
+    // LOOKUP TOKEN STRING
     if (auto it = Known_Symbols_By_String.find(symbol); it != Known_Symbols_By_String.end())
     {
         type = it->second;
@@ -333,28 +409,44 @@ Core::SymbolType Core::is_symbol(const std::string& symbol) noexcept
 
 
 
+/**
+ * @brief Update a built-in symbol value.
+ * @param type Symbol type.
+ * @param val  New value.
+ */
 void Core::update_symbol(Core::SymbolType type, const std::string& val) noexcept
 {
+    // MAP TYPE TO TOKEN STRING
     const std::string symbol = Known_Symbols_By_Token[type];
 
+    // UPDATE STORED VALUE
     builtin_symbols[symbol] = val;
 
     return;
 }
 
 
+
+/**
+ * @brief Check if a string matches a known OS name.
+ * @param param OS name.
+ * @return True if supported.
+ */
 bool Core::is_os(const std::string& param) noexcept
 {
+    // LINEAR SEARCH IN KNOWN OS LIST
     return (std::find(Known_OSs.begin(), Known_OSs.end(), param) != Known_OSs.end());
 }
 
 
 
+/**
+ * @brief Check if a string matches a known architecture name.
+ * @param param Arch name.
+ * @return True if supported.
+ */
 bool Core::is_arch(const std::string& param) noexcept
 {
+    // LINEAR SEARCH IN KNOWN ARCH LIST
     return (std::find(Known_ARCHs.begin(), Known_ARCHs.end(), param) != Known_ARCHs.end());
 }
-
-
-
-

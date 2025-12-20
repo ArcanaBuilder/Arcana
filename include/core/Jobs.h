@@ -2,6 +2,27 @@
 #define __ARCANA_JOBS_H__
 
 
+/**
+ * @defgroup Jobs Job Execution Model
+ * @brief Job representation and execution planning.
+ *
+ * This module defines the job abstraction used by Arcana at runtime.
+ *
+ * It is responsible for:
+ * - representing executable jobs derived from semantic tasks
+ * - resolving execution order and dependencies
+ * - producing an executable job list for the Core runtime
+ *
+ * This module sits between the Semantic layer and the Core runtime.
+ */
+
+
+/**
+ * @addtogroup Jobs
+ * @{
+ */
+
+
 #include "Defines.h"
 #include "Semantic.h"
 
@@ -15,8 +36,6 @@ USE_MODULE(Arcana);
 
 
 
-
-
 //    ███████╗ ██████╗ ██████╗ ██╗    ██╗ █████╗ ██████╗ ██████╗ ███████╗
 //    ██╔════╝██╔═══██╗██╔══██╗██║    ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝
 //    █████╗  ██║   ██║██████╔╝██║ █╗ ██║███████║██████╔╝██║  ██║███████╗
@@ -26,14 +45,8 @@ USE_MODULE(Arcana);
 //                                                                                                                                                                                       
 
 
-
 class Job;
 class List;
-
-
-
-
-
 
 
 
@@ -48,23 +61,33 @@ class List;
 //                                                                                                                                                  
 
 
+/**
+ * @brief Error information produced during job expansion.
+ */
 struct ExpansionError
 {
-    bool        ok;
-    std::string msg;
-    std::string hint;
+    bool        ok;   ///< Indicates whether expansion succeeded.
+    std::string msg;  ///< Error message.
+    std::string hint; ///< Optional hint for error resolution.
 
     ExpansionError() : ok(false) {}
 };
 
 
+
+/**
+ * @brief Executable job description.
+ *
+ * A Job is the runtime representation of a semantic task after
+ * variable expansion and dependency resolution.
+ */
 struct Job
 {
-    std::string            name;
-    Semantic::Task::Instrs instructions;
-    Semantic::Interpreter  interpreter;
-    bool                   parallelizable;
-    bool                   echo;
+    std::string            name;            ///< Job name.
+    Semantic::Task::Instrs instructions;    ///< Instructions to execute.
+    Semantic::Interpreter  interpreter;     ///< Interpreter used to run the job.
+    bool                   parallelizable;  ///< Whether the job can run in parallel.
+    bool                   echo;            ///< Whether command echoing is enabled.
 };
 
 
@@ -84,29 +107,55 @@ struct Job
 
 
 
+
+/**
+ * @brief Collection of executable jobs.
+ *
+ * Builds and stores the final execution plan derived from the
+ * semantic environment.
+ */
 class List
 {
 public:
     List()            = default;
     List(const List&) = default;
 
-    static ExpansionError    FromEnv(Semantic::Enviroment& environment, List& out) noexcept;
-    const  std::vector<Job>& All() const noexcept { return data; }
+    /**
+     * @brief Builds a job list from a semantic environment.
+     *
+     * @param[in]  environment Semantic environment.
+     * @param[out] out Output job list.
+     *
+     * @return ExpansionError describing the outcome.
+     */
+    static ExpansionError
+    FromEnv(Semantic::Enviroment& environment, List& out) noexcept;
 
-    std::string main_job;
+    /**
+     * @brief Returns all jobs in execution order.
+     */
+    const std::vector<Job>&
+    All() const noexcept
+    {
+        return data;
+    }
+
+    std::string main_job; ///< Name of the main job.
+
 private:
     void Insert(const std::optional<Job>& j);
     void Insert(std::vector<Job>& vj);
-    
-    std::unordered_set<std::string> index;
-    std::vector<Job>                data;
+
+    std::unordered_set<std::string> index; ///< Job name index for uniqueness.
+    std::vector<Job>                data;  ///< Ordered job list.
 };
-                                                                                   
+
 
 
 END_MODULE(Jobs)
 
 
+/** @} */
 
 
 #endif /* __ARCANA_JOBS_H__ */

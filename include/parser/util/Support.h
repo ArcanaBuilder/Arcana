@@ -27,6 +27,32 @@
 //    ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
 //                                                                                                                                                                            
 
+/**
+ * @file Support.h
+ * @brief Utility helpers used across Arcana.
+ *
+ * This header provides common utilities used across the scanner, grammar,
+ * semantic and runtime layers, including:
+ * - command line argument parsing
+ * - filesystem helpers
+ * - string helpers (trim/split/quoted split)
+ * - numeric conversion helpers
+ * - mangling helpers for profile/OS specialized keys
+ * - string representations for grammar/scanner entities
+ * - fuzzy matching helpers (closest string)
+ * - transparent hashing/equality for std::string_view keyed maps
+ */
+
+/**
+ * @defgroup Support Support Utilities
+ * @brief Shared helper utilities for Arcana subsystems.
+ */
+
+/**
+ * @addtogroup Support
+ * @{
+ */
+
 BEGIN_MODULE(Scan)
 
 class Lexer;
@@ -116,31 +142,67 @@ struct Arguments
 };
 
 
+/**
+ * @brief Error functor used during parsing stages.
+ *
+ * This object formats parser errors using lexer context and grammar matches.
+ */
 struct ParserError
 {
     Scan::Lexer& lexer;
     
+    /**
+     * @brief Formats a parser error.
+     *
+     * @param ctx Error context label.
+     * @param match Grammar match information.
+     * @return Arcana_Result indicating success/failure of the reporting step.
+     */
     Arcana_Result operator () (const std::string& ctx, const Grammar::Match& match) const;
 };
 
 
+/**
+ * @brief Error functor used during semantic analysis stages.
+ *
+ * Produces diagnostics using lexer context and semantic output information.
+ */
 struct SemanticError
 {
     Scan::Lexer& lexer;
     
+    /**
+     * @brief Formats a semantic error.
+     *
+     * @param ctx Error context label.
+     * @param SemanticOutput Semantic analysis output.
+     * @param match Grammar match information.
+     * @return Arcana_Result indicating success/failure of the reporting step.
+     */
     Arcana_Result operator () (const std::string& ctx, const Support::SemanticOutput&, const Grammar::Match&) const;
 };
 
 
+/**
+ * @brief Error functor used during post-processing stages.
+ */
 struct PostProcError
 {
     Scan::Lexer& lexer;
     
+    /**
+     * @brief Formats a post-processing error.
+     *
+     * @param ctx Error context label.
+     * @param err Error description.
+     * @return Arcana_Result indicating success/failure of the reporting step.
+     */
     Arcana_Result operator () (const std::string& ctx, const std::string& err) const;
 };
 
 
 END_MODULE(Support)
+
 
 
 
@@ -180,13 +242,6 @@ using Statement         = std::vector<std::string>;
 
 
 
-
-
-
-
-
-
-
 //    ███╗   ███╗ ██████╗ ██████╗ ██╗   ██╗██╗     ███████╗    ███████╗██╗   ██╗██████╗ ██████╗  ██████╗ ██████╗ ████████╗
 //    ████╗ ████║██╔═══██╗██╔══██╗██║   ██║██║     ██╔════╝    ██╔════╝██║   ██║██╔══██╗██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝
 //    ██╔████╔██║██║   ██║██║  ██║██║   ██║██║     █████╗      ███████╗██║   ██║██████╔╝██████╔╝██║   ██║██████╔╝   ██║   
@@ -213,22 +268,44 @@ BEGIN_MODULE(Support)
 //    ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝  ╚═════╝   ╚═╝   ╚══════╝
 //                                                                                                               
 
+/**
+ * @brief Transparent hash for std::string_view.
+ *
+ * Enables heterogeneous lookup in unordered containers keyed by std::string_view
+ * (e.g. find with std::string, const char*, std::string_view).
+ */
 struct StringViewHash
 {
     using is_transparent = void;
 
+    /**
+     * @brief Hashes a string_view.
+     */
     std::size_t operator()(std::string_view s) const noexcept;
 };
 
 
+/**
+ * @brief Transparent equality for std::string_view.
+ *
+ * Enables heterogeneous comparison in unordered containers keyed by std::string_view.
+ */
 struct StringViewEq
 {
     using is_transparent = void;
 
+    /**
+     * @brief Compares two string_view values for equality.
+     */
     bool operator() (std::string_view a, std::string_view b) const noexcept;
 };
 
 
+/**
+ * @brief Semantic stage output container.
+ *
+ * Holds a Semantic_Result plus an error string and an optional hint.
+ */
 struct SemanticOutput
 {
     Semantic_Result  result;
@@ -270,12 +347,16 @@ struct SemanticOutput
 
 
 
+/**
+ * @brief Tokenization result for split_quoted().
+ */
 struct SplitResult
 {
-    bool                     ok;
-    std::vector<std::string> tokens;
-    std::string              error;
+    bool                     ok;     ///< True on success.
+    std::vector<std::string> tokens; ///< Token list.
+    std::string              error;  ///< Error message on failure.
 };
+
 
 
 
@@ -298,6 +379,13 @@ struct SplitResult
 std::variant<Support::Arguments, std::string>   ParseArgs(int argc, char** argv);
 
 
+
+/**
+ * @brief Checks whether a file exists.
+ *
+ * @param filename Path to file.
+ * @return true if the file exists and is accessible.
+ */
 bool file_exists(const std::string& filename);
 
 
@@ -308,22 +396,66 @@ bool file_exists(const std::string& filename);
 std::string ltrim(const std::string& s);
 
 
+
 /// @brief remove whitespace character for the left of the string
 /// @param s the input string
 /// @return a copy left trimmed of @ref s
 std::string rtrim(const std::string& s);
 
 
+
+/**
+ * @brief Converts an ASCII character to lower-case.
+ *
+ * Only affects the range 'A'..'Z'.
+ */
 inline char toLowerAscii(char c) noexcept;
 
 
+
+/**
+ * @brief Splits a string on a separator character.
+ *
+ * @param s Input string.
+ * @param sep Separator character.
+ * @return Token list.
+ */
 std::vector<std::string> split(const std::string& s, char sep = ' ') noexcept;
 
+
+
+/**
+ * @brief Splits a string on a separator while honoring quoted segments.
+ *
+ * @param s Input string.
+ * @param sep Separator character.
+ * @return SplitResult containing tokens or an error.
+ */
 SplitResult split_quoted(const std::string& s, char sep = ' ') noexcept;
 
+
+
+/**
+ * @brief Converts a string to a number (base auto-detection is implementation-defined).
+ *
+ * @param s Input string.
+ * @return Parsed number if conversion succeeds.
+ */
 std::optional<long long> to_number(const std::string& s);
 
+
+
+/**
+ * @brief Generates a mangled key string.
+ *
+ * Used to represent specialized entries (e.g. profile/OS bound) in tables.
+ *
+ * @param target Base identifier.
+ * @param mangling Mangling suffix (e.g. profile name).
+ * @return Mangled key.
+ */
 std::string generate_mangling(const std::string& target, const std::string& mangling);
+
 
 
 /// @brief Function used to represent a TokenType
@@ -332,10 +464,12 @@ std::string generate_mangling(const std::string& target, const std::string& mang
 std::string TokenTypeRepr(const Scan::TokenType type);
 
 
+
 /// @brief Function used to represent a vector of TokenType 
 /// @param[in] type 
 /// @return string representation of TokenType separeted by 'or'
 std::string TerminalRepr(const Grammar::Terminal& type);
+
 
 
 /// @brief Function used to represent a vector of vector of TokenType
@@ -344,10 +478,12 @@ std::string TerminalRepr(const Grammar::Terminal& type);
 std::string NonTerminalRepr(const Grammar::NonTerminal& type);
 
 
+
 /// @brief Function used to represent a set of vector of TokenType
 /// @param[in] type 
 /// @return string representation of TokenType separeted by 'or'
 std::string UniqueNonTerminalRepr(const Grammar::UniqueNonTerminal& type);
+
 
 
 /// @brief Function used to represent a Rule
@@ -356,6 +492,17 @@ std::string UniqueNonTerminalRepr(const Grammar::UniqueNonTerminal& type);
 std::string RuleRepr(const Grammar::Rule type);
 
 
+
+/**
+ * @brief Finds the closest string to a target within a maximum edit distance.
+ *
+ * Intended for diagnostics ("did you mean ...?") style suggestions.
+ *
+ * @param list Candidate strings.
+ * @param target Target string.
+ * @param max_distance Maximum allowed distance.
+ * @return Closest match if found within threshold.
+ */
 std::optional<std::string> FindClosest(const std::vector<std::string> & list,
                                 const std::string & target,
                                 std::size_t max_distance = std::numeric_limits<std::size_t>::max()) noexcept;
@@ -364,6 +511,11 @@ std::optional<std::string> FindClosest(const std::vector<std::string> & list,
 
 
 
+/**
+ * @brief Unordered map keyed by std::string_view with transparent hashing/equality.
+ *
+ * Allows heterogeneous lookup (std::string, std::string_view, const char*).
+ */
 template < typename T >
 using AbstractKeywordMap = std::unordered_map<
     std::string_view,
@@ -378,5 +530,6 @@ using AbstractKeywordMap = std::unordered_map<
 
 END_MODULE(Support)
 
+/** @} */
 
 #endif /* __ARCANA_UTIL_SUPPORT__H__ */

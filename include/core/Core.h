@@ -2,6 +2,26 @@
 #define __ARCANA_CORE_H__
 
 
+
+/**
+ * @defgroup Core Core Runtime
+ * @brief Core runtime facilities of Arcana.
+ *
+ * This module provides:
+ * - execution of job graphs
+ * - runtime configuration options
+ * - global symbol handling
+ *
+ * It represents the execution layer between the semantic model
+ * and the operating system.
+ */
+
+/**
+ * @addtogroup Core
+ * @{
+ */
+
+
 #include "Jobs.h"
 #include "Defines.h"
 
@@ -9,8 +29,6 @@
 
 
 BEGIN_MODULE(Core)
-
-
 USE_MODULE(Arcana);
 
 
@@ -26,19 +44,26 @@ USE_MODULE(Arcana);
 
 
 
+/**
+ * @brief Built-in Arcana symbol identifiers.
+ *
+ * Used to represent special runtime values accessible
+ * through the {arc:...} expansion mechanism.
+ */
 enum class SymbolType : std::uint8_t
 {
-    MAIN        = 0,
-    ROOT           ,
-    VERSION        ,
-    PROFILE        ,
-    THREADS        ,
-    MAX_THREADS    ,
-    OS             ,
-    ARCH           ,
+    MAIN        = 0, ///< Main task symbol.
+    ROOT,            ///< Project root directory.
+    VERSION,         ///< Arcana version.
+    PROFILE,         ///< Active build profile.
+    THREADS,         ///< Active thread count.
+    MAX_THREADS,     ///< Maximum available threads.
+    OS,              ///< Operating system identifier.
+    ARCH,            ///< Architecture identifier.
 
-    UNDEFINED      ,
+    UNDEFINED,       ///< Unknown or invalid symbol.
 };
+
 
 
 
@@ -51,28 +76,40 @@ enum class SymbolType : std::uint8_t
 //                                                               
 
 
+/**
+ * @brief Result of a single instruction execution.
+ */
 struct InstructionResult
 {
-    std::string command;
-    int         exit_code;
+    std::string command;    ///< Executed command.
+    int         exit_code;  ///< Process exit code.
 };
 
 
+
+/**
+ * @brief Result of a job execution.
+ */
 struct Result
 {
-    std::string                    name;
-    bool                           ok;
-    int                            first_error;
-    std::vector<InstructionResult> results;
+    std::string                    name;        ///< Job name.
+    bool                           ok;          ///< Overall success status.
+    int                            first_error; ///< Index of first failing instruction.
+    std::vector<InstructionResult> results;     ///< Per-instruction results.
 };
 
 
+
+/**
+ * @brief Runtime options controlling job execution.
+ */
 struct RunOptions
 {
-    bool     silent          = false;
-    bool     stop_on_error   = true;
-    unsigned max_parallelism = std::thread::hardware_concurrency();
+    bool     silent          = false;                               ///< Suppress standard output.
+    bool     stop_on_error   = true;                                ///< Stop execution on first error.
+    unsigned max_parallelism = std::thread::hardware_concurrency(); ///< Max concurrent jobs.
 };
+
 
 
 
@@ -86,17 +123,70 @@ struct RunOptions
 //                                                                                                           
 
 
-std::vector<Result>       run_jobs(const Jobs::List& jobs, const RunOptions& opt) noexcept;
+/**
+ * @brief Executes a list of jobs.
+ *
+ * @param[in] jobs Job execution list.
+ * @param[in] opt Runtime execution options.
+ *
+ * @return Execution results for each job.
+ */
+std::vector<Result>
+run_jobs(const Jobs::List& jobs, const RunOptions& opt) noexcept;
 
-std::string&              symbol(Core::SymbolType type) noexcept;
-SymbolType                is_symbol(const std::string& symbol) noexcept;
-void                      update_symbol(SymbolType type, const std::string& val) noexcept;
-bool                      is_os(const std::string& param) noexcept;
-bool                      is_arch(const std::string& param) noexcept;
+
+
+/**
+ * @brief Returns the current value of a built-in symbol.
+ *
+ * @param[in] type Symbol identifier.
+ * @return Reference to the symbol value string.
+ */
+std::string&
+symbol(Core::SymbolType type) noexcept;
+
+
+
+/**
+ * @brief Checks whether a string represents a built-in symbol.
+ *
+ * @param[in] symbol Symbol name.
+ * @return Corresponding SymbolType or SymbolType::UNDEFINED.
+ */
+SymbolType
+is_symbol(const std::string& symbol) noexcept;
+
+
+
+/**
+ * @brief Updates the value of a built-in symbol.
+ *
+ * @param[in] type Symbol identifier.
+ * @param[in] val New symbol value.
+ */
+void
+update_symbol(SymbolType type, const std::string& val) noexcept;
+
+
+
+/**
+ * @brief Checks whether a string matches a supported operating system identifier.
+ */
+bool
+is_os(const std::string& param) noexcept;
+
+
+
+/**
+ * @brief Checks whether a string matches a supported architecture identifier.
+ */
+bool
+is_arch(const std::string& param) noexcept;
 
 
 
 END_MODULE(Core)
 
+/** @} */
 
 #endif /* __ARCANA_CORE_H__ */

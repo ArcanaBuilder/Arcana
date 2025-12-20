@@ -12,7 +12,19 @@
 BEGIN_MODULE(Generator)
 
 
-
+/**
+ * @brief Default Arcana project template.
+ *
+ * This template represents the initial Arcana build file generated
+ * when creating a new project. It defines:
+ * - default profiles
+ * - interpreter and threading configuration
+ * - core variables and mappings
+ * - example assertions
+ * - skeleton public and private tasks
+ *
+ * The template is emitted verbatim either to stdout or to a file.
+ */
 static const char* ARCANA_TEMPLATE = R"TEMPLATE(
 #!/usr/bin/arcana
 
@@ -76,7 +88,24 @@ task Install()
 
 
 
-
+/**
+ * @brief Generates an Arcana project template.
+ *
+ * Writes the default Arcana template either to a file or to stdout.
+ *
+ * If the output string is empty, the default filename "arcfile" is used.
+ * If the output string equals "stdout", the template is printed to stdout
+ * instead of being written to a file.
+ *
+ * Parent directories are created automatically if they do not exist.
+ *
+ * @param[inout] output Output destination:
+ *        - empty string: defaults to "arcfile"
+ *        - "stdout": prints the template to stdout
+ *        - otherwise: treated as a filesystem path
+ *
+ * @return true on success, false on I/O or filesystem errors.
+ */
 inline bool Generate_Template(std::string& output)
 {
     namespace fs = std::filesystem;
