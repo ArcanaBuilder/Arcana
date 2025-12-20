@@ -35,7 +35,7 @@
 #define _I(enum)                                ((size_t) enum) 
 
 
-#define __ARCANA__VERSION__                     "0.4.1"
+#define __ARCANA__VERSION__                     "0.4.2"
 
 
 

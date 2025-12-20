@@ -236,6 +236,10 @@ Token Lexer::identifier()
     {
         tt = TokenType::EQ;
     }
+    else if (lower.compare("in") == 0)
+    {
+        tt = TokenType::IN;
+    }
 
     // GENERATE THE TOKEN
     return makeToken(tt, std::move(lexeme), tokLine, tokCol, lexeme.size());

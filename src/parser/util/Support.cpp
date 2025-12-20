@@ -7,6 +7,7 @@
 #include <limits>
 #include <cstddef>
 #include <variant>
+#include <charconv>
 #include <algorithm>
 #include <filesystem>
 
@@ -232,6 +233,31 @@ std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char*
             else
             {
                 return "Missing value for option -p";
+            }
+        }
+        else if (arg == "-t")
+        {
+            if (i + 1 < argc)
+            {
+                std::string value = std::string(argv[i + 1]);
+                const char* begin = value.data();
+                const char* end   = begin + value.size(); 
+
+                auto [ptr, ec] = std::from_chars(begin, end, args.threads.ivalue);
+
+                if (ec != std::errc{} || ptr != end || args.threads.ivalue <= 0)
+                {
+                    ss << "Invalid value for option -t: " << TOKEN_MAGENTA(value) << ". Expected a positive integer.";
+                    return ss.str();
+                }
+                args.threads.svalue = value;
+                args.threads.found  = true;
+                i += 2;
+                continue;
+            }
+            else
+            {
+                return "Missing value for option -t";
             }
         }
         if (arg == "--generate")
@@ -530,6 +556,7 @@ std::string Support::TokenTypeRepr(const Scan::TokenType type)
         case Scan::TokenType::AT:          return "at sign";   
         case Scan::TokenType::EQ:          return "eq";   
         case Scan::TokenType::NE:          return "ne";   
+        case Scan::TokenType::IN:          return "in";   
         case Scan::TokenType::SEMICOLON:   return "semicolon";   
         case Scan::TokenType::NEWLINE:     return "<new line>";   
         case Scan::TokenType::ENDOFFILE:   return "EOF";     

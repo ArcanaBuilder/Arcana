@@ -4,6 +4,7 @@
 
 #include <set>
 #include <array>
+#include <regex>
 #include <vector>
 #include <variant>
 #include <algorithm>
@@ -300,6 +301,8 @@ struct AssertCheck
     {
         EQUAL,
         NOT_EQUAL,
+        IN,
+        DEPENDENCIES,
     };
 
     std::size_t line;
@@ -308,6 +311,8 @@ struct AssertCheck
     std::string rvalue;
     CheckType   check;
     std::string reason;
+
+    std::filesystem::path search_path;
 };
 
 
@@ -435,7 +440,7 @@ public:
     const std::optional<std::string> AlignEnviroment() noexcept;
           Arcana_Result              CheckArgs(const Arcana::Support::Arguments& args) noexcept;
     const std::optional<std::string> Expand() noexcept;
-    const std::optional<std::string> CheckAsserts() noexcept;
+    const std::optional<std::string> ExecuteAsserts() noexcept;
     
     Interpreter                      GetInterpreter() noexcept { return default_interpreter; }
     uint32_t                         GetThreads()     noexcept { return max_threads;         }
@@ -445,6 +450,28 @@ private:
     Profile     profile;
     Interpreter default_interpreter;
     uint32_t    max_threads;
+
+    struct Expander
+    {
+        Enviroment& env;
+
+        const std::regex re_intern;
+        const std::regex re_arc;
+        const std::regex re_fs;
+
+        explicit Expander(Enviroment& e) noexcept
+            : env(e)
+            , re_intern(R"(\{arc:(__profile__|__version__|__main__|__root__|__max_threads__|__threads__|__os__|__arch__)\})")
+            , re_arc(R"(\{arc:([A-Za-z]+)\})")
+            , re_fs(R"(\{fs:([^}]+)\})")
+        {}
+
+        std::optional<std::string> ExpandInternals(std::string& s) noexcept;
+        std::optional<std::string> ExpandArcAll(std::string& s) noexcept;
+        std::optional<std::string> ExpandText(std::string& s) noexcept;
+        void ExtractFsPaths(const std::string& s, std::vector<std::filesystem::path>& out) noexcept;
+        std::optional<std::string> ExpandAssertSide(std::string& stmt, AssertCheck& assert) noexcept;
+    };
 };
 
 

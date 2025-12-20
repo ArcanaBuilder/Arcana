@@ -83,6 +83,16 @@ struct Arguments
     task,
     profile,
     generator;
+    
+    struct
+    {
+        std::string svalue;
+        uint32_t    ivalue;
+        bool        found;
+
+        operator bool () const noexcept { return found; } 
+    } 
+    threads;
 
     bool debug;
     bool flush_cache;
@@ -96,6 +106,7 @@ struct Arguments
         task{"", false},
         profile{"", false},
         generator{"", false},
+        threads{"", 0, false},
         debug(false),
         flush_cache(false),
         version(false),

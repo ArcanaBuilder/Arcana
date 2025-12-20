@@ -95,6 +95,8 @@ OPTIONS
   -p <profile>          Execute the arcfile with a specific profile. 
                         Profiles must be declared in the arcfile, via 'using profiles' statement. 
   -s <arcfile>          Execute the CLI passed arcfile. 
+  -t <numofthreads>     Explict pass via CLI the wanted threads. This option will override the
+                        'using threads' statement.
   --generate [stream]   Generate an arcfile template. If a stream is passed the template will be
                         saved into it.
                         If the stream is stdout, the template will be printed on int. 
@@ -162,10 +164,10 @@ LANGUAGE:
 
   VARIABLES:
     NAME = VALUE                    Simple assignment of VALUE into NAME
-    GLOB = path/**.c                Simple assignment of path/**.c into GLOB, but at runtime
-                                    the engine will try to expand the glob **.c
+    GLOB = path/**/*.c              Simple assignment of path/**/*.c into GLOB, but at runtime
+                                    the engine will try to expand the glob **/*.c
     @map GLOB
-    VAR  = path2/**.o               Using the @map X attribute on a glob variable Y will generate 
+    VAR  = path2/**/*.o             Using the @map X attribute on a glob variable Y will generate 
                                     a mapping of X to Y
 
 
@@ -294,7 +296,7 @@ static Arcana_Result Parse(const Support::Arguments& args)
     }
     
     CHECK_RESULT(env.Expand());
-    CHECK_RESULT(env.CheckAsserts());
+    CHECK_RESULT(env.ExecuteAsserts());
     
     if (args.debug)
     {
@@ -328,8 +330,10 @@ static Arcana_Result Execute(const Support::Arguments& args)
         return ARCANA_RESULT__OK;
     }
 
+
     runopt.silent          = args.silent;
     runopt.max_parallelism = env.GetThreads();
+
     Core::run_jobs(joblist, runopt);
 
     return Arcana_Result::ARCANA_RESULT__OK;

@@ -3,6 +3,14 @@
 All relevant changes to this project will be documented in this file.
 
 
+## [0.4.2] - 2025-12-20
+### Changes
+- Refactored Expader logic
+- Added keyword **in** for **assert** statement  
+- Added filesystem seach logic for **assert** statement via  
+  **{fs:xxx}** expasion type  
+
+
 ## [0.4.1] - 2025-12-19
 
 ### Changes

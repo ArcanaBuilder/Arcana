@@ -18,50 +18,29 @@ static const char* ARCANA_TEMPLATE = R"TEMPLATE(
 
 using profiles Debug Release;
 using default interpreter /bin/bash;
+using threads 1;
 
-COMPILER = g++
+@profile Debug;   FLAGS = 
+@profile Release; FLAGS = 
 
-@profile Debug
-FLAGS    = -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG
+COMPILER = 
+INCLUDES = 
+TARGET   = 
+SOURCES  = 
+OBJECTS  =
+BUILDDIR = 
+SRCDIR   = 
+SYSBINS  = /bin
 
-@profile Release
-FLAGS    = -std=c++17 -Os -Wall -Wextra -DRELEASE
+map SOURCES -> OBJECTS;
 
-INCLUDES = -Iinclude
-
-TARGET   = {arc:BUILDDIR}/arcana
-SOURCES  = {arc:SRCDIR}/**.cpp
-
-@map SOURCES
-OBJECTS  = {arc:BUILDDIR}/**.o
-
-BUILDDIR = build
-SRCDIR   = src
+assert "{arc:COMPILER}" in "{fs:{arc:SYSBINS}}" -> "{arc:COMPILER} is required for this project";
 
 
 ###########################
 # PRIVATE TASKS
 ###########################
 
-
-task MakeFolders() 
-{
-    cd {arc:SRCDIR}
-    find . -type d -exec mkdir -p "../{arc:BUILDDIR}"/{} \;
-}
-
-@echo
-@multithread
-task Compile(SOURCES) 
-{
-    {arc:COMPILER} {arc:FLAGS} {arc:INCLUDES} -c {arc:list:SOURCES} -o {arc:list:OBJECTS}
-}
-    
-    
-task Link()
-{        
-    {arc:COMPILER} {arc:FLAGS} {arc:inline:OBJECTS} -o {arc:TARGET}
-}
 
 
 ###########################
@@ -70,27 +49,29 @@ task Link()
 
 @pub
 @flushcache
-@then MakeFolders
 task Clean() 
 { 
-    rm -rf {arc:BUILDDIR}
+
 }
 
 @pub
 @main
-@requires Compile Link
-task Build() {}
+task Build() 
+{
+
+}
 
 @pub
 @requires Clean Build
 task Rebuild() {}
 
 @pub
-@requires Clean Build
+@requires Rebuild
 task Install()
 {
-    cp {arc:TARGET} /usr/bin/  
+
 }
+
 )TEMPLATE";
 
 

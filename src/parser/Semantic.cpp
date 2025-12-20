@@ -10,6 +10,7 @@
 #include <thread>
 #include <charconv>
 #include <algorithm>
+#include <filesystem>
 #include <unordered_map>
 
 
@@ -51,6 +52,7 @@ struct ExpandMatch
 using AttributeMap   = Arcana::Support::AbstractKeywordMap<Attr::Type>;
 using UsingMap       = Arcana::Support::AbstractKeywordMap<Using::Rule>;
 
+namespace fs = std::filesystem;
 
 
 
@@ -549,6 +551,10 @@ SemanticOutput Engine::Collect_Assert(std::size_t line, const std::string& stmt,
     {
         acheck.check = AssertCheck::CheckType::NOT_EQUAL;
     }
+    else if (op == "in")
+    {
+        acheck.check = AssertCheck::CheckType::IN;
+    }
 
     _env.atable.push_back(acheck);
 
@@ -643,6 +649,11 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
         profile.selected = profile.profiles[0];
     }
 
+    if (args.threads)
+    {
+        Core::update_symbol(Core::SymbolType::THREADS, args.threads.svalue);
+    }
+
     Core::update_symbol(Core::SymbolType::PROFILE, profile.selected);
     
     // AFTER THE PROFILE SELECTION, REMOVE THE UNWANTED KEYS FROM THE TABLES AND
@@ -727,123 +738,43 @@ const std::optional<std::string> Enviroment::AlignEnviroment() noexcept
 
 
 
-const std::optional<std::string> Enviroment::Expand() noexcept
+const std::optional<std::string>
+Enviroment::Expand() noexcept
 {
-    // LAMBDA USED TO EXPAND A STATEMENT
-    auto expand_one = [this](std::string& stmt) noexcept -> std::optional<std::string>
-    {
-        std::stringstream        ss;
-        std::vector<ExpandMatch> matches;
-        bool                     intern_satisfied = false;
-        
-        std::regex intern_re(R"(\{arc:(__profile__|__version__|__main__|__root__|__max_threads__|__threads__|__os__|__arch__)\})");
-        for (std::sregex_iterator it(stmt.begin(), stmt.end(), intern_re), end; it != end && !intern_satisfied; ++it)
-        {   
-            std::string new_stmt  = stmt.substr(0, it->position());
+    Expander ex(*this);
 
-            if (auto symbol_type = Core::is_symbol((*it)[1]); symbol_type != Core::SymbolType::UNDEFINED)
-            {
-                new_stmt += Core::symbol(symbol_type);
-            }
-
-            new_stmt += stmt.substr(it->position() + (*it)[0].length(), stmt.length() - it->position() + (*it)[0].length());
-            stmt = new_stmt;
-        }
-
-        intern_satisfied = true;
-
-        std::regex var_re(R"(\{arc:([A-Za-z]+)\})");
-        for (std::sregex_iterator it(stmt.begin(), stmt.end(), var_re), end; it != end; ++it)
-        {   
-            if (const auto vit = vtable.find((*it)[1]); vit != vtable.end())
-            {
-                const auto& var = vit->first;
-                std::size_t start = it->position();
-                matches.push_back({var, start, start + var.size() + 6});
-            }
-            else
-            {
-                std::stringstream err;
-                err << "Undefined variable " << ANSI_BMAGENTA << (*it)[1] << ANSI_RESET 
-                    << " while trying to expand "<< ANSI_BMAGENTA << "{arc:" << (*it)[1] << "}" << ANSI_RESET;
-
-                return err.str();
-            }
-        }
-        
-        if (!matches.empty())
-        {
-            std::size_t iterator = 0;
-
-            std::sort(matches.begin(), matches.end(), [] (const ExpandMatch& a, const ExpandMatch& b) {
-                return a.start < b.start;
-            });
-    
-            for (const auto& match: matches)
-            {
-                const std::string& replacement = vtable[*match.text].var_value;
-
-                ss << stmt.substr(iterator, match.start - iterator);
-                ss << replacement;
-                iterator = match.end;
-            }
-
-            auto& last = matches.back(); 
-
-            if (last.end < stmt.length())
-            {
-                ss << stmt.substr(last.end, stmt.length() - iterator);
-            }
-
-            stmt = ss.str();
-        }
-
-        return std::nullopt;
-    };
-
-    // HANDLE MAX THREADS   
+    // ------------------------------------------------------------
+    // HANDLE MAX THREADS
+    // ------------------------------------------------------------
     auto machine_max_threads = std::thread::hardware_concurrency();
 
     if (max_threads == 0 || max_threads > machine_max_threads)
     {
         max_threads = machine_max_threads;
     }
-    
-    // FOR EACH KEY IN VTABLE
-    auto var_keys = Table::Keys(vtable);
-    
-    if (var_keys.empty()) return std::nullopt;
 
-    // SORT BY VARIABLE NAME LENGTH
+    // ------------------------------------------------------------
+    // FOR EACH KEY IN VTABLE (per validare task_inputs)
+    // ------------------------------------------------------------
+    auto var_keys = Table::Keys(vtable);
+
+    if (var_keys.empty())
+    {
+        return std::nullopt;
+    }
+
     std::sort(var_keys.begin(), var_keys.end(), [] (const std::string& a, const std::string& b) {
         return a.size() > b.size();
     });
 
-
+    // ------------------------------------------------------------
+    // EXPAND VTABLE + GLOB EXPAND
+    // ------------------------------------------------------------
     Glob::ExpandOptions opt;
 
-    for (auto& assert : atable)
-    {
-        if (const auto err = expand_one(assert.lvalue); err.has_value())
-        {
-            return err;
-        }
-
-        if (const auto err = expand_one(assert.rvalue); err.has_value())
-        {
-            return err;
-        }
-
-        if (const auto err = expand_one(assert.reason); err.has_value())
-        {
-            return err;
-        }
-    }
-
-    // ITERATE THE VTABLE AND TRY TO EXPAND
     for (auto& [name, var] : vtable)
     {
-        if (const auto err = expand_one(var.var_value); err.has_value())
+        if (auto err = ex.ExpandText(var.var_value); err.has_value())
         {
             return err;
         }
@@ -854,17 +785,46 @@ const std::optional<std::string> Enviroment::Expand() noexcept
         if (!Glob::Parse(var.var_value, pattern, error))
         {
             std::stringstream ss;
-            ss << "While expanding " << TOKEN_MAGENTA(name) << " an invalid glob was detected " << TOKEN_MAGENTA(pattern.normalized) << ": " << ParseErrorRepr(error);
+            ss << "While expanding " << TOKEN_MAGENTA(name)
+               << " an invalid glob was detected " << TOKEN_MAGENTA(pattern.normalized)
+               << ": " << ParseErrorRepr(error);
+
             return ss.str();
         }
 
+        var.glob_expansion.clear();
+
         if (!Arcana::Glob::Expand(pattern, ".", var.glob_expansion, opt))
         {
-            // HOW CAN WE REACH THIS?
+            // qui la tua Glob::Expand ritorna bool; se false significa "nessun match"? o errore?
+            // Io non posso inventare semantica: se vuoi trattarlo come errore, fai return.
         }
     }
 
-    // ITERATE THE FTABLE AND TRY TO EXPAND
+    // ------------------------------------------------------------
+    // ASSERTS
+    // ------------------------------------------------------------
+    for (auto& assert : atable)
+    {
+        if (auto err = ex.ExpandAssertSide(assert.lvalue, assert); err.has_value())
+        {
+            return err;
+        }
+
+        if (auto err = ex.ExpandAssertSide(assert.rvalue, assert); err.has_value())
+        {
+            return err;
+        }
+
+        if (auto err = ex.ExpandText(assert.reason); err.has_value())
+        {
+            return err;
+        }
+    }
+
+    // ------------------------------------------------------------
+    // FTABLE
+    // ------------------------------------------------------------
     for (auto& [name, task] : ftable)
     {
         if (task.hasAttribute(Attr::Type::INTERPRETER))
@@ -872,18 +832,20 @@ const std::optional<std::string> Enviroment::Expand() noexcept
             std::stringstream ss;
             auto properties = task.getProperties(Attr::Type::INTERPRETER);
 
-            if (const auto err = expand_one(properties[0]); err.has_value())
+            if (!properties.empty())
             {
-                return err;
-            }
+                if (auto err = ex.ExpandText(properties[0]); err.has_value())
+                {
+                    return err;
+                }
 
-            task.interpreter = properties[0];
+                task.interpreter = properties[0];
 
-            // CHECK IF THE INTERPRETER EXISTS
-            if (!Support::file_exists(properties[0]))
-            {
-                ss << "Interpreter " << TOKEN_MAGENTA(properties[0]) << " is missing or unknown";
-                return ss.str();
+                if (!Support::file_exists(properties[0]))
+                {
+                    ss << "Interpreter " << TOKEN_MAGENTA(properties[0]) << " is missing or unknown";
+                    return ss.str();
+                }
             }
         }
 
@@ -892,21 +854,25 @@ const std::optional<std::string> Enviroment::Expand() noexcept
             if (std::find(var_keys.begin(), var_keys.end(), input) == var_keys.end())
             {
                 std::stringstream ss;
-                ss << "Invalid input " << TOKEN_MAGENTA(input << ANSI_RESET << " for task " << ANSI_BMAGENTA << name ) << ": Undefined variable";
+                ss << "Invalid input " << TOKEN_MAGENTA(input << ANSI_RESET << " for task " << ANSI_BMAGENTA << name)
+                   << ": Undefined variable";
+
                 return ss.str();
             }
         }
 
-        for (auto& instr : task.task_instrs) 
+        for (auto& instr : task.task_instrs)
         {
-            if (const auto err = expand_one(instr); err.has_value())
+            if (auto err = ex.ExpandText(instr); err.has_value())
             {
                 return err;
             }
         }
     }
 
+    // ------------------------------------------------------------
     // HANDLE MAPPED VARS EXPANSION
+    // ------------------------------------------------------------
     auto map_required = Table::GetValues(vtable, Semantic::Attr::Type::MAP);
 
     for (auto& stmt : map_required.value())
@@ -917,40 +883,187 @@ const std::optional<std::string> Enviroment::Expand() noexcept
         auto& map_to   = stmt.get();
         auto& map_from = vtable[map_to.getProperties(Semantic::Attr::Type::MAP).at(0)];
 
-        if (!Arcana::Glob::MapGlobToGlob(map_from.var_value,      map_to.var_value, 
+        if (!Arcana::Glob::MapGlobToGlob(map_from.var_value,      map_to.var_value,
                                          map_from.glob_expansion, map_to.glob_expansion, e1, e2, m1))
         {
             std::stringstream ss;
-            ss << "While mapping " << TOKEN_MAGENTA(map_from.var_name) << " to " << TOKEN_MAGENTA(map_to.var_name) << ": incompatible globs";
+            ss << "While mapping " << TOKEN_MAGENTA(map_from.var_name)
+               << " to " << TOKEN_MAGENTA(map_to.var_name)
+               << ": incompatible globs";
+
             return ss.str();
         }
     }
 
+    return std::nullopt;
+}
+
+
+const std::optional<std::string> Enviroment::ExecuteAsserts() noexcept
+{
+    bool assert_failed = false;
+
+    for (const auto& assert : atable)
+    {
+        assert_failed = false;
+
+        switch (assert.check)
+        {
+            case AssertCheck::CheckType::EQUAL:     
+                assert_failed = (assert.lvalue != assert.rvalue);                         
+                break;
+            case AssertCheck::CheckType::NOT_EQUAL: 
+                assert_failed = (assert.lvalue == assert.rvalue);                         
+                break;
+            case AssertCheck::CheckType::IN:        
+                assert_failed = (assert.rvalue.find(assert.lvalue) == std::string::npos); 
+                break;
+
+            case AssertCheck::CheckType::DEPENDENCIES:
+                assert_failed = !fs::exists(assert.search_path);
+                break;
+        }
+
+        if (assert_failed)
+        {
+            std::stringstream ss;
+            ss << "Assert failed on line " << assert.line << ": " << TOKEN_CYAN(assert.stmt);
+
+            if (assert.check != AssertCheck::CheckType::DEPENDENCIES)
+            {
+                ss << " with lvalue: " << TOKEN_MAGENTA(assert.lvalue) << ", rvalue: " << TOKEN_MAGENTA(assert.rvalue) << std::endl;
+            }
+            else
+            {
+                ss << " dependency " << TOKEN_MAGENTA(assert.search_path) << " not found!" << std::endl;
+            }
+
+            ss << "Reason: " << assert.reason;
+            return ss.str();
+        }
+    }
 
     return std::nullopt;
 }
 
 
 
-const std::optional<std::string> Enviroment::CheckAsserts() noexcept
+
+//    ███████╗██╗  ██╗██████╗  █████╗ ███╗   ██╗██████╗ ███████╗██████╗ 
+//    ██╔════╝╚██╗██╔╝██╔══██╗██╔══██╗████╗  ██║██╔══██╗██╔════╝██╔══██╗
+//    █████╗   ╚███╔╝ ██████╔╝███████║██╔██╗ ██║██║  ██║█████╗  ██████╔╝
+//    ██╔══╝   ██╔██╗ ██╔═══╝ ██╔══██║██║╚██╗██║██║  ██║██╔══╝  ██╔══██╗
+//    ███████╗██╔╝ ██╗██║     ██║  ██║██║ ╚████║██████╔╝███████╗██║  ██║
+//    ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚══════╝╚═╝  ╚═╝
+//                                                                      
+
+
+
+std::optional<std::string> Enviroment::Expander::ExpandInternals(std::string& s) noexcept
 {
-    bool assert_failed = false;
-
-    for (const auto& assert : atable)
+    for (int depth = 0; depth < 32; ++depth)
     {
-        switch (assert.check)
+        std::smatch m;
+        if (!std::regex_search(s, m, re_intern))
         {
-            case AssertCheck::CheckType::EQUAL:     assert_failed = (assert.lvalue != assert.rvalue); break;
-            case AssertCheck::CheckType::NOT_EQUAL: assert_failed = (assert.lvalue == assert.rvalue); break;
+            return std::nullopt;
         }
 
-        if (assert_failed)
+        const std::string sym = m[1].str();
+
+        if (auto st = Core::is_symbol(sym); st != Core::SymbolType::UNDEFINED)
         {
-            std::stringstream ss;
-            ss << "Assert failed on line " << assert.line << ": " << TOKEN_MAGENTA(assert.stmt) << " with lvalue: " << TOKEN_MAGENTA(assert.lvalue) << ", rvalue: " << TOKEN_MAGENTA(assert.rvalue) << std::endl;
-            ss << "Reason: " << assert.reason;
-            return ss.str();
+            const std::string rep = Core::symbol(st);
+
+            s.replace(static_cast<std::size_t>(m.position(0)), static_cast<std::size_t>(m.length(0)), rep);
         }
+        else
+        {
+            return "Internal symbol expansion failed for {arc:" + sym + "}";
+        }
+    }
+
+    return "Too deep internal symbol expansion (depth limit reached)";
+}
+
+
+
+std::optional<std::string> Enviroment::Expander::ExpandArcAll(std::string& s) noexcept
+{
+    for (int depth = 0; depth < 32; ++depth)
+    {
+        std::smatch m;
+        if (!std::regex_search(s, m, re_arc))
+        {
+            return std::nullopt;
+        }
+
+        const std::string name = m[1].str();
+
+        auto it = env.vtable.find(name);
+        if (it == env.vtable.end())
+        {
+            std::stringstream err;
+            err << "Undefined variable " << ANSI_BMAGENTA << name << ANSI_RESET
+                << " while trying to expand " << ANSI_BMAGENTA << "{arc:" << name << "}" << ANSI_RESET;
+
+            return err.str();
+        }
+
+        const std::string& value = it->second.var_value;
+
+        s.replace(static_cast<std::size_t>(m.position(0)), static_cast<std::size_t>(m.length(0)), value);
+    }
+
+    return "Too deep / cyclic {arc:...} expansion (depth limit reached)";
+}
+
+
+
+std::optional<std::string> Enviroment::Expander::ExpandText(std::string& s) noexcept
+{
+    if (auto err = ExpandInternals(s); err.has_value())
+    {
+        return err;
+    }
+
+    if (auto err = ExpandArcAll(s); err.has_value())
+    {
+        return err;
+    }
+
+    return std::nullopt;
+}
+
+
+
+void Enviroment::Expander::ExtractFsPaths(const std::string& s, std::vector<fs::path>& out) noexcept
+{
+    std::smatch m;
+
+    for (auto it = s.cbegin(); std::regex_search(it, s.cend(), m, re_fs); )
+    {
+        out.push_back(fs::path(m[1].str()));
+        it = m.suffix().first;
+    }
+}
+
+
+
+std::optional<std::string> Enviroment::Expander::ExpandAssertSide(std::string& stmt, AssertCheck& assert) noexcept
+{ 
+    if (auto err = ExpandText(stmt); err.has_value())
+    {
+        return err;
+    }
+    
+    std::vector<fs::path> paths;
+    ExtractFsPaths(stmt, paths);
+
+    if (!paths.empty())
+    {
+        assert.check       = AssertCheck::CheckType::DEPENDENCIES;
+        assert.search_path = paths.back() / assert.lvalue;
     }
 
     return std::nullopt;

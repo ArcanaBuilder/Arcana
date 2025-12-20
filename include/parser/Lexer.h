@@ -51,6 +51,7 @@ enum class TokenType : uint32_t
     AT                       ,
     NE                       ,
     EQ                       ,
+    IN                       ,
     SEMICOLON                ,
     NEWLINE                  ,
     ENDOFFILE                ,

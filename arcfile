@@ -1,11 +1,11 @@
 #!/usr/bin/arcana
 
-using profiles Debug Release;
+using profiles Release Debug;
 using default interpreter /bin/bash;
 using threads 12;
 
 @profile Debug;   FLAGS = -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG
-@profile Release; FLAGS = -std=c++17 -Os -Wall -Wextra -DRELEASE
+@profile Release; FLAGS = -std=c++17 -Ofast -Wall -Wextra -DRELEASE
 
 BUILDDIR = arcbuild
 SRCDIR   = src
@@ -14,20 +14,17 @@ TARGET   = {arc:BUILDDIR}/{arc:TOOL}
 SOURCES  = {arc:SRCDIR}/**/*.cpp
 OBJECTS  = {arc:BUILDDIR}/**/*.o
 INCLUDES = -Iinclude/common -Iinclude/core -Iinclude/parser -Iinclude/parser/util -Iinclude/core/util
+BINS     = /bin
 
 map SOURCES -> OBJECTS;
 
-assert "{arc:__os__}" eq "linux" -> "This project can only build under linux, {arc:__os__} not admitted";
-
 @ifos linux;   RM       = rm
 @ifos linux;   COMPILER = g++
-@ifos linux;   PYTHON   = /bin/python3
+@ifos linux;   PYTHON   = {arc:BINS}/python3
 
-
-@ifos windows; RM       = del.exe
-@ifos windows; COMPILER = msvc.exe
-@ifos windows; PYTHON   = C:\Users\sfattore\AppData\Local\Microsoft\WindowsApps\python3.exe
-
+assert "{arc:__os__}"      eq "linux"             -> "This project can only be build under linux, {arc:__os__} not admitted";
+assert "{arc:COMPILER}"    in "{fs:{arc:BINS}}"   -> "{arc:COMPILER} is required for this project";
+assert "python3"           in "{fs:{arc:BINS}}"   -> "python3 is required for this project";
 
 ###########################
 # PRIVATE TASKS
@@ -44,20 +41,16 @@ task MakeFolders()
 @interpreter {arc:PYTHON}
 task Message() 
 {
-if '{arc:__profile__}' == 'Release':
-    print('Executing {arc:__main__} for {arc:TOOL} in {arc:__profile__} mode!')
-
-if '{arc:__profile__}' != 'Release':
-    print('Executing {arc:__main__} for {arc:TOOL} in {arc:__profile__} mode!')
-    print('Builtin Symbols:')
-    print('main       : {arc:__main__}')
-    print('root       : {arc:__root__}')
-    print('version    : {arc:__version__}')
-    print('profile    : {arc:__profile__}')
-    print('threads    : {arc:__threads__}')
-    print('max_threads: {arc:__max_threads__}')
-    print('OS         : {arc:__os__}')
-    print('arch       : {arc:__arch__}')
+print('Executing {arc:__main__} for {arc:TOOL} in {arc:__profile__} mode!')
+print('Builtin Symbols:')
+print('main       : {arc:__main__}')
+print('root       : {arc:__root__}')
+print('version    : {arc:__version__}')
+print('profile    : {arc:__profile__}')
+print('threads    : {arc:__threads__}')
+print('max_threads: {arc:__max_threads__}')
+print('OS         : {arc:__os__}')
+print('arch       : {arc:__arch__}')
 }
 
 @echo

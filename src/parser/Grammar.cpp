@@ -168,7 +168,7 @@ static Rules rule_ASSERT =
     Scan::TokenType::DQUOTE                         |
     Scan::TokenType::ANY                            |
     Scan::TokenType::DQUOTE                         |
-    ( Scan::TokenType::EQ || Scan::TokenType::NE )  |
+    ( Scan::TokenType::EQ || Scan::TokenType::NE || Scan::TokenType::IN )  |
     Scan::TokenType::DQUOTE                         |
     Scan::TokenType::ANY                            |
     Scan::TokenType::DQUOTE                         |
