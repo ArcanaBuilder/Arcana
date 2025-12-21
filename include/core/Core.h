@@ -129,9 +129,9 @@ struct RunOptions
  * @param[in] jobs Job execution list.
  * @param[in] opt Runtime execution options.
  *
- * @return Execution results for each job.
+ * @return ARCANA_RESULT__OK on success, otherwise a failure code.
  */
-std::vector<Result>
+Arcana_Result
 run_jobs(const Jobs::List& jobs, const RunOptions& opt) noexcept;
 
 
@@ -166,6 +166,16 @@ is_symbol(const std::string& symbol) noexcept;
  */
 void
 update_symbol(SymbolType type, const std::string& val) noexcept;
+
+
+
+/**
+ * @brief Check if a sybol is set.
+ * @param type Symbol type.
+ * @return True if supported.
+ */
+bool
+is_symbol_set(Core::SymbolType type) noexcept;
 
 
 

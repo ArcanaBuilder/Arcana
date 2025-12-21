@@ -61,6 +61,7 @@ class List;
 //                                                                                                                                                  
 
 
+
 /**
  * @brief Error information produced during job expansion.
  */
@@ -126,9 +127,9 @@ public:
      * @param[in]  environment Semantic environment.
      * @param[out] out Output job list.
      *
-     * @return ExpansionError describing the outcome.
+    * @return ARCANA_RESULT__OK on success, otherwise a failure code.
      */
-    static ExpansionError
+    static Arcana_Result
     FromEnv(Semantic::Enviroment& environment, List& out) noexcept;
 
     /**

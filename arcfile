@@ -72,6 +72,7 @@ task Link()
 # PUBLIC TASKS
 ###########################
 
+
 @pub
 @flushcache
 @then MakeFolders
@@ -80,6 +81,13 @@ task Clean()
     rm -rf {arc:BUILDDIR}
 }
 
+@profile Debug 
+@pub
+@main
+@requires Message Compile Link
+task Build() {}
+
+@profile Release 
 @pub
 @main
 @requires Message Compile Link
@@ -93,5 +101,5 @@ task Rebuild() {}
 @requires Clean Build
 task Install()
 {
-    cp {arc:TARGET} /usr/bin/  
+    sudo cp {arc:TARGET} /usr/bin/  
 }

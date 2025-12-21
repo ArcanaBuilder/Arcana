@@ -1,10 +1,14 @@
-#include <sstream>
-
+#include "Jobs.h"
+#include "Cache.h"
 #include "Lexer.h"
 #include "Support.h"
 #include "Grammar.h"
+#include "Semantic.h"
+#include "Generator.h"
+#include "TableHelper.h"
 
 #include <limits>
+#include <sstream>
 #include <cstddef>
 #include <variant>
 #include <charconv>
@@ -26,6 +30,244 @@ USE_MODULE(Arcana);
 //                                                                                                        
 
 
+/**
+ * @brief Arcana CLI banner printed on startup and help/version output.
+ */
+static const char* ARCANA_HEADER = 
+#if defined(_WIN32)
+R"HEADER(
+         Arcana - the modern alternative to make.
+)HEADER";
+#else
+R"HEADER(
+         ▄████▄ █████▄  ▄█████ ▄████▄ ███  ██ ▄████▄ 
+         ██▄▄██ ██▄▄██▄ ██     ██▄▄██ ██ ▀▄██ ██▄▄██ 
+         ██  ██ ██   ██ ▀█████ ██  ██ ██   ██ ██  ██ 
+                                         
+         Arcana — the modern alternative to make.
+)HEADER";
+#endif 
+
+
+/**
+ * @brief Print Arcana banner and version.
+ * @return Arcana_Result::ARCANA_RESULT__OK
+ */
+static Arcana_Result Version(void)
+{
+    MSG(ARCANA_HEADER);
+    MSG("Version: " << __ARCANA__VERSION__);
+
+    return Arcana_Result::ARCANA_RESULT__OK_AND_EXIT;
+}
+
+
+
+/**
+ * @brief Print the Arcana command-line help message.
+ * @return Arcana_Result::ARCANA_RESULT__OK
+ */
+static Arcana_Result Help(void)
+{
+    static const char* ARCANA_HELP = R"HELP(
+
+DESCRIPTION
+  Arcana lets you build your project in a simple and modern way.
+  By defining tasks, statements, and variables, characterizing them with attributes, 
+  you'll be able to define the main building steps of your project yourself, 
+  in the cleanest possible form.
+
+
+USAGE
+  arcana [task] [options]
+  arcana --help
+  arcana --version
+
+
+OPTIONS
+  --help                Show this help message, then exit.
+  --version             Print the arcana version, then exit.
+  --flush-cache         Flush arcana cache, then exit.
+  --silent              Suppress Arcana runtime logs on stdout.
+  -p <profile>          Execute the arcfile with a specific profile. 
+                        Profiles must be declared in the arcfile, via 'using profiles' statement. 
+  -s <arcfile>          Execute the CLI passed arcfile. 
+  -t <numofthreads>     Explict pass via CLI the wanted threads. This option will override the
+                        'using threads' statement.
+  --generate [stream]   Generate an arcfile template. If a stream is passed the template will be
+                        saved into it.
+                        If the stream is stdout, the template will be printed on it. 
+  --value <ITEM>        Show ITEM value. The ITEM can be a task, a variable or a symbol.
+  --pubs                Show public tasks.
+  --profiles            Show registered profiles. 
+
+
+LANGUAGE:
+  It's a deliberately lightweight grammar, to avoid the complexities of other builders.
+  It allows the use of native Arcana statements, variable declarations, and tasks, 
+  with the ability to be customized through attributes that define their behavior and execution order.
+  In particular, body tasks are grammar-less, meaning no control over their content is performed.
+  This is because we wanted to offer users the freedom to use their preferred interpreter 
+  to execute the instructions.
+  This means no custom statements like if/for/while, no strange symbols, and no overly complex syntax.
+  The only exception is the ability to expand variables declared in Arcana within task statements.
+
+  NATIVE STATEMENTS:
+    import <file.arc>                               Import an arcscript as arcana source file.
+    
+    using profiles <Profile list>                   Allows the user to define a set of profiles to use 
+                                                    in the arcana code.
+                                                    Any use of profiles not declared in this way will 
+                                                    raise an error.
+
+    using default interpreter <path to interpreter> Allows the user to define the default interpreter 
+                                                    for task bodies. 
+                                                    By default, /bin/bash will be used.
+    
+    using threads <max threads number>              Allows the user to define the number of threads on 
+                                                    which to parallelize the execution of a specific task.
+                                                    Omitting this statement will result in the use of all 
+                                                    the cores on your machine.
+
+    map <SOURCE> -> <TARGET>                        Same as attribute @map. 
+
+    assert "lvalue" <op> "rvalue" -> "reason"       Execute assert equal operation. 
+
+  
+  BUILTIN SYMBOLS:
+    In Arcana there are builtin symbols:
+
+    __main__                        A symbol that identifies the name of the main task.
+                                    It represents the entry point of the execution graph.
+
+    __root__                        A symbol that identifies the absolute path of the project root.
+                                    The project root is defined as the directory containing the main Arcana file.
+
+    __version__                     A symbol that identifies the current version of Arcana.
+                                    It can be used for compatibility checks and diagnostics.
+
+    __profile__                     A symbol that identifies the currently selected execution profile.
+                                    If no profile is selected, it will have the value 'None'.
+
+    __threads__                     A symbol that identifies the number of threads effectively used
+                                    for task execution at runtime.
+
+    __max_threads__                 A symbol that identifies the maximum number of threads allowed
+                                    for task execution, as determined by system capabilities and configuration.
+
+    __os__                          A symbol that identifies the target operating system.
+                                    The value is determined at compile time and is platform independent.
+
+    __arch__                        A symbol that identifies the target CPU architecture.
+                                    The value is determined at compile time and is platform independent.
+
+
+  VARIABLES:
+    NAME = VALUE                    Simple assignment of VALUE into NAME
+    GLOB = path/**/*.c              Simple assignment of path/**/*.c into GLOB, but at runtime
+                                    the engine will try to expand the glob **/*.c
+    @map GLOB
+    VAR  = path2/**/*.o             Using the @map X attribute on a glob variable Y will generate 
+                                    a mapping of X to Y
+
+
+  TASKS:
+    task Name(INPUT_PARAMS)         
+    {
+        instructions...
+    }
+
+    A task declaration follows the linear semantics of 'task NAME(OPTIONAL_INPUTS) { OPTIONAL_STATEMENTS }'.
+    The inputs are not related to the body of the task itself; they only tell arcana that this task 
+    handles these data sets.
+    This is to keep track of which statements can be avoided in the cache because they have not changed.
+    A task can have 0 inputs and 0 statements.
+    If it has 0 statements, it will be optimized by eliminating the task itself, but through the use of 
+    attributes like @then, @after, and @pub, it becomes a wrapper that allows the invocation of private tasks.
+    As mentioned above, the only task statement management for arcana translates into the expansion 
+    of arcana variables.
+    Here too, the logic is quite simple.
+
+    VARIABLES EXPANSION:
+      There are various types of expansion:
+
+      1) simple expansion, follows the grammar {arc:VARNAME}, results in a simple text replacing with 
+         the contents of a variable.
+      2) inline expansion, follows the grammar {arc:inline:VARNAME}, translates to an inline expansion 
+         of the contents of a glob variable.
+      3) list expansion, follows the grammar {arc:list:VARNAME}, translates into an expansion of the 
+         statement into several sibling statements, each characterized by an entry of the glob type 
+         variable.
+
+      For glob expansions, if the passed variable is not a glob, its nominal content will be used.
+
+
+  ATTRIBUTES:
+    Attributes allow you to customize variables and, above all, tasks as much as possible.
+
+    @map                            Valid only for variables. Allows you to map one glob to another.
+
+    @ifos        <os>               Valid only for variables. Enables the annotated variables or 
+                                    tasks only when the host OS matches <os>.
+
+    @pub                            Export task to the caller. By defaults all symbols are private.
+
+    @main                           Mark the task as main task.
+
+    @echo                           Prints at runtime on stdout the executed task instructions.
+
+    @then        <task list>        After the execution of the task with the after attribute, 
+                                    the specified tasks will be called.
+
+    @requires    <task list>        Before the execution of the task with the after attribute, 
+                                    the specified tasks will be called.
+
+    @exclude     <VARNAME>          Used primarily for glob expansions. It allows you to perform 
+                                    subtraction between sets by subtracting the value of VARNAME 
+                                    from the variable characterized by this attribute.
+
+    @always                         Execute the task regardless of job scheduling.
+
+    @profile     <profile>          Restricts the annotated variables or tasks to the specified 
+                                    build profile.
+
+    @flushcache                     Clears cache, forces subsequent tasks to ignore it.
+
+    @interpreter <interpreter>      Force the task to be executed with the specified interpreter.
+    
+    @multithread                    Enable the multithread for the selected task, not guaranteed.
+
+
+EXAMPLES:
+  arcana
+  arcana <TASK>
+  arcana <TASK> -p Debug
+  arcana <TASK> -p Debug -t 1
+  arcana --flush-cache
+  arcana --pubs
+  arcana --value <TASK>
+  arcana --generate stdout
+)HELP";
+
+    MSG(ARCANA_HEADER);
+    MSG(ARCANA_HELP);
+
+    return Arcana_Result::ARCANA_RESULT__OK_AND_EXIT;
+}
+
+
+
+/**
+ * @brief Compute the Levenshtein distance between two strings.
+ *
+ * The Levenshtein distance is the minimum number of single-character edits
+ * (insertions, deletions, or substitutions) required to change one string
+ * into the other.
+ *
+ * @param a First string.
+ * @param b Second string.
+ * @return Edit distance between @p a and @p b.
+ */
 std::size_t levenshtein_distance(const std::string& a,
                                  const std::string& b) noexcept
 {
@@ -79,6 +321,13 @@ std::size_t levenshtein_distance(const std::string& a,
 
 
 
+/**
+ * @brief Format and print a syntax error produced by the parsing engine.
+ *
+ * @param ctx Source context (typically a file path).
+ * @param match Grammar match containing error information.
+ * @return Arcana_Result::ARCANA_RESULT__NOK
+ */
 Arcana_Result Support::ParserError::operator() (const std::string& ctx, const Grammar::Match& match) const
 {
     const auto& [token, found, semtypes, _] = match.Error;
@@ -88,17 +337,21 @@ Arcana_Result Support::ParserError::operator() (const std::string& ctx, const Gr
     std::string       symbol(token.end, '^');
     std::stringstream ss;
 
+    // BUILD A VISUAL DIAGNOSTIC LINE WITH A CARET RANGE UNDER THE OFFENDING TOKEN.
     ss << "[" << TOKEN_RED("SYNTAX ERROR") << "] In file " << ANSI_BOLD << ctx << ANSI_RESET << ", line " << ANSI_BOLD << token.line << ": " << lexer[token] << ANSI_RESET << std::endl;
     ss << TOKEN_RED("               +~~~~~~~~~~~~~~~~~~~~~~~~" << s << symbol) << std::endl;
 
+    // NORMALIZE SPECIAL LEXEMES FOR OUTPUT.
     escaping = (token.lexeme == "\n") ? "<New Line>" : token.lexeme;
 
     if (token.type == Scan::TokenType::UNKNOWN)
     {
+        // REPORT UNKNOWN SYMBOLS AS UNDEFINED INPUT.
         ss << "        Found undefined symbol: " << escaping  << std::endl;
     }
     else
     {
+        // PRINT FOUND TOKEN AND EXPECTED NON-TERMINALS / RULES.
         ss << "Found:    " << TOKEN_RED(escaping) << " (" << Support::TokenTypeRepr(token.type) << ")" << std::endl;
         ss << "Expected: " << Support::UniqueNonTerminalRepr(found) << " for statement(s): ";
         
@@ -112,36 +365,56 @@ Arcana_Result Support::ParserError::operator() (const std::string& ctx, const Gr
         ss << std::endl;
     }
     
+    // FLUSH DIAGNOSTIC MESSAGE TO STDERR.
     std::cerr << ss.str();
 
     return Arcana_Result::ARCANA_RESULT__NOK;
 }
 
 
+/**
+ * @brief Format and print a semantic error produced during analysis.
+ *
+ * @param ctx Source context (typically a file path).
+ * @param ao Semantic analysis output (error and optional hint).
+ * @param match Grammar match containing token information.
+ * @return Arcana_Result::ARCANA_RESULT__NOK
+ */
 Arcana_Result Support::SemanticError::operator() (const std::string& ctx, const Support::SemanticOutput& ao, const Grammar::Match& match) const
 {
     const auto& [token, found, semtypes, _] = match.Error;
 
     std::stringstream ss;
 
+    // PRINT ERROR HEADER WITH SOURCE LOCATION AND INPUT LINE.
     ss << "[" << TOKEN_RED("SEMANTIC ERROR") << "] In file " << ANSI_BOLD << ctx << ANSI_RESET << ", line " << ANSI_BOLD << token.line << ": " << lexer[token]  << ANSI_RESET << std::endl;
     ss << ao.err << std::endl;
 
     if (!ao.hint.empty())
     {
+        // PRINT A SUGGESTION WHEN A CLOSE MATCH IS AVAILABLE.
         ss << "[" << TOKEN_GREEN("HINT") << "] Did you mean " << TOKEN_CYAN(ao.hint) << "?" << std::endl;
     }
 
+    // FLUSH DIAGNOSTIC MESSAGE TO STDERR.
     std::cerr << ss.str();
 
     return Arcana_Result::ARCANA_RESULT__NOK;
 }
 
 
+/**
+ * @brief Format and print a post-processing error.
+ *
+ * @param ctx Source context (typically a file path).
+ * @param err Error message.
+ * @return Arcana_Result::ARCANA_RESULT__NOK
+ */
 Arcana_Result Support::PostProcError::operator() (const std::string& ctx, const std::string& err) const
 {
     std::stringstream ss;
 
+    // PRINT ERROR HEADER AND MESSAGE.
     ss << "[" << TOKEN_RED("SEMANTIC ERROR") << "] In file: " << ANSI_BOLD << ctx << ANSI_RESET << std::endl;
     ss << err << std::endl;
     std::cerr << ss.str();
@@ -151,12 +424,19 @@ Arcana_Result Support::PostProcError::operator() (const std::string& ctx, const 
 
 
 
+/**
+ * @brief Case-insensitive hash for std::string_view based on ASCII lowering.
+ *
+ * @param s Input string view.
+ * @return Hash value.
+ */
 std::size_t Support::StringViewHash::operator() (std::string_view s) const noexcept
 {
     std::size_t h = 0;
 
     for (char c : s)
     {
+        // UPDATE HASH USING LOWERCASED ASCII CHARACTER.
         h = h * 131 + Support::toLowerAscii(c); 
     }
 
@@ -165,6 +445,13 @@ std::size_t Support::StringViewHash::operator() (std::string_view s) const noexc
 
 
 
+/**
+ * @brief Case-insensitive equality for std::string_view based on ASCII lowering.
+ *
+ * @param a First string view.
+ * @param b Second string view.
+ * @return true if equal (case-insensitive ASCII), false otherwise.
+ */
 bool Support::StringViewEq::operator() (std::string_view a, std::string_view b) const noexcept
 {
     if (a.size() != b.size())
@@ -198,10 +485,17 @@ bool Support::StringViewEq::operator() (std::string_view a, std::string_view b) 
 
 
 
-std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char** argv)
+/**
+ * @brief Parse command-line arguments into a Support::Arguments structure.
+ *
+ * @param argc Argument count.
+ * @param argv Argument vector.
+ * @param args Argument data structure.
+ * @return ARCANA_RESULT__OK on success, otherwise a failure code.
+ */
+Arcana_Result Support::ParseArgs(int argc, char** argv, Support::Arguments &args)
 {
     std::stringstream  ss;
-    Support::Arguments args{};
 
     int i = 1;
     while (i < argc)
@@ -212,19 +506,22 @@ std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char*
         {
             if (i + 1 < argc)
             {
+                // READ ARCFILE PATH.
                 args.arcfile = argv[i + 1];
                 i += 2;
                 continue;
             }
             else
             {
-                return "Missing value for option -s";
+                ERR("Missing value for option -s");
+                return Arcana_Result::ARCANA_RESULT__NOK;
             }
         }
         else if (arg == "-p")
         {
             if (i + 1 < argc)
             {
+                // READ PROFILE NAME.
                 args.profile.found = true;
                 args.profile.value = argv[i + 1];
                 i += 2;
@@ -232,13 +529,15 @@ std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char*
             }
             else
             {
-                return "Missing value for option -p";
+                ERR("Missing value for option -p");
+                return Arcana_Result::ARCANA_RESULT__NOK;
             }
         }
         else if (arg == "-t")
         {
             if (i + 1 < argc)
             {
+                // PARSE THREAD COUNT AS POSITIVE INTEGER.
                 std::string value = std::string(argv[i + 1]);
                 const char* begin = value.data();
                 const char* end   = begin + value.size(); 
@@ -248,7 +547,8 @@ std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char*
                 if (ec != std::errc{} || ptr != end || args.threads.ivalue <= 0)
                 {
                     ss << "Invalid value for option -t: " << TOKEN_MAGENTA(value) << ". Expected a positive integer.";
-                    return ss.str();
+                    ERR(ss.str());
+                    return Arcana_Result::ARCANA_RESULT__NOK;
                 }
                 args.threads.svalue = value;
                 args.threads.found  = true;
@@ -257,11 +557,29 @@ std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char*
             }
             else
             {
-                return "Missing value for option -t";
+                ERR("Missing value for option -t");
+                return Arcana_Result::ARCANA_RESULT__NOK;
+            }
+        }
+        else if (arg == "--value")
+        {
+            if (i + 1 < argc)
+            {
+                // READ PROFILE NAME.
+                args.value.found = true;
+                args.value.value = argv[i + 1];
+                i += 2;
+                continue;
+            }
+            else
+            {
+                ERR("Missing value for option --value");
+                return Arcana_Result::ARCANA_RESULT__NOK;
             }
         }
         if (arg == "--generate")
         {
+            // ENABLE TEMPLATE GENERATION MODE (OPTIONAL OUTPUT TARGET).
             args.generator.found = true;
 
             if (i + 1 < argc)
@@ -276,55 +594,338 @@ std::variant<Support::Arguments, std::string> Support::ParseArgs(int argc, char*
 
             continue;
         }
-        else if (arg == "--debug")
-        {
-            args.debug = true;
-            ++i;
-            continue;
-        }
         else if (arg == "--flush-cache")
         {
+            // REQUEST CACHE FLUSH MODE.
             args.flush_cache = true;
             ++i;
             continue;
         }
         else if (arg == "--version")
         {
+            // REQUEST VERSION OUTPUT.
             args.version = true;
             ++i;
             continue;
         }
         else if (arg == "--help")
         {
+            // REQUEST HELP OUTPUT.
             args.help = true;
+            ++i;
+            continue;
+        }
+        else if (arg == "--pubs")
+        {
+            // REQUEST PUB TASK OUTPUT.
+            args.pubtasks = true;
+            ++i;
+            continue;
+        }
+        else if (arg == "--profiles")
+        {
+            // REQUEST PUB TASK OUTPUT.
+            args.profiles = true;
             ++i;
             continue;
         }
         else if (arg == "--silent")
         {
+            // SUPPRESS RUNTIME LOGS ON STDOUT.
             args.silent = true;
             ++i;
             continue;
         }
         else if (!args.task.found)
         {
+            // CAPTURE FIRST POSITIONAL ARGUMENT AS TASK NAME.
             args.task.found = true;
             args.task.value = argv[i];
         }
         else
         {
+            // FAIL ON UNRECOGNIZED PARAMETERS.
             ss << "Unknown parameter " << ANSI_BMAGENTA << argv[i] << ANSI_RESET;
-            return ss.str();
+            ERR(ss.str());
+            return Arcana_Result::ARCANA_RESULT__NOK;
         }
 
         ++i;
     }
 
-    return args;
+    return Arcana_Result::ARCANA_RESULT__OK;
 }
 
 
 
+/**
+ * @brief Handle command-line arguments.
+ *
+ * @param args Argument data structure.
+ * @return ARCANA_RESULT__OK on success, otherwise a failure code.
+ */
+Arcana_Result Support::HandleArgsPreParse(const Arguments &args)
+{
+    if (args.version)
+    {
+        return Version();
+    }
+
+    if (args.help)
+    {
+        return Help();
+    }
+
+    if (args.flush_cache)
+    {
+        Cache::Manager::Instance().EraseCache();
+        return Arcana_Result::ARCANA_RESULT__OK_AND_EXIT;
+    }
+
+    if (args.generator.found)
+    {
+        std::string output = args.generator.value;
+        bool res = Generator::Generate_Template(output);
+
+        if (!res)
+        {
+            ERR("Cannot generate template!");
+            return Arcana_Result::ARCANA_RESULT__NOK;
+        }
+
+        ARC("Generated template in " << output << "!");
+        return Arcana_Result::ARCANA_RESULT__OK_AND_EXIT;
+    }
+
+    if (!Support::file_exists(args.arcfile))
+    {
+        ERR("Script arcfile not found!");
+        return Arcana_Result::ARCANA_RESULT__NOK;
+    }
+    else
+    {
+        std::filesystem::path p(args.arcfile);
+        std::filesystem::path dir = p.parent_path();
+
+        if (!dir.empty())
+        {
+            std::error_code ec;
+            std::filesystem::current_path(dir, ec);
+            if (ec)
+            {
+                ERR("chdir failed for " << dir << ": " << ec.message());
+                return Arcana_Result::ARCANA_RESULT__NOK;
+            }
+        }
+    }
+
+    return Arcana_Result::ARCANA_RESULT__OK;
+}
+
+
+
+
+Arcana_Result Support::HandleArgsPostParse(const Arguments &args, Arcana::Semantic::Enviroment& env)
+{
+    if (args.pubtasks)
+    {
+        auto tasks = Table::GetValues(env.ftable, Semantic::Attr::Type::PUBLIC);
+
+        if (tasks)
+        {
+            for (auto& task : tasks.value())
+            {
+                MSG(task.get().task_name);
+            }
+        }
+        
+        return Arcana_Result::ARCANA_RESULT__OK_AND_EXIT;
+    }
+    else if (args.profiles)
+    {
+        const auto& profsref = env.GetProfile();
+        
+        for (uint32_t i = 0; i < profsref.profiles.size(); ++i)
+        {
+            std::stringstream ss;
+
+            if (i == 0)
+            {
+                ss << profsref.profiles[i] << " [default";
+
+                if (profsref.profiles[i] == profsref.selected)
+                {
+                    ss << "|selected";
+                }
+
+                ss << "]";
+            }
+            else
+            {
+                ss << profsref.profiles[i];
+
+                if (profsref.profiles[i] == profsref.selected)
+                {
+                    ss << " [selected]";
+                }
+            }
+
+            MSG(ss.str());
+        }
+        
+        return Arcana_Result::ARCANA_RESULT__OK_AND_EXIT;
+    }
+    else if (args.value)
+    {
+        auto vector_inline = [] (const std::vector<std::string>& vec) noexcept -> std::string
+        {
+            uint32_t i = 0;
+            std::stringstream ss;
+
+            for (const auto& item : vec)
+            {
+                if (i) ss << ", ";
+                ss << item;
+                i++;
+            }
+
+            return ss.str();
+        };
+
+        auto print_attributes = [&vector_inline] (const Semantic::Attr::List & attrs) noexcept -> void
+        {
+            std::stringstream ss;
+            uint32_t          i = 0;
+
+            for (const auto& item : attrs)
+            {
+                ss << "@" << TOKEN_CYAN(item.name);
+
+                if (item.props.size())
+                {
+                    ss << " " << vector_inline(item.props);
+                }
+                ss << std::endl;
+
+                ++i;
+            }
+
+            MSG(ss.str());
+        };
+        
+        auto print_line = [] (const std::string& value) noexcept -> void
+        {
+            MSG(value);
+        };
+
+        auto print_ctx = [] (const std::string& ctx) noexcept -> void
+        {
+            std::stringstream ss;
+            ss << "[" << TOKEN_YELLOW(ANSI_DIM << ctx) << "]";
+            MSG(ss.str());
+        };
+        
+        auto print_kv = [&print_ctx, &print_line] (const std::string& ctx, const std::string& value) noexcept -> void
+        {
+            if (value.empty()) return;
+
+            print_ctx(ctx);
+            print_line(value);
+            print_line("");
+        };
+
+        bool found = false;
+        std::stringstream ss;
+        const auto& wanted = args.value.value;
+
+        if (const auto& res = env.vtable.find(wanted); res != env.vtable.end())
+        {
+            found = true;
+
+            print_kv("TYPE", "Variable");
+            print_kv("VALUE", res->second.var_value);
+
+            if (res->second.attributes.size())
+            {
+                print_ctx("ATTRIBUTES");
+                print_attributes(res->second.attributes);
+            }
+
+            if (res->second.glob_expansion.size())
+            {
+                print_ctx("GLOB EXPANSION");
+                for (const auto& exp : res->second.glob_expansion)
+                {
+                    print_line(exp);
+                }
+            }
+        }
+        
+        if (const auto& res = env.ftable.find(wanted); res != env.ftable.end())
+        {
+            if (found)
+            {
+                MSG("-------------------------------------------------------------------------------");
+            }
+
+            found = true;
+            
+            print_kv("TYPE", "Task");
+            print_kv("INPUTS", vector_inline(res->second.task_inputs));
+            print_kv("INTERPRETER", res->second.interpreter);
+
+            if (res->second.attributes.size())
+            {
+                print_ctx("ATTRIBUTES");
+                print_attributes(res->second.attributes);
+            }
+
+            if (res->second.task_instrs.size())
+            {
+                print_ctx("INSTRUCTIONS");
+                for (const auto& instr : res->second.task_instrs)
+                {
+                    print_line(instr);
+                }
+            }
+        }
+
+        if (const auto st = Core::is_symbol(wanted); st != Core::SymbolType::UNDEFINED)
+        {
+            const auto value = Core::symbol(st);
+
+            if (found)
+            {
+                MSG("-------------------------------------------------------------------------------");
+            }
+
+            found = true;
+            
+            print_kv("TYPE", "Builtin Symbol");
+            print_kv("VALUE", value);
+        }
+        
+        if (!found)
+        {
+            ss << "Arcana does not know any task, variable or symbol called " << TOKEN_MAGENTA(wanted);
+            ERR(ss.str());
+        }
+
+        return Arcana_Result::ARCANA_RESULT__OK_AND_EXIT;
+    }
+
+    return Arcana_Result::ARCANA_RESULT__OK;
+}
+
+
+
+
+/**
+ * @brief Check whether a file exists and is a regular file.
+ *
+ * @param filename File path.
+ * @return true if the file exists and is a regular file, false otherwise.
+ */
 bool Support::file_exists(const std::string& filename)
 {
     return std::filesystem::exists(filename)
@@ -333,6 +934,12 @@ bool Support::file_exists(const std::string& filename)
 
 
 
+/**
+ * @brief Trim whitespace from the left side of the input string.
+ *
+ * @param s Input string.
+ * @return Left-trimmed string.
+ */
 std::string Support::ltrim(const std::string& s)
 {
     const std::string ws = " \t\r\n\f\v";
@@ -348,6 +955,12 @@ std::string Support::ltrim(const std::string& s)
 
 
 
+/**
+ * @brief Trim whitespace from the right side of the input string.
+ *
+ * @param s Input string.
+ * @return Right-trimmed string.
+ */
 std::string Support::rtrim(const std::string& s)
 {
     const std::string ws = " \t\r\n\f\v";
@@ -363,6 +976,12 @@ std::string Support::rtrim(const std::string& s)
 
 
 
+/**
+ * @brief Convert an ASCII character to lowercase.
+ *
+ * @param c Input character.
+ * @return Lowercased ASCII character.
+ */
 inline char Support::toLowerAscii(char c) noexcept
 {
     if (c >= 'A' && c <= 'Z')
@@ -372,6 +991,15 @@ inline char Support::toLowerAscii(char c) noexcept
 
 
 
+/**
+ * @brief Split a string by a separator character.
+ *
+ * Empty tokens are skipped.
+ *
+ * @param s Input string.
+ * @param sep Separator character.
+ * @return Vector of tokens.
+ */
 std::vector<std::string> Support::split(const std::string& s, char sep) noexcept
 {
     std::vector<std::string> result;
@@ -402,6 +1030,15 @@ std::vector<std::string> Support::split(const std::string& s, char sep) noexcept
 
 
 
+/**
+ * @brief Split a string by a separator, treating single-quoted substrings as atomic tokens.
+ *
+ * The quoting character is '\'' and the separator is typically space.
+ *
+ * @param s Input string.
+ * @param sep Separator character.
+ * @return A Support::SplitResult containing tokens or an error description.
+ */
 Support::SplitResult Support::split_quoted(const std::string& s, char sep) noexcept
 {
     Support::SplitResult res{true, {}, {}};
@@ -494,6 +1131,12 @@ Support::SplitResult Support::split_quoted(const std::string& s, char sep) noexc
 
 
 
+/**
+ * @brief Convert a decimal numeric string into a long long.
+ *
+ * @param s Input string.
+ * @return Parsed value on success, std::nullopt on failure.
+ */
 std::optional<long long> Support::to_number(const std::string& s)
 {
     if (s.empty()) 
@@ -519,6 +1162,13 @@ std::optional<long long> Support::to_number(const std::string& s)
 
 
 
+/**
+ * @brief Generate a mangled symbol name using the provided target and mangling suffix.
+ *
+ * @param target Base name.
+ * @param mangling Mangling suffix.
+ * @return Mangled string in the form "target@@mangling".
+ */
 std::string Support::generate_mangling(const std::string& target, const std::string& mangling)
 {
     std::stringstream ss;
@@ -528,6 +1178,12 @@ std::string Support::generate_mangling(const std::string& target, const std::str
 
 
 
+/**
+ * @brief Convert a token type to a human-readable string.
+ *
+ * @param type Token type.
+ * @return String representation of the token type.
+ */
 std::string Support::TokenTypeRepr(const Scan::TokenType type)
 {
     switch (type)
@@ -569,6 +1225,12 @@ std::string Support::TokenTypeRepr(const Scan::TokenType type)
 
 
 
+/**
+ * @brief Convert a grammar terminal set to a formatted string.
+ *
+ * @param type Terminal set.
+ * @return String representation of the terminal set.
+ */
 std::string Support::TerminalRepr(const Grammar::Terminal& type)
 {   
     std::stringstream ss;
@@ -585,6 +1247,12 @@ std::string Support::TerminalRepr(const Grammar::Terminal& type)
 
 
 
+/**
+ * @brief Convert a grammar non-terminal set to a formatted string.
+ *
+ * @param type Non-terminal set.
+ * @return String representation of the non-terminal set.
+ */
 std::string Support::NonTerminalRepr(const Grammar::NonTerminal& type)
 {   
     std::stringstream ss;
@@ -601,6 +1269,12 @@ std::string Support::NonTerminalRepr(const Grammar::NonTerminal& type)
 
 
 
+/**
+ * @brief Convert a unique non-terminal set to a formatted string.
+ *
+ * @param type Unique non-terminal set.
+ * @return String representation of the unique non-terminal set.
+ */
 std::string Support::UniqueNonTerminalRepr(const Grammar::UniqueNonTerminal& type)
 {
     std::stringstream ss;
@@ -620,6 +1294,12 @@ std::string Support::UniqueNonTerminalRepr(const Grammar::UniqueNonTerminal& typ
 
 
 
+/**
+ * @brief Convert a grammar rule to a human-readable string.
+ *
+ * @param type Grammar rule.
+ * @return String representation of the rule.
+ */
 std::string Support::RuleRepr(const Grammar::Rule type)
 {
     switch (type)
@@ -639,6 +1319,14 @@ std::string Support::RuleRepr(const Grammar::Rule type)
 
 
 
+/**
+ * @brief Find the closest string to a target using Levenshtein distance.
+ *
+ * @param list Candidate strings.
+ * @param target Target string.
+ * @param max_distance Maximum distance allowed.
+ * @return Closest match if found within @p max_distance, otherwise std::nullopt.
+ */
 std::optional<std::string> Support::FindClosest(const std::vector<std::string>& list,
                                                 const std::string& target,
                                                 std::size_t max_distance) noexcept
@@ -666,9 +1354,3 @@ std::optional<std::string> Support::FindClosest(const std::vector<std::string>& 
 
     return best;
 }
-
-
-
-
-
-

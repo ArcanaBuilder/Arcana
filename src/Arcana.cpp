@@ -1,24 +1,19 @@
+#include "Glob.h"
 #include "Jobs.h"
 #include "Core.h"
-#include "Debug.h" 
 #include "Cache.h"
 #include "Parser.h"
 #include "Support.h"
 #include "Defines.h"
 #include "Semantic.h"
-#include "Generator.h"
 #include "TableHelper.h"
 
 #include <cerrno>
 #include <cstring>
-#include <variant>
 #include <iostream>
 #include <unistd.h>
 #include <filesystem>
 
-
-
-#include "Glob.h"
 
 USE_MODULE(Arcana);
 
@@ -37,273 +32,59 @@ USE_MODULE(Arcana);
 //     
 
 
-#define CHECK_RESULT(op)                if (auto res = op; res.has_value()) { ERR(res.value()); return Arcana_Result::ARCANA_RESULT__NOK; }
+
+#define CHECK_RESULT(op)                    if (auto res = op; res != Arcana_Result::ARCANA_RESULT__OK) { return res; }
+#define CHECK_STR_RESULT(op)                if (auto res = op; res.has_value())                         { ERR(res.value()); return Arcana_Result::ARCANA_RESULT__NOK; }
 
 
 static Semantic::Enviroment env;
 
-static const char* ARCANA_HEADER = 
-#if defined(_WIN32)
-R"HEADER(
-         Arcana - the modern alternative to make.
-)HEADER";
-#else
-R"HEADER(
-         ▄████▄ █████▄  ▄█████ ▄████▄ ███  ██ ▄████▄ 
-         ██▄▄██ ██▄▄██▄ ██     ██▄▄██ ██ ▀▄██ ██▄▄██ 
-         ██  ██ ██   ██ ▀█████ ██  ██ ██   ██ ██  ██ 
-                                         
-         Arcana — the modern alternative to make.
-)HEADER";
-#endif 
 
 
 
-static Arcana_Result Version(void)
-{
-    MSG(ARCANA_HEADER);
-    MSG("Version: " << __ARCANA__VERSION__);
-
-    return Arcana_Result::ARCANA_RESULT__OK;
-}
-
-
-
-
-static Arcana_Result Help(void)
-{
-    static const char* ARCANA_HELP = R"HELP(
-
-DESCRIPTION
-  Arcana lets you build your project in a simple and modern way.
-  By defining tasks, statements, and variables, characterizing them with attributes, 
-  you'll be able to define the main building steps of your project yourself, 
-  in the cleanest possible form.
-
-
-USAGE
-  arcana [task] [options]
-  arcana --help
-  arcana --version
-
-
-OPTIONS
-  --help                Show this help message, then exit.
-  --version             Print the arcana version, then exit.
-  --flush-cache         Flush arcana cache, then exit.
-  --silent              Suppress Arcana runtime logs on stdout.
-  -p <profile>          Execute the arcfile with a specific profile. 
-                        Profiles must be declared in the arcfile, via 'using profiles' statement. 
-  -s <arcfile>          Execute the CLI passed arcfile. 
-  -t <numofthreads>     Explict pass via CLI the wanted threads. This option will override the
-                        'using threads' statement.
-  --generate [stream]   Generate an arcfile template. If a stream is passed the template will be
-                        saved into it.
-                        If the stream is stdout, the template will be printed on int. 
-
-
-LANGUAGE:
-  It's a deliberately lightweight grammar, to avoid the complexities of other builders.
-  It allows the use of native Arcana statements, variable declarations, and tasks, 
-  with the ability to be customized through attributes that define their behavior and execution order.
-  In particular, body tasks are grammar-less, meaning no control over their content is performed.
-  This is because we wanted to offer users the freedom to use their preferred interpreter 
-  to execute the instructions.
-  This means no custom statements like if/for/while, no strange symbols, and no overly complex syntax.
-  The only exception is the ability to expand variables declared in Arcana within task statements.
-
-  NATIVE STATEMENTS:
-    import <file.arc>                               Import an arcscript as acana source file.
-    
-    using profiles <Profile list>                   Allows the user to define a set of profiles to use 
-                                                    in the arcana code.
-                                                    Any use of profiles not declared in this way will 
-                                                    raise an error.
-
-    using default interpreter <path to interpreter> Allows the user to define the default interpreter 
-                                                    for task bodies. 
-                                                    By default, /bin/bash will be used.
-    
-    using threads <max threads nuumber>             Allows the user to define the number of threads on 
-                                                    which to parallelize the execution of a specific task.
-                                                    Omitting this statement will result in the use of all 
-                                                    the cores on your machine.
-
-    map <SOURCE> -> <TARGET>                        Same as attribute @map. 
-
-    assert "lvalue" <op> "rvalue" -> "reason"       Execute assert equal operation. 
-
-  
-  BUILTIN SYMBOLS:
-    In Arcana there are builtin symbols:
-
-    __main__                        A symbol that identifies the name of the main task.
-                                    It represents the entry point of the execution graph.
-
-    __root__                        A symbol that identifies the absolute path of the project root.
-                                    The project root is defined as the directory containing the main Arcana file.
-
-    __version__                     A symbol that identifies the current version of Arcana.
-                                    It can be used for compatibility checks and diagnostics.
-
-    __profile__                     A symbol that identifies the currently selected execution profile.
-                                    If no profile is selected, it will have the value 'None'.
-
-    __threads__                     A symbol that identifies the number of threads effectively used
-                                    for task execution at runtime.
-
-    __max_threads__                 A symbol that identifies the maximum number of threads allowed
-                                    for task execution, as determined by system capabilities and configuration.
-
-    __os__                          A symbol that identifies the target operating system.
-                                    The value is determined at compile time and is platform independent.
-
-    __arch__                        A symbol that identifies the target CPU architecture.
-                                    The value is determined at compile time and is platform independent.
-
-
-  VARIABLES:
-    NAME = VALUE                    Simple assignment of VALUE into NAME
-    GLOB = path/**/*.c              Simple assignment of path/**/*.c into GLOB, but at runtime
-                                    the engine will try to expand the glob **/*.c
-    @map GLOB
-    VAR  = path2/**/*.o             Using the @map X attribute on a glob variable Y will generate 
-                                    a mapping of X to Y
-
-
-  TASKS:
-    task Name(INPUT_PARAMS)         
-    {
-        instructions...
-    }
-
-    A task declaration follows the linear semantics of 'task NAME(OPTIONAL_INPUTS) { OPTIONAL_STATEMENTS }'.
-    The inputs are not related to the body of the task itself; they only tell arcana that this task 
-    handles these data sets.
-    This is to keep track of which statements can be avoided in the cache because they have not changed.
-    A task can have 0 inputs and 0 statements.
-    If it has 0 statements, it will be optimized by eliminating the task itself, but through the use of 
-    attributes like @then, @after, and @pub, it becomes a wrapper that allows the invocation of private tasks.
-    As mentioned above, the only task statement management for arcana translates into the expansion 
-    of arcana variables.
-    Here too, the logic is quite simple.
-
-    VARIABLES EXPANSION:
-      There are various types of expansion:
-
-      1) simple expansion, follows the grammar {arc:VARNAME}, results in a simple text replacing with 
-         the contents of a variable.
-      2) inline expansion, follows the grammar {arc:inline:VARNAME}, translates to an inline expansion 
-         of the contents of a glob variable.
-      3) list expansion, follows the grammar {arc:list:VARNAME}, translates into an expansion of the 
-         statement into several sibling statements, each characterized by an entry of the glob type 
-         variable.
-
-      For glob expansions, if the passed variable is not a glob, its nominal content will be used.
-
-
-  ATTRIBUTES:
-    Attributes allow you to customize variables and, above all, tasks as much as possible.
-
-    @map                            Valid only for variables. Allows you to map one glob to another.
-
-    @ifos        <os>               Valid only for variables. Enables the annotated variables or 
-                                    tasks only when the host OS matches <os>.
-
-    @pub                            Export task to the caller. By defaults all symbols are private.
-
-    @main                           Mark the task as main task.
-
-    @echo                           Prints at runtime on stdout the executed task instructions.
-
-    @then        <task list>        After the execution of the task with the after attribute, 
-                                    the specified tasks will be called.
-
-    @requires    <task list>        Before the execution of the task with the after attribute, 
-                                    the specified tasks will be called.
-
-    @exclude     <VARNAME>          Used primarily for glob expansions. It allows you to perform 
-                                    subtraction between sets by subtracting the value of VARNAME 
-                                    from the variable characterized by this attribute.
-
-    @always                         Execute the task regardless of job scheduling.
-
-    @profile     <profile>          Restricts the annotated variables or tasks to the specified 
-                                    build profile.
-
-    @flushcache                     Clears cache, forces subsequent tasks to ignore it.
-
-    @interpreter <interpreter>      Force the task to be executed with the specified interpreter.
-    
-    @multithread                    Enable the multithread for the selected task, not guaranteed.
-
-
-EXAMPLES:
-  arcana
-  arcana <TASK>
-  arcana <TASK> -p Debug
-)HELP";
-
-    MSG(ARCANA_HEADER);
-    MSG(ARCANA_HELP);
-
-    return Arcana_Result::ARCANA_RESULT__OK;
-}
-
-
-
+/**
+ * @brief Parse and process the Arcana source file.
+ *
+ * This function performs lexical analysis, parsing, semantic validation,
+ * environment alignment, variable expansion, and assertion execution.
+ *
+ * @param args Parsed command-line arguments.
+ * @return Arcana_Result::ARCANA_RESULT__OK on success, NOK on failure.
+ */
 static Arcana_Result Parse(const Support::Arguments& args)
 {
-    Arcana_Result result = Arcana_Result::ARCANA_RESULT__OK;
+    // INITIALIZE LEXER, GRAMMAR ENGINE, AND PARSER.
     Scan::Lexer          lexer(args.arcfile);
     Grammar::Engine      engine;
     Parsing::Parser      parser(lexer, engine);
 
+    // REGISTER PARSING, SEMANTIC, AND POST-PROCESS ERROR HANDLERS.
     parser.Set_ParsingError_Handler    (Support::ParserError   {lexer} );
     parser.Set_AnalisysError_Handler   (Support::SemanticError {lexer} );
     parser.Set_PostProcessError_Handler(Support::PostProcError {lexer} );
     
-    result = parser.Parse(env);
+    // PARSE INPUT FILE AND BUILD ENVIRONMENT STATE.
+    CHECK_RESULT(parser.Parse(env));
 
-    if (args.debug)
+    // VALIDATE CLI ARGUMENTS AGAINST ENVIRONMENT (PROFILES, THREADS, MAIN TASK, ETC).
+    CHECK_RESULT(env.CheckArgs(args));
+
+    // ALIGN ENVIRONMENT TABLES AND DEFAULTS.
+    CHECK_STR_RESULT(env.AlignEnviroment());
+
+    // EXPAND VARIABLES, GLOBS, AND ATTRIBUTE-DRIVEN TRANSFORMS.
+    CHECK_STR_RESULT(env.Expand());
+
+    // EXECUTE ASSERT STATEMENTS.
+    CHECK_STR_RESULT(env.ExecuteAsserts());
+
+    // CHECK FOR PUBLIC TASKS PRESENCE.
+    if (!Table::GetValues(env.ftable, Semantic::Attr::Type::PUBLIC))
     {
-        ARC("DEBUG AFTER PARSING");
-
-        Debug::VTable(env.vtable);
-        Debug::FTable(env.ftable);
-    }
-
-    if (result != Arcana_Result::ARCANA_RESULT__OK)
-    {
-        return result;
-    }
-    
-    result = env.CheckArgs(args);
-
-    if (result != Arcana_Result::ARCANA_RESULT__OK)
-    {
-        return result;
-    }
-
-    CHECK_RESULT(env.AlignEnviroment());
-
-    if (args.debug)
-    {
-        ARC("DEBUG AFTER ALIGNMENT");
-        
-        Debug::VTable(env.vtable);
-        Debug::FTable(env.ftable);
-    }
-    
-    CHECK_RESULT(env.Expand());
-    CHECK_RESULT(env.ExecuteAsserts());
-    
-    if (args.debug)
-    {
-        ARC("DEBUG AFTER EXPANSION");
-        
-        Debug::VTable(env.vtable);
-        Debug::FTable(env.ftable);
+        std::stringstream ss;
+        ss << "Arcfile " << TOKEN_MAGENTA(args.arcfile) << " has no public tasks"; 
+        ERR(ss.str());
+        return Arcana_Result::ARCANA_RESULT__NOK;
     }
 
     return Arcana_Result::ARCANA_RESULT__OK;
@@ -311,117 +92,57 @@ static Arcana_Result Parse(const Support::Arguments& args)
 
 
 
+/**
+ * @brief Build the job list from the environment and execute it.
+ *
+ * @param args Parsed command-line arguments.
+ * @return Arcana_Result::ARCANA_RESULT__OK on success, NOK on failure.
+ */
 static Arcana_Result Execute(const Support::Arguments& args)
 {
     Jobs::List           joblist;
     Core::RunOptions     runopt;
 
-    const auto& jobs_result = Jobs::List::FromEnv(env, joblist);
+    // BUILD JOBLIST FROM CURRENT ENVIRONMENT.
+    CHECK_RESULT(Jobs::List::FromEnv(env, joblist));
 
-    if (!jobs_result.ok)
-    {
-        ERR(jobs_result.msg);
-        return Arcana_Result::ARCANA_RESULT__NOK;
-    }
-
-    if (args.debug)
-    {
-        Debug::JobsList(joblist);
-        return ARCANA_RESULT__OK;
-    }
-
-
+    // CONFIGURE RUNTIME EXECUTION OPTIONS.
     runopt.silent          = args.silent;
     runopt.max_parallelism = env.GetThreads();
 
-    Core::run_jobs(joblist, runopt);
-
-    return Arcana_Result::ARCANA_RESULT__OK;
+    // EXECUTE JOBS AND PROPAGATE RESULT.
+    return Core::run_jobs(joblist, runopt);
 }
-
-
-
-                                                                                                                  
+                                                                                                   
                                                                                                                                                                                       
                                                                     
+/**
+ * @brief Arcana program entry point.
+ *
+ * @param argc Argument count.
+ * @param argv Argument vector.
+ * @return Process exit code.
+ */
 int main(int argc, char** argv) 
 {   
     Support::Arguments args;
 
-    auto res = Support::ParseArgs(argc, argv);
+    // PARSE COMMAND-LINE ARGUMENTS INTO `args`.
+    CHECK_RESULT(Support::ParseArgs(argc, argv, args));
 
-    if (std::holds_alternative<std::string>(res)) 
-    {
-        ERR(std::get<std::string>(res));
-        return Arcana_Result::ARCANA_RESULT__NOK;
-    } 
-    else 
-    {
-        args = std::get<Support::Arguments>(res);
-    }
+    // HANDLE PRE PARSE EARLY-EXIT OPTIONS AND VALIDATE INPUTS.
+    CHECK_RESULT(Support::HandleArgsPreParse(args));
 
-    if (args.version)
-    {
-        return Version();
-    }
+    // PARSE ARCFILE AND PREPARE THE SEMANTIC ENVIRONMENT.
+    CHECK_RESULT(Parse(args));
 
-    if (args.help)
-    {
-        return Help();
-    }
+    // HANDLE POST PARSE EARLY-EXIT OPTIONS.
+    CHECK_RESULT(Support::HandleArgsPostParse(args, env));
 
-    if (args.flush_cache)
-    {
-        Cache::Manager::Instance().EraseCache();
-        return Arcana_Result::ARCANA_RESULT__OK;
-    }
-
-    if (args.generator.found)
-    {
-        bool res = Generator::Generate_Template(args.generator.value);
-
-        if (!res)
-        {
-            ERR("Cannot generate template!");
-            return Arcana_Result::ARCANA_RESULT__NOK;
-        }
-
-        ARC("Generated template in " << args.generator.value << "!");
-        return Arcana_Result::ARCANA_RESULT__OK;
-    }
-
-    if (!Support::file_exists(args.arcfile))
-    {
-        ERR("Script arcfile not found!");
-        return Arcana_Result::ARCANA_RESULT__NOK;
-    }
-    else
-    {
-        std::filesystem::path p(args.arcfile);
-        std::filesystem::path dir = p.parent_path();
-
-        if (!dir.empty())
-        {
-            std::error_code ec;
-            std::filesystem::current_path(dir, ec);
-            if (ec)
-            {
-                ERR("chdir failed for " << dir << ": " << ec.message());
-                return Arcana_Result::ARCANA_RESULT__NOK;
-            }
-        }
-    }
-
+    // LOAD CACHE AND APPLY PROFILE-RELATED CACHE RULES.
     Cache::Manager::Instance().LoadCache();
-
-    auto result = Parse(args);
-
-    if (result != Arcana_Result::ARCANA_RESULT__OK)
-    {
-        return result;
-    }
-
     Cache::Manager::Instance().HandleProfileChange(env.GetProfile().selected);
 
+    // GENERATE JOBLIST AND EXECUTE.
     return Execute(args);
 }

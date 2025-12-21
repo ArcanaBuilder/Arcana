@@ -121,8 +121,6 @@ static const std::vector<std::string> _usings =
  * @brief Construct semantic engine and initialize attribute rule table.
  */
 Engine::Engine()
-    :
-    _main_count(0)
 {
     // INITIALIZE ATTRIBUTE RULES TABLE
     _attr_rules[_I(Attr::Type::PROFILE     )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK, Attr::Target::VARIABLE } };
@@ -218,17 +216,6 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
             ss << "Invalid " << name << " " << TOKEN_MAGENTA(property[0]) << ": undeclared variable";
             return SEM_NOK_HINT(ss.str(), Support::FindClosest(keys, property[0]));
         }
-    }
-    else if (attr == Attr::Type::MAIN)
-    {
-        // ENFORCE SINGLE MAIN
-        if (_main_count > 0)
-        {
-            ss << "Cannot tag multiple tasks with attribute " << TOKEN_MAGENTA(name);
-            return SEM_NOK(ss.str());
-        }
-
-        _main_count = 1;
     }
     else if (attr == Attr::Type::IFOS)
     {
@@ -335,28 +322,45 @@ SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& 
         }
     }
 
-    // VALIDATE @requires DOES NOT SELF-REFERENCE
-    if (task.hasAttribute(Attr::Type::REQUIRES))
-    {
-        auto& properties = task.getProperties(Attr::Type::REQUIRES);
-
-        if (std::find(properties.begin(), properties.end(), name) != properties.end())
-        {
-            ss << "Attribute " << TOKEN_MAGENTA("@requires") << " with property " << TOKEN_MAGENTA(name) << " cannot be auto referencing";
-            return SEM_NOK(ss.str());
-        }
-    }
-
     // APPLY MANGLING FOR PROFILE
-    const auto& attr = std::find(task.attributes.begin(), task.attributes.end(), Attr::Type::PROFILE);
-
-    if (attr != task.attributes.end())
+    if (task.hasAttribute(Attr::Type::PROFILE))
     {
-        ftable[Support::generate_mangling(name, (*attr).props[0])] = task;
+        const auto profile = task.getProperties(Attr::Type::PROFILE);
+
+        ftable[Support::generate_mangling(name, profile[0])] = task;
+
+        if (task.hasAttribute(Attr::Type::MAIN))
+        {
+            if (!Core::is_symbol_set(Core::SymbolType::MAIN))
+            {
+                Core::update_symbol(Core::SymbolType::MAIN, name);
+            }
+            else
+            {
+                if (Core::symbol(Core::SymbolType::MAIN) != name)
+                {
+                    ss << "Cannot tag multiple tasks with attribute " << TOKEN_MAGENTA("main");
+                    return SEM_NOK(ss.str());
+                }
+            }
+        }
     }
     else
     {
         ftable[name] = task;
+
+        if (task.hasAttribute(Attr::Type::MAIN))
+        {
+            if (!Core::is_symbol_set(Core::SymbolType::MAIN))
+            {
+                Core::update_symbol(Core::SymbolType::MAIN, name);
+            }
+            else
+            {
+                ss << "Cannot tag multiple tasks with attribute " << TOKEN_MAGENTA("main");
+                return SEM_NOK(ss.str());
+            }
+        }
     }
 
     return SEM_OK();
@@ -593,6 +597,51 @@ SemanticOutput Engine::Collect_Assert(std::size_t line,
  */
 Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noexcept
 {
+    // HANDLE PROFILE OVERRIDE
+    if (args.profile.found)
+    {
+        if (std::find(profile.profiles.begin(), profile.profiles.end(), args.profile.value) == profile.profiles.end())
+        {
+            ERR("Requested profile " << TOKEN_MAGENTA(args.profile.value) << " is invalid!");
+
+            auto closest = Support::FindClosest(profile.profiles, args.profile.value);
+
+            if (closest)
+            {
+                HINT("Did you mean " << ANSI_BCYAN << closest.value() << ANSI_RESET << "?");
+            }
+
+            return Arcana_Result::ARCANA_RESULT__NOK;
+        }
+
+        profile.selected = args.profile.value;
+    }
+    else
+    {
+        // DEFAULT PROFILE SELECTION
+        if (profile.profiles.empty())
+        {
+            return Arcana_Result::ARCANA_RESULT__OK;
+        }
+
+        profile.selected = profile.profiles[0];
+    }
+    
+    // UPDATE PROFILE SYMBOL
+    Core::update_symbol(Core::SymbolType::PROFILE, profile.selected);
+
+    // ALIGN TABLES AFTER PROFILE SELECTION
+    Table::AlignOnProfile(vtable, profile.selected);
+    Table::AlignOnProfile(ftable, profile.selected);
+    Table::AlignOnOS(vtable);
+
+    // HANDLE THREADS OVERRIDE
+    if (args.threads)
+    {
+        max_threads = args.threads.ivalue;
+        Core::update_symbol(Core::SymbolType::THREADS, args.threads.svalue);
+    }
+
     // HANDLE TASK OVERRIDE
     if (args.task.found)
     {
@@ -647,51 +696,6 @@ Arcana_Result Enviroment::CheckArgs(const Arcana::Support::Arguments& args) noex
             return Arcana_Result::ARCANA_RESULT__NOK;
         }
     }
-
-    // HANDLE PROFILE OVERRIDE
-    if (args.profile.found)
-    {
-        if (std::find(profile.profiles.begin(), profile.profiles.end(), args.profile.value) == profile.profiles.end())
-        {
-            ERR("Requested profile " << TOKEN_MAGENTA(args.profile.value) << " is invalid!");
-
-            auto closest = Support::FindClosest(profile.profiles, args.profile.value);
-
-            if (closest)
-            {
-                HINT("Did you mean " << ANSI_BCYAN << closest.value() << ANSI_RESET << "?");
-            }
-
-            return Arcana_Result::ARCANA_RESULT__NOK;
-        }
-
-        profile.selected = args.profile.value;
-    }
-    else
-    {
-        // DEFAULT PROFILE SELECTION
-        if (profile.profiles.empty())
-        {
-            return Arcana_Result::ARCANA_RESULT__OK;
-        }
-
-        profile.selected = profile.profiles[0];
-    }
-
-    // HANDLE THREADS OVERRIDE
-    if (args.threads)
-    {
-        max_threads = args.threads.ivalue;
-        Core::update_symbol(Core::SymbolType::THREADS, args.threads.svalue);
-    }
-
-    // UPDATE PROFILE SYMBOL
-    Core::update_symbol(Core::SymbolType::PROFILE, profile.selected);
-
-    // ALIGN TABLES AFTER PROFILE SELECTION
-    Table::AlignOnProfile(vtable, profile.selected);
-    Table::AlignOnProfile(ftable, profile.selected);
-    Table::AlignOnOS(vtable);
 
     return Arcana_Result::ARCANA_RESULT__OK;
 }
@@ -860,20 +864,17 @@ const std::optional<std::string> Enviroment::Expand() noexcept
             std::stringstream ss;
             auto properties = task.getProperties(Attr::Type::INTERPRETER);
 
-            if (!properties.empty())
+            if (auto err = ex.ExpandText(properties[0]); err.has_value())
             {
-                if (auto err = ex.ExpandText(properties[0]); err.has_value())
-                {
-                    return err;
-                }
+                return err;
+            }
+            
+            task.interpreter = properties[0];
 
-                task.interpreter = properties[0];
-
-                if (!Support::file_exists(properties[0]))
-                {
-                    ss << "Interpreter " << TOKEN_MAGENTA(properties[0]) << " is missing or unknown";
-                    return ss.str();
-                }
+            if (!Support::file_exists(task.interpreter))
+            {
+                ss << "Interpreter " << TOKEN_MAGENTA(task.interpreter) << " is missing or unknown";
+                return ss.str();
             }
         }
 

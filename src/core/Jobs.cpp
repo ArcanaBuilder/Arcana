@@ -703,13 +703,10 @@ void List::Insert(const std::optional<Job>& j)
  *
  * @param environment Semantic environment containing tables and expansions.
  * @param out Output job list.
- * @return ExpansionError with `ok=true` on success.
+ * @return ARCANA_RESULT__OK on success, otherwise a failure code.
  */
-ExpansionError List::FromEnv(Semantic::Enviroment& environment, List& out) noexcept
+Arcana_Result List::FromEnv(Semantic::Enviroment& environment, List& out) noexcept
 {
-    ExpansionError status;
-    status.ok = true;
-
     // BUILD GRAPH FROM FTABLE
     Graph graph = BuildGraph(environment.ftable);
 
@@ -726,7 +723,8 @@ ExpansionError List::FromEnv(Semantic::Enviroment& environment, List& out) noexc
         // DFS VISIT ROOT
         if (!dfs_visit(main_name, environment.ftable, environment.vtable, graph, mark, ordered, err))
         {
-            return err.ok ? status : err;
+            ERR(err.msg);
+            return Arcana_Result::ARCANA_RESULT__NOK;
         }
 
         // INSERT ORDERED JOBS
@@ -747,7 +745,8 @@ ExpansionError List::FromEnv(Semantic::Enviroment& environment, List& out) noexc
 
             if (!result.first.ok)
             {
-                return result.first;
+                ERR(result.first.msg);
+                return Arcana_Result::ARCANA_RESULT__NOK;
             }
             else if (result.second)
             {
@@ -756,6 +755,6 @@ ExpansionError List::FromEnv(Semantic::Enviroment& environment, List& out) noexc
         }
     }
 
-    return status;
+    return Arcana_Result::ARCANA_RESULT__OK;
 }
  

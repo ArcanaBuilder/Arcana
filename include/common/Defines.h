@@ -218,6 +218,16 @@
 #define TOKEN_GREEN(token)                      ANSI_BGREEN << token << ANSI_RESET
 
 
+/**
+ * @brief Wraps a token with bright yellow ANSI color codes.
+ *
+ * Intended for stream output (e.g. std::cout / std::cerr).
+ *
+ * @param token Token or expression to be colorized.
+ */
+#define TOKEN_YELLOW(token)                      ANSI_BYELLOW << token << ANSI_RESET
+
+
 
 //    ██████╗ ██████╗ ██╗███╗   ██╗████████╗███████╗██████╗     ███╗   ███╗ █████╗  ██████╗██████╗  ██████╗ ███████╗
 //    ██╔══██╗██╔══██╗██║████╗  ██║╚══██╔══╝██╔════╝██╔══██╗    ████╗ ████║██╔══██╗██╔════╝██╔══██╗██╔═══██╗██╔════╝
@@ -277,6 +287,17 @@
 
 
 /**
+ * @brief Prints a formatted warning message to stdout.
+ *
+ * Prefixes the message with a colored "[WARN]" tag.
+ *
+ * @param msg Warning message to print.
+ */
+#define WARN(msg)                             std::cout << "[" << ANSI_BYELLOW << "WARN" << ANSI_RESET << "] " << msg << std::endl
+
+
+
+/**
  * @brief Prints a formatted hint message to stdout.
  *
  * Prefixes the message with a colored "[HINT]" tag.
@@ -309,8 +330,9 @@
  */
 enum Arcana_Result : int32_t
 {
-    ARCANA_RESULT__OK  =  0,  ///< Operation completed successfully.
-    ARCANA_RESULT__NOK = -1,  ///< Operation failed.
+    ARCANA_RESULT__OK          =  0,  ///< Operation completed successfully.
+    ARCANA_RESULT__OK_AND_EXIT =  1,  ///< Operation completed successfully, then exit.
+    ARCANA_RESULT__NOK         = -1,  ///< Operation failed.
 };
 
 

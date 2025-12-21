@@ -9,7 +9,6 @@
 #include <vector>
 #include <limits>
 #include <climits> 
-#include <variant>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -73,6 +72,13 @@ enum class Rule : uint32_t;
 END_MODULE(Grammar)
 
 
+BEGIN_MODULE(Semantic)
+
+struct Enviroment;
+
+END_MODULE(Semantic)
+
+
 BEGIN_MODULE(Support)
 
 struct SemanticOutput;
@@ -107,6 +113,7 @@ struct Arguments
         operator bool () const noexcept { return found; } 
     } 
     task,
+    value,
     profile,
     generator;
     
@@ -125,11 +132,14 @@ struct Arguments
     bool version;
     bool help;
     bool silent;
+    bool pubtasks;
+    bool profiles;
 
     Arguments() 
         : 
         arcfile("arcfile"),
         task{"", false},
+        value{"", false},
         profile{"", false},
         generator{"", false},
         threads{"", 0, false},
@@ -137,7 +147,9 @@ struct Arguments
         flush_cache(false),
         version(false),
         help(false),
-        silent(false)
+        silent(false),
+        pubtasks(false),
+        profiles(false)
     {}
 };
 
@@ -372,11 +384,36 @@ struct SplitResult
 //                                                                                                                                                                                                        
 
 
-/// @brief Parse command line arguments
-/// @param[in] argc argument count
-/// @param[in] argv argument values
-/// @return Arguments instance
-std::variant<Support::Arguments, std::string>   ParseArgs(int argc, char** argv);
+/**
+ * @brief Parse command-line arguments into a Support::Arguments structure.
+ *
+ * @param argc Argument count.
+ * @param argv Argument vector.
+ * @param args Argument data structure.
+ * @return ARCANA_RESULT__OK on success, otherwise a failure code.
+ */
+Arcana_Result ParseArgs(int argc, char** argv, Support::Arguments &args);
+
+
+
+
+/**
+ * @brief Handle command-line arguments pre parsing.
+ *
+ * @param args Argument data structure.
+ * @return ARCANA_RESULT__OK on success, otherwise a failure code.
+ */
+Arcana_Result HandleArgsPreParse(const Arguments &args);
+
+
+
+/**
+ * @brief Handle command-line arguments post parsing.
+ *
+ * @param args Argument data structure.
+ * @return ARCANA_RESULT__OK on success, otherwise a failure code.
+ */
+Arcana_Result HandleArgsPostParse(const Arguments &args, Semantic::Enviroment& env);
 
 
 

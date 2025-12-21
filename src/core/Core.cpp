@@ -322,17 +322,12 @@ static Core::Result run_job(const Jobs::Job& job, const Core::RunOptions& opt) n
  *
  * @param jobs Job list to execute.
  * @param opt Execution options.
- * @return Vector of per-job results.
+ * @return ARCANA_RESULT__OK on success, otherwise a failure code.
  */
-std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::RunOptions& opt) noexcept
+Arcana_Result Core::run_jobs(const Jobs::List& jobs, const Core::RunOptions& opt) noexcept
 {
-    bool ok = true;
-    std::vector<Core::Result> results;
-
+    Arcana_Result result = Arcana_Result::ARCANA_RESULT__OK;
     Stopwatch sw;
-
-    // PREALLOC RESULTS
-    results.reserve(jobs.All().size());
 
     // START TIMER
     sw.start();
@@ -347,12 +342,11 @@ std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::Run
 
         // RUN JOB AND COLLECT RESULT
         auto r = run_job(job, opt);
-        results.push_back(r);
 
         // STOP EARLY ON ERROR IF REQUESTED
         if (!r.ok && opt.stop_on_error)
         {
-            ok = false;
+            result = Arcana_Result::ARCANA_RESULT__NOK;
             ERR(ANSI_GRAY << "Task failed: " << job.name << ANSI_RESET);
             break;
         }
@@ -363,12 +357,12 @@ std::vector<Core::Result> Core::run_jobs(const Jobs::List& jobs, const Core::Run
     auto ms = sw.elapsed<>();
 
     // PRINT SUMMARY
-    if (ok && !opt.silent)
+    if ((result == Arcana_Result::ARCANA_RESULT__OK) && (!opt.silent))
     {
         ARC("Action '" << jobs.main_job << "' done in " << Stopwatch::format(ms));
     }
 
-    return results;
+    return result;
 }
 
 
@@ -423,6 +417,21 @@ void Core::update_symbol(Core::SymbolType type, const std::string& val) noexcept
     builtin_symbols[symbol] = val;
 
     return;
+}
+
+
+
+/**
+ * @brief Check if a sybol is set.
+ * @param type Symbol type.
+ * @return True if supported.
+ */
+bool Core::is_symbol_set(Core::SymbolType type) noexcept
+{
+    // MAP TYPE TO TOKEN STRING
+    const std::string symbol = Known_Symbols_By_Token[type];
+
+    return (builtin_symbols[symbol] != "None");
 }
 
 

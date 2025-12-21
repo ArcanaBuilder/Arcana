@@ -3,6 +3,17 @@
 All relevant changes to this project will be documented in this file.
 
 
+## [0.4.3] - 2025-12-21
+### Removed
+- Module **Debug**
+
+### Added
+- CLI optons: **--value \<VALUE>**, **--pubs** and **--profiles** 
+
+### Fixed Bugs
+- **@main** attribute logic  
+
+
 ## [0.4.2] - 2025-12-20
 ### Changes
 - Refactored Expader logic

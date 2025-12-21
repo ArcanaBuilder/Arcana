@@ -954,7 +954,6 @@ public:
 private:
     Attr::Rules  _attr_rules;   //!< Attribute rule table (indexed by Attr::Type)
     Attr::List   _attr_pending; //!< Attributes pending attachment to next entity (variable/task)
-    std::uint8_t _main_count;   //!< Count of tasks marked MAIN (should be <= 1)
     
     Enviroment   _env;          //!< Owned environment
 };
