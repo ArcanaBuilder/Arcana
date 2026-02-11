@@ -99,6 +99,9 @@ enum class Rule : uint32_t
     /// Variable assignment statement (e.g. NAME = VALUE)
     VARIABLE_ASSIGN       ,
 
+    /// Variable join statement (e.g. NAME += VALUE)
+    VARIABLE_JOIN         ,
+
     /// Empty line (e.g. newline / whitespace-only line)
     EMPTY_LINE            ,
 
@@ -118,7 +121,10 @@ enum class Rule : uint32_t
     MAPPING               ,
 
     /// Assert statement (e.g. assert "x" in "{fs:...}" -> "reason")
-    ASSERT                ,
+    ASSERT_MSG            ,
+
+    /// Assert statement (e.g. assert "x" in "{fs:...}" -> action list)
+    ASSERT_ACT            ,
 };
 
 
@@ -144,6 +150,23 @@ enum class VARIABLE_ASSIGN : uint32_t
     GRAMMAR_END           ,
 };
 
+
+enum class VARIABLE_JOIN : uint32_t 
+{
+    /// Variable name token/span (left-hand identifier)
+    VARNAME            = 0,
+
+    PLUS                  ,
+
+    /// Assignment operator token/span (typically '=')
+    ASSIGN                ,
+
+    /// Assigned value token/span (right-hand side)
+    VALUE                 ,
+
+    /// Sentinel: end of this positional enum
+    GRAMMAR_END           ,
+};
 
 
 /**
@@ -299,7 +322,7 @@ enum class MAPPING : uint32_t
 
 
 /**
- * @brief Positional capture indices for Rule::ASSERT.
+ * @brief Positional capture indices for Rule::ASSERT_MSG.
  *
  * Assertions typically have the form:
  * assert ITEM_1 OP ITEM_2 -> REASON
@@ -307,7 +330,7 @@ enum class MAPPING : uint32_t
  * Many RESERVED slots exist because the matcher preserves positional structure
  * for fixed keywords/operators/punctuation as part of the grammar definition.
  */
-enum class ASSERT : uint32_t 
+enum class ASSERT_MSG : uint32_t 
 {
     /// Reserved keyword token/span (e.g. "assert")
     RESERVED1          = 0,
@@ -353,6 +376,54 @@ enum class ASSERT : uint32_t
 };
 
 
+
+/**
+ * @brief Positional capture indices for Rule::ASSERT_ACT.
+ *
+ * Assertions typically have the form:
+ * assert ITEM_1 OP ITEM_2 -> ACTION
+ *
+ * Many RESERVED slots exist because the matcher preserves positional structure
+ * for fixed keywords/operators/punctuation as part of the grammar definition.
+ */
+enum class ASSERT_ACT : uint32_t 
+{
+    /// Reserved keyword token/span (e.g. "assert")
+    RESERVED1          = 0,
+
+    /// Reserved token/span (grammar-specific)
+    RESERVED2             ,
+
+    /// Left item token/span (assertion LHS)
+    ITEM_1                ,
+
+    /// Reserved token/span (grammar-specific)
+    RESERVED3             ,
+
+    /// Operator token/span (e.g. "in", "==", "!=", ...)
+    OP                    ,
+
+    /// Reserved token/span (grammar-specific)
+    RESERVED4             ,
+
+    /// Right item token/span (assertion RHS)
+    ITEM_2                ,
+
+    /// Reserved token/span (grammar-specific)
+    RESERVED5             ,
+
+    /// Reserved token/span (grammar-specific)
+    RESERVED6             ,
+
+    /// Reserved token/span (grammar-specific)
+    RESERVED7             ,
+
+    /// Callbacks
+    ACTIONS               ,
+
+    /// Sentinel: end of this positional enum
+    GRAMMAR_END           ,
+};
 
 
 //    ██████╗ ██╗   ██╗██████╗ ██╗     ██╗ ██████╗     █████╗  ██████╗  ██████╗ ██████╗ ███████╗ ██████╗  █████╗ ████████╗███████╗███████╗

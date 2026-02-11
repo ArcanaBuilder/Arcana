@@ -115,7 +115,13 @@
 /**
  * @brief Current Arcana version string.
  */
-#define __ARCANA__VERSION__                     "0.4.3"
+#define __ARCANA__VERSION__                     "0.5.0"
+
+
+/**
+ * @brief Current Arcana major release name.
+ */
+#define __ARCANA__RELEASE__                     "Funky Fox"
 
 
 

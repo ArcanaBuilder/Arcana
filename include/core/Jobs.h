@@ -130,7 +130,7 @@ public:
     * @return ARCANA_RESULT__OK on success, otherwise a failure code.
      */
     static Arcana_Result
-    FromEnv(Semantic::Enviroment& environment, List& out) noexcept;
+    FromEnv(Semantic::Enviroment& environment, List& out, std::vector<std::string>& recovery) noexcept;
 
     /**
      * @brief Returns all jobs in execution order.

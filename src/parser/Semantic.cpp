@@ -4,6 +4,7 @@
 #include "Core.h"
 #include "Support.h"
 #include "TableHelper.h"
+#include "Profiler.h"
 
 #include <regex>
 #include <memory>
@@ -45,6 +46,7 @@ static const AttributeMap Known_Attributes =
     { "flushcache"  , Attr::Type::FLUSHCACHE  },
     { "echo"        , Attr::Type::ECHO        },
     { "exclude"     , Attr::Type::EXCLUDE     },
+    { "glob"        , Attr::Type::GLOB        },
     { "ifos"        , Attr::Type::IFOS        },
 };
 
@@ -79,6 +81,7 @@ static const std::vector<std::string> _attributes =
     "flushcache",
     "echo",
     "exclude",
+    "glob",
     "ifos",
 };
 
@@ -130,6 +133,7 @@ Engine::Engine()
     _attr_rules[_I(Attr::Type::THEN        )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } };
     _attr_rules[_I(Attr::Type::MAP         )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };
     _attr_rules[_I(Attr::Type::EXCLUDE     )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };
+    _attr_rules[_I(Attr::Type::GLOB        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , {                     Attr::Target::VARIABLE } };
     _attr_rules[_I(Attr::Type::MULTITHREAD )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };
     _attr_rules[_I(Attr::Type::MAIN        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };
     _attr_rules[_I(Attr::Type::INTERPRETER )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK,                        } };
@@ -245,7 +249,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
  * @param val  Raw value.
  * @return SemanticOutput with status.
  */
-SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::string& val)
+SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::string& val, bool join)
 {
     std::stringstream  ss;
     InstructionAssign  assign { name, val };
@@ -280,7 +284,22 @@ SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::st
     }
     else
     {
-        _env.vtable[name] = assign;
+        if (join) 
+        {
+            const auto& keys = Table::Keys(_env.vtable);
+
+            if (std::find(keys.begin(), keys.end(), name) == keys.end())
+            {
+                #warning handle error
+            } 
+
+            auto& var = _env.vtable[name];
+            var.var_value.push_back(val);
+        }
+        else
+        {
+            _env.vtable[name] = assign;
+        }
     }
 
     return SEM_OK();
@@ -553,17 +572,28 @@ SemanticOutput Engine::Collect_Assert(std::size_t line,
                                      const std::string& lvalue,
                                      const std::string& op,
                                      const std::string& rvalue,
-                                     const std::string& reason)
+                                     const std::string& reason,
+                                     const bool         actions)
 {
     AssertCheck acheck;
 
-    // FILL ASSERT STRUCT
+    // FILL ASSERT_MSG STRUCT
     acheck.line   = line;
     acheck.stmt   = stmt;
     acheck.lvalue = lvalue;
     acheck.rvalue = rvalue;
-    acheck.reason = reason;
-
+    
+    if (actions)
+    {
+        acheck.type    = AssertCheck::Type::ACTIONS;
+        acheck.actions = Arcana::Support::split(reason);
+    }
+    else
+    {
+        acheck.type   = AssertCheck::Type::MESSAGE;
+        acheck.reason = reason;
+    }
+    
     // MAP OPERATOR
     if (op == "eq")
     {
@@ -578,7 +608,7 @@ SemanticOutput Engine::Collect_Assert(std::size_t line,
         acheck.check = AssertCheck::CheckType::IN;
     }
 
-    // STORE ASSERT
+    // STORE ASSERT_MSG
     _env.atable.push_back(acheck);
 
     return SEM_OK();
@@ -805,40 +835,64 @@ const std::optional<std::string> Enviroment::Expand() noexcept
     std::sort(var_keys.begin(), var_keys.end(), [] (const std::string& a, const std::string& b) {
         return a.size() > b.size();
     });
-
+    
     // EXPAND VTABLE AND COMPUTE GLOB EXPANSIONS
     Glob::ExpandOptions opt;
 
     for (auto& [name, var] : vtable)
     {
-        // EXPAND TEXT TOKENS
-        if (auto err = ex.ExpandText(var.var_value); err.has_value())
-        {
-            return err;
-        }
-
-        // PARSE GLOB PATTERN
-        Glob::Pattern    pattern;
-        Glob::ParseError error;
-
-        if (!Glob::Parse(var.var_value, pattern, error))
-        {
-            std::stringstream ss;
-            ss << "While expanding " << TOKEN_MAGENTA(name)
-               << " an invalid glob was detected " << TOKEN_MAGENTA(pattern.normalized)
-               << ": " << ParseErrorRepr(error);
-
-            return ss.str();
-        }
-
         // EXPAND GLOB TO LIST
         var.glob_expansion.clear();
-        Arcana::Glob::Expand(pattern, ".", var.glob_expansion, opt);
+
+        for (auto& value : var.var_value)
+        {
+            // EXPAND TEXT TOKENS
+            if (auto err = ex.ExpandText(value); err.has_value())
+            {
+                return err;
+            }
+
+            if (!var.hasAttribute(Attr::Type::GLOB)) continue;
+    
+            // PARSE GLOB PATTERN
+            Glob::Pattern    pattern;
+            Glob::ParseError error;
+
+            if (!Glob::Parse(value, pattern, error))
+            {
+                std::stringstream ss;
+                ss << "While expanding " << TOKEN_MAGENTA(name)
+                   << " an invalid glob was detected " << TOKEN_MAGENTA(pattern.normalized)
+                   << ": " << ParseErrorRepr(error);
+    
+                return ss.str();
+            }
+
+            Arcana::Glob::Expand(pattern, ".", var.glob_expansion, opt);
+        }
     }
 
     // EXPAND ASSERTS
+    auto keys = Table::Keys(ftable);
+
     for (auto& assert : atable)
     {
+        for (const auto& action : assert.actions)
+        {
+            if (std::find(keys.begin(), keys.end(), action) == keys.end())
+            {
+                std::stringstream ss;
+                ss << "Callback " << TOKEN_MAGENTA(action) << " is undefined in statement " << TOKEN_CYAN("assert");
+                
+                if (auto closest = Support::FindClosest(keys, action); closest.has_value() )
+                {
+                    ss << std::endl << "[" << TOKEN_GREEN("HINT") << "] Did you mean " << TOKEN_CYAN(closest.value()) << "?";
+                }
+
+                return ss.str();
+            }
+        }
+
         if (auto err = ex.ExpandAssertSide(assert.lvalue, assert); err.has_value())
         {
             return err;
@@ -904,6 +958,8 @@ const std::optional<std::string> Enviroment::Expand() noexcept
     // HANDLE MAPPED VARS EXPANSION
     auto map_required = Table::GetValues(vtable, Semantic::Attr::Type::MAP);
 
+    if (!map_required.has_value()) return std::nullopt;
+
     for (auto& stmt : map_required.value())
     {
         Glob::ParseError e1, e2;
@@ -912,18 +968,18 @@ const std::optional<std::string> Enviroment::Expand() noexcept
         auto& map_to   = stmt.get();
         auto& map_from = vtable[map_to.getProperties(Semantic::Attr::Type::MAP).at(0)];
 
-        if (!Arcana::Glob::MapGlobToGlob(map_from.var_value,      map_to.var_value,
-                                         map_from.glob_expansion, map_to.glob_expansion, e1, e2, m1))
+        if (!Arcana::Glob::MapGlobToGlob(map_from.var_value, map_to.var_value[0],
+                                            map_from.glob_expansion, map_to.glob_expansion, e1, e2, m1))
         {
             std::stringstream ss;
             ss << "While mapping " << TOKEN_MAGENTA(map_from.var_name)
-               << " to " << TOKEN_MAGENTA(map_to.var_name)
-               << ": incompatible globs";
+                << " to " << TOKEN_MAGENTA(map_to.var_name)
+                << ": incompatible globs";
 
             return ss.str();
         }
     }
-
+    
     return std::nullopt;
 }
 
@@ -933,15 +989,18 @@ const std::optional<std::string> Enviroment::Expand() noexcept
  * @brief Evaluate all collected asserts after expansion.
  * @return Empty optional on success, error string on first failure.
  */
-const std::optional<std::string> Enviroment::ExecuteAsserts() noexcept
+const std::optional<std::string> Enviroment::ExecuteAsserts(std::vector<std::string>& reco_cb) noexcept
 {
     bool assert_failed = false;
+    std::stringstream ss;
+
+    reco_cb.clear();
 
     for (const auto& assert : atable)
     {
         assert_failed = false;
 
-        // EVALUATE ASSERT
+        // EVALUATE ASSERT_MSG
         switch (assert.check)
         {
             case AssertCheck::CheckType::EQUAL:
@@ -961,7 +1020,6 @@ const std::optional<std::string> Enviroment::ExecuteAsserts() noexcept
         if (assert_failed)
         {
             // BUILD ERROR MESSAGE
-            std::stringstream ss;
             ss << "Assert failed on line " << assert.line << ": " << TOKEN_CYAN(assert.stmt);
 
             if (assert.check != AssertCheck::CheckType::DEPENDENCIES)
@@ -973,10 +1031,23 @@ const std::optional<std::string> Enviroment::ExecuteAsserts() noexcept
                 ss << " dependency " << TOKEN_MAGENTA(assert.search_path) << " not found!" << std::endl;
             }
 
-            ss << "Reason: " << assert.reason;
-            return ss.str();
+            if (assert.type == AssertCheck::Type::MESSAGE)
+            {
+                ss << "Reason: " << assert.reason;
+                return ss.str();
+            }
+            else
+            {
+                for (auto& task : assert.actions)
+                {
+                    ss << "Scheduling recovery callback " << TOKEN_MAGENTA(task);
+                    reco_cb.push_back(task);
+                } 
+            }
         }
     }
+
+    if (ss.str().size()) return ss.str();
 
     return std::nullopt;
 }
@@ -1003,7 +1074,7 @@ const std::optional<std::string> Enviroment::ExecuteAsserts() noexcept
  */
 std::optional<std::string> Enviroment::Expander::ExpandInternals(std::string& s) noexcept
 {
-    for (int depth = 0; depth < 32; ++depth)
+    for (int depth = 0; depth < 256; ++depth)
     {
         // SEARCH NEXT INTERNAL TOKEN
         std::smatch m;
@@ -1038,7 +1109,7 @@ std::optional<std::string> Enviroment::Expander::ExpandInternals(std::string& s)
  */
 std::optional<std::string> Enviroment::Expander::ExpandArcAll(std::string& s) noexcept
 {
-    for (int depth = 0; depth < 32; ++depth)
+    for (int depth = 0; depth < 256; ++depth)
     {
         // SEARCH NEXT VARIABLE TOKEN
         std::smatch m;
@@ -1061,7 +1132,7 @@ std::optional<std::string> Enviroment::Expander::ExpandArcAll(std::string& s) no
         }
 
         // REPLACE TOKEN WITH VALUE
-        const std::string& value = it->second.var_value;
+        const std::string& value = it->second.GetListValue();
         s.replace(static_cast<std::size_t>(m.position(0)), static_cast<std::size_t>(m.length(0)), value);
     }
 
@@ -1127,7 +1198,7 @@ std::optional<std::string> Enviroment::Expander::ExpandAssertSide(std::string& s
         return err;
     }
 
-    // EXTRACT FS PATHS AND UPDATE ASSERT MODE
+    // EXTRACT FS PATHS AND UPDATE ASSERT_MSG MODE
     std::vector<fs::path> paths;
     ExtractFsPaths(stmt, paths);
 

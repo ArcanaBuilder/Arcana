@@ -70,13 +70,15 @@ Arcana_Result Parser::Parse(Semantic::Enviroment& env)
             // DEFAULT CASE HANDLES NEW LINES AND PARTIAL MATCH
             switch (match.type)
             {
-                case Grammar::Rule::VARIABLE_ASSIGN:   astout = Handle_VarAssign(match);   match.valid = false;  break;
-                case Grammar::Rule::ATTRIBUTE:         astout = Handle_Attribute(match);   match.valid = false;  break;
-                case Grammar::Rule::TASK_DECL:         astout = Handle_TaskDecl(match);    match.valid = false;  break;
-                case Grammar::Rule::USING:             astout = Handle_Using(match);       match.valid = false;  break;
-                case Grammar::Rule::MAPPING:           astout = Handle_Mapping(match);     match.valid = false;  break;
-                case Grammar::Rule::ASSERT:            astout = Handle_Assert(match);      match.valid = false;  break;
-                default:                                                                   match.valid = false;  break;
+                case Grammar::Rule::VARIABLE_ASSIGN:   astout = Handle_VarAssign(match);     match.valid = false;  break;
+                case Grammar::Rule::VARIABLE_JOIN:     astout = Handle_VarJoin(match);       match.valid = false;  break;
+                case Grammar::Rule::ATTRIBUTE:         astout = Handle_Attribute(match);     match.valid = false;  break;
+                case Grammar::Rule::TASK_DECL:         astout = Handle_TaskDecl(match);      match.valid = false;  break;
+                case Grammar::Rule::USING:             astout = Handle_Using(match);         match.valid = false;  break;
+                case Grammar::Rule::MAPPING:           astout = Handle_Mapping(match);       match.valid = false;  break;
+                case Grammar::Rule::ASSERT_MSG:        astout = Handle_Assert(match, false); match.valid = false;  break;
+                case Grammar::Rule::ASSERT_ACT:        astout = Handle_Assert(match, true);  match.valid = false;  break;
+                default:                                                                     match.valid = false;  break;
             }
 
             // HANDLE IMPORT BY SPAWNING A NEW PARSER INSTANCE
@@ -139,6 +141,24 @@ Arcana::Support::SemanticOutput Parser::Handle_VarAssign(Grammar::Match& match)
 
     // COLLECT INTO SEMANTIC ENGINE
     return instr_engine.Collect_Assignment(var, value);
+}
+
+
+
+
+Arcana::Support::SemanticOutput Parser::Handle_VarJoin(Grammar::Match& match)
+{
+    // EXTRACT MATCH POINTS
+    Point p1 = match[_I(Grammar::VARIABLE_JOIN::VARNAME)];
+    Point p2 = match[_I(Grammar::VARIABLE_JOIN::VALUE)];
+
+    // SLICE RAW INPUT LINE
+    Input  input = lexer[p1->token];
+    Lexeme var   = input.substr(p1->start, p1->end - p1->start);
+    Lexeme value = input.substr(p2->start, p2->end - p2->start);
+
+    // COLLECT INTO SEMANTIC ENGINE
+    return instr_engine.Collect_Assignment(var, value, true);
 }
 
 
@@ -403,18 +423,18 @@ Arcana::Support::SemanticOutput Parser::Handle_Mapping(Grammar::Match& match)
  * - full statement substring (for diagnostics)
  * - lvalue, operator, rvalue, reason
  *
- * @param match Grammar match for ASSERT.
+ * @param match Grammar match for ASSERT_MSG.
  * @return SemanticOutput from `Collect_Assert`.
  */
-Arcana::Support::SemanticOutput Parser::Handle_Assert(Grammar::Match& match)
+Arcana::Support::SemanticOutput Parser::Handle_Assert(Grammar::Match& match, bool actions)
 {
     // EXTRACT MATCH POINTS
-    Point pStart = match[_I(Grammar::ASSERT::RESERVED2)];
-    Point p1     = match[_I(Grammar::ASSERT::ITEM_1)];
-    Point p2     = match[_I(Grammar::ASSERT::OP)];
-    Point p3     = match[_I(Grammar::ASSERT::ITEM_2)];
-    Point p4     = match[_I(Grammar::ASSERT::REASON)];
-    Point pStop  = match[_I(Grammar::ASSERT::RESERVED5)];
+    Point pStart = match[(actions) ? _I(Grammar::ASSERT_ACT::RESERVED2) : _I(Grammar::ASSERT_MSG::RESERVED2)];
+    Point p1     = match[(actions) ? _I(Grammar::ASSERT_ACT::ITEM_1)    : _I(Grammar::ASSERT_MSG::ITEM_1)];
+    Point p2     = match[(actions) ? _I(Grammar::ASSERT_ACT::OP)        : _I(Grammar::ASSERT_MSG::OP)];
+    Point p3     = match[(actions) ? _I(Grammar::ASSERT_ACT::ITEM_2)    : _I(Grammar::ASSERT_MSG::ITEM_2)];
+    Point p4     = match[(actions) ? _I(Grammar::ASSERT_ACT::ACTIONS)   : _I(Grammar::ASSERT_MSG::REASON)];
+    Point pStop  = match[(actions) ? _I(Grammar::ASSERT_ACT::RESERVED5) : _I(Grammar::ASSERT_MSG::RESERVED5)];
 
     // SLICE RAW INPUT LINE
     Input  input  = lexer[p1->token];
@@ -427,5 +447,5 @@ Arcana::Support::SemanticOutput Parser::Handle_Assert(Grammar::Match& match)
     Lexeme reason = input.substr(p4->start, p4->end - p4->start);
 
     // COLLECT INTO SEMANTIC ENGINE
-    return instr_engine.Collect_Assert(p1->token.line, stmt, lvalue, op, rvalue, reason);
+    return instr_engine.Collect_Assert(p1->token.line, stmt, lvalue, op, rvalue, reason, actions);
 }

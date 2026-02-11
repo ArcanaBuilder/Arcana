@@ -17,8 +17,9 @@ using SymbolMap = Support::AbstractKeywordMap<std::string>;
 static SymbolMap builtin_symbols =
 {
     { "__main__"       , "None"                                              },
-    { "__root__"       , std::filesystem::current_path().generic_string()     },
-    { "__version__"    , __ARCANA__VERSION__                                  },
+    { "__root__"       , std::filesystem::current_path().generic_string()    },
+    { "__version__"    , __ARCANA__VERSION__                                 },
+    { "__release__"    , __ARCANA__RELEASE__                                 },
     { "__profile__"    , "None"                                              },
     { "__threads__"    , "None"                                              },
     { "__max_threads__", std::to_string(std::thread::hardware_concurrency()) },
@@ -66,6 +67,7 @@ static std::map<Core::SymbolType, std::string> Known_Symbols_By_Token =
     { Core::SymbolType::MAIN        , "__main__"        },
     { Core::SymbolType::ROOT        , "__root__"        },
     { Core::SymbolType::VERSION     , "__version__"     },
+    { Core::SymbolType::RELEASE     , "__release__"     },
     { Core::SymbolType::PROFILE     , "__profile__"     },
     { Core::SymbolType::THREADS     , "__threads__"     },
     { Core::SymbolType::MAX_THREADS , "__max_threads__" },
@@ -83,6 +85,7 @@ static std::map<std::string, Core::SymbolType> Known_Symbols_By_String =
     { "__main__"        , Core::SymbolType::MAIN        },
     { "__root__"        , Core::SymbolType::ROOT        },
     { "__version__"     , Core::SymbolType::VERSION     },
+    { "__release__"     , Core::SymbolType::RELEASE     },
     { "__profile__"     , Core::SymbolType::PROFILE     },
     { "__threads__"     , Core::SymbolType::THREADS     },
     { "__max_threads__" , Core::SymbolType::MAX_THREADS },

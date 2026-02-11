@@ -189,6 +189,10 @@ private:
      */
     Support::SemanticOutput Handle_VarAssign(Grammar::Match& match);
 
+
+    Support::SemanticOutput Handle_VarJoin(Grammar::Match& match);
+
+
     /**
      * @brief Handles Rule::ATTRIBUTE semantic action.
      *
@@ -222,12 +226,12 @@ private:
     Support::SemanticOutput Handle_Mapping(Grammar::Match& match);
 
     /**
-     * @brief Handles Rule::ASSERT semantic action.
+     * @brief Handles Rule::ASSERT_MSG semantic action.
      *
      * @param match Grammar match describing an assert statement.
      * @return SemanticOutput describing success or semantic error.
      */
-    Support::SemanticOutput Handle_Assert(Grammar::Match& match);
+    Support::SemanticOutput Handle_Assert(Grammar::Match& match, bool actions);
     
     /**
      * @brief Handles Rule::IMPORT by parsing a referenced script into a new environment.

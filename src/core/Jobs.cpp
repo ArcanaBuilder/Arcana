@@ -183,7 +183,10 @@ static void PruneUnchangedInstructions(Jobs::Job& job,
             // FALLBACK: PROCESS SINGLE VALUE
             if (!var_ref.var_value.empty())
             {
-                process_file(var_ref.var_value);
+                for (auto& value : var_ref.var_value)
+                {
+                    process_file(value);
+                }
             }
         }
     }
@@ -461,7 +464,7 @@ static ExpansionError ExpandListInstuctions(const Semantic::InstructionTask& tas
  * @return Pair (ExpansionError, optional Job). If expansion fails, Job is nullopt.
  */
 static std::pair<ExpansionError, std::optional<Job>>
-FromInstruction(const Semantic::InstructionTask& task, Semantic::VTable& vtable) noexcept
+FromInstruction(const Semantic::InstructionTask& task, Semantic::VTable& vtable, bool prunable = true) noexcept
 {
     Job            new_job {};
     ExpansionError status;
@@ -478,8 +481,11 @@ FromInstruction(const Semantic::InstructionTask& task, Semantic::VTable& vtable)
         return std::make_pair(status, std::nullopt);
     }
 
-    // PRUNE UNCHANGED INSTRUCTIONS
-    PruneUnchangedInstructions(new_job, task, vtable);
+    if (prunable)
+    {
+        // PRUNE UNCHANGED INSTRUCTIONS
+        PruneUnchangedInstructions(new_job, task, vtable);
+    }
 
     // IF NOTHING TO RUN, RETURN EMPTY JOB
     if (!new_job.instructions.size())
@@ -575,13 +581,14 @@ static bool dfs_visit(const std::string&                name,
                       const Graph&                      graph,
                       std::map<std::string, VisitMark>& mark,
                       std::vector<Job>&                 out,
-                      ExpansionError&                   err) noexcept
+                      ExpansionError&                   err,
+                      bool prunable = true) noexcept
 {
     // COLLECT CURRENT NODE INTO OUT VECTOR
-    auto collect_node = [&] (Arcana::Semantic::FTable::const_iterator& tit) noexcept -> bool
+    auto collect_node = [&] (Arcana::Semantic::FTable::const_iterator& tit, bool pruning) noexcept -> bool
     {
         const Semantic::InstructionTask& t = tit->second;
-        const auto& result = FromInstruction(t, vtable);
+        const auto& result = FromInstruction(t, vtable, pruning);
 
         if (!result.first.ok)
         {
@@ -639,14 +646,14 @@ static bool dfs_visit(const std::string&                name,
         // VISIT DEPENDENCIES FIRST
         for (const auto& succ : git->second[0])
         {
-            if (!dfs_visit(succ, table, vtable, graph, mark, out, err))
+            if (!dfs_visit(succ, table, vtable, graph, mark, out, err, prunable))
             {
                 return false;
             }
         }
 
         // COLLECT CURRENT NODE
-        if (!collect_node(tit))
+        if (!collect_node(tit, prunable))
         {
             return false;
         }
@@ -654,7 +661,7 @@ static bool dfs_visit(const std::string&                name,
         // VISIT SUCCESSORS
         for (const auto& succ : git->second[1])
         {
-            if (!dfs_visit(succ, table, vtable, graph, mark, out, err))
+            if (!dfs_visit(succ, table, vtable, graph, mark, out, err, prunable))
             {
                 return false;
             }
@@ -665,7 +672,7 @@ static bool dfs_visit(const std::string&                name,
     m = VisitMark::PERM;
 
     // FINAL COLLECT (KEEP ORIGINAL BEHAVIOR)
-    return collect_node(tit);
+    return collect_node(tit, prunable);
 }
 
 
@@ -705,10 +712,30 @@ void List::Insert(const std::optional<Job>& j)
  * @param out Output job list.
  * @return ARCANA_RESULT__OK on success, otherwise a failure code.
  */
-Arcana_Result List::FromEnv(Semantic::Enviroment& environment, List& out) noexcept
+Arcana_Result List::FromEnv(Semantic::Enviroment& environment, List& out, std::vector<std::string>& recovery) noexcept
 {
     // BUILD GRAPH FROM FTABLE
     Graph graph = BuildGraph(environment.ftable);
+
+    for (const auto& task_name : recovery)
+    {
+        ExpansionError                   err;
+        std::vector<Job>                 ordered;
+        std::map<std::string, VisitMark> mark;
+
+        // DFS VISIT ROOT
+        if (!dfs_visit(task_name, environment.ftable, environment.vtable, graph, mark, ordered, err, false))
+        {
+            ERR(err.msg);
+            return Arcana_Result::ARCANA_RESULT__NOK;
+        }
+
+        // INSERT ORDERED JOBS
+        for (const Job& j : ordered)
+        {
+            out.Insert(j);
+        }
+    }
 
     // START FROM MAIN TASK
     if (auto main_task_opt = Table::GetValue(environment.ftable, Semantic::Attr::Type::MAIN))

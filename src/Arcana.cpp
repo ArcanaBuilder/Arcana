@@ -6,6 +6,7 @@
 #include "Support.h"
 #include "Defines.h"
 #include "Semantic.h"
+#include "Profiler.h"
 #include "TableHelper.h"
 
 #include <cerrno>
@@ -75,9 +76,6 @@ static Arcana_Result Parse(const Support::Arguments& args)
     // EXPAND VARIABLES, GLOBS, AND ATTRIBUTE-DRIVEN TRANSFORMS.
     CHECK_STR_RESULT(env.Expand());
 
-    // EXECUTE ASSERT STATEMENTS.
-    CHECK_STR_RESULT(env.ExecuteAsserts());
-
     // CHECK FOR PUBLIC TASKS PRESENCE.
     if (!Table::GetValues(env.ftable, Semantic::Attr::Type::PUBLIC))
     {
@@ -100,11 +98,25 @@ static Arcana_Result Parse(const Support::Arguments& args)
  */
 static Arcana_Result Execute(const Support::Arguments& args)
 {
-    Jobs::List           joblist;
-    Core::RunOptions     runopt;
+    Jobs::List               joblist;
+    Core::RunOptions         runopt;
+    std::vector<std::string> recovery;
+
+    ARC(ANSI_GRAY << "Executing Environment" << ANSI_RESET);
+
+    // EXECUTE ASSERT_MSG STATEMENTS.
+    if (auto res = env.ExecuteAsserts(recovery); res.has_value())
+    {
+        ERR(res.value());
+
+        if (recovery.size() == 0)
+        {
+            return Arcana_Result::ARCANA_RESULT__NOK;
+        }
+    } 
 
     // BUILD JOBLIST FROM CURRENT ENVIRONMENT.
-    CHECK_RESULT(Jobs::List::FromEnv(env, joblist));
+    CHECK_RESULT(Jobs::List::FromEnv(env, joblist, recovery));
 
     // CONFIGURE RUNTIME EXECUTION OPTIONS.
     runopt.silent          = args.silent;
@@ -133,14 +145,18 @@ int main(int argc, char** argv)
     // HANDLE PRE PARSE EARLY-EXIT OPTIONS AND VALIDATE INPUTS.
     CHECK_RESULT(Support::HandleArgsPreParse(args));
 
+    ARC(ANSI_GRAY << "Building Environment" << ANSI_RESET);
+
     // PARSE ARCFILE AND PREPARE THE SEMANTIC ENVIRONMENT.
     CHECK_RESULT(Parse(args));
 
     // HANDLE POST PARSE EARLY-EXIT OPTIONS.
     CHECK_RESULT(Support::HandleArgsPostParse(args, env));
 
-    // LOAD CACHE AND APPLY PROFILE-RELATED CACHE RULES.
+    // LOAD CACHE.
     Cache::Manager::Instance().LoadCache();
+
+    // APPLY PROFILE-RELATED CACHE RULE.
     Cache::Manager::Instance().HandleProfileChange(env.GetProfile().selected);
 
     // GENERATE JOBLIST AND EXECUTE.

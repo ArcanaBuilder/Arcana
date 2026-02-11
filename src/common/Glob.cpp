@@ -1,4 +1,5 @@
 #include "Glob.h"
+#include "Profiler.h"
 
 #include <algorithm>
 
@@ -539,6 +540,33 @@ static bool SegmentAllowsDotfiles(const Segment& seg) noexcept
 
 
 /**
+ * @brief Check whether a segment is a single literal atom.
+ *
+ * Used as a fast-path during expansion to avoid directory enumeration
+ * when the next step is a deterministic single child lookup.
+ *
+ * @param seg Segment to test.
+ * @param out_lit Output literal view.
+ * @return true if the segment is exactly one literal atom.
+ */
+static bool SegmentIsLiteralOnly(const Segment& seg, std::string_view& out_lit) noexcept
+{
+    if (seg.atoms.size() != 1)
+    {
+        return false;
+    }
+    if (seg.atoms[0].kind != Atom::Kind::LITERAL)
+    {
+        return false;
+    }
+
+    out_lit = seg.atoms[0].literal;
+    return true;
+}
+
+
+
+/**
  * @brief Match a single character against a parsed character class.
  *
  * The class can be:
@@ -607,17 +635,126 @@ static bool CharClassMatch(const CharClass& cc, char ch) noexcept
  */
 static bool MatchSegmentAtoms(const Segment& seg, const std::string& name) noexcept
 {
+    // FAST-PATHS FOR COMMON SEGMENT SHAPES (AVOID DP)
+    // NOTE: DOTFILE POLICY IS HANDLED BY THE CALLER.
+
+    auto starts_with = [] (std::string_view s, std::string_view pre) noexcept -> bool
+    {
+        if (s.size() < pre.size())
+        {
+            return false;
+        }
+        return s.substr(0, pre.size()) == pre;
+    };
+
+    auto ends_with = [] (std::string_view s, std::string_view suf) noexcept -> bool
+    {
+        if (s.size() < suf.size())
+        {
+            return false;
+        }
+        return s.substr(s.size() - suf.size(), suf.size()) == suf;
+    };
+
+    const std::size_t Afast = seg.atoms.size();
+    if (Afast == 0)
+    {
+        return name.empty();
+    }
+
+    // SINGLE ATOM CASES
+    if (Afast == 1)
+    {
+        const Atom& a0 = seg.atoms[0];
+
+        if (a0.kind == Atom::Kind::LITERAL)
+        {
+            return name == a0.literal;
+        }
+        if (a0.kind == Atom::Kind::STAR)
+        {
+            return true;
+        }
+        if (a0.kind == Atom::Kind::QMARK)
+        {
+            return name.size() == 1;
+        }
+        if (a0.kind == Atom::Kind::CHARCLASS)
+        {
+            return (name.size() == 1) && CharClassMatch(a0.cls, name[0]);
+        }
+    }
+
+    // PURE QMARKS: EXACT LENGTH MATCH
+    bool only_qmarks = true;
+    for (const auto& a : seg.atoms)
+    {
+        if (a.kind != Atom::Kind::QMARK)
+        {
+            only_qmarks = false;
+            break;
+        }
+    }
+    if (only_qmarks)
+    {
+        return name.size() == seg.atoms.size();
+    }
+
+    // SIMPLE STAR FORMS WITHOUT CHARCLASSES:
+    //   "*.ext"   => STAR + LITERAL
+    //   "pre*"    => LITERAL + STAR
+    //   "pre*suf" => LITERAL + STAR + LITERAL
+    //   "*suf"    => STAR + LITERAL
+    //   "pre*"    => LITERAL + STAR
+    bool has_charclass = false;
+    for (const auto& a : seg.atoms)
+    {
+        if (a.kind == Atom::Kind::CHARCLASS)
+        {
+            has_charclass = true;
+            break;
+        }
+    }
+
+    if (!has_charclass)
+    {
+        if (Afast == 2 && seg.atoms[0].kind == Atom::Kind::STAR && seg.atoms[1].kind == Atom::Kind::LITERAL)
+        {
+            return ends_with(name, seg.atoms[1].literal);
+        }
+        if (Afast == 2 && seg.atoms[0].kind == Atom::Kind::LITERAL && seg.atoms[1].kind == Atom::Kind::STAR)
+        {
+            return starts_with(name, seg.atoms[0].literal);
+        }
+        if (Afast == 3 && seg.atoms[0].kind == Atom::Kind::LITERAL && seg.atoms[1].kind == Atom::Kind::STAR && seg.atoms[2].kind == Atom::Kind::LITERAL)
+        {
+            const std::string& pre = seg.atoms[0].literal;
+            const std::string& suf = seg.atoms[2].literal;
+
+            if (name.size() < pre.size() + suf.size())
+            {
+                return false;
+            }
+
+            return starts_with(name, pre) && ends_with(name, suf);
+        }
+    }
+
     const std::size_t A = seg.atoms.size();
     const std::size_t N = name.size();
 
     // DP[i][j] = true IF FIRST i ATOMS MATCH FIRST j CHARACTERS
-    std::vector<std::vector<bool>> dp(A + 1, std::vector<bool>(N + 1, false));
-    dp[0][0] = true;
+    // USE A ROLLING DP TO AVOID HEAP CHURN FROM vector<vector<bool>>.
+    std::vector<std::uint8_t> cur(N + 1, 0);
+    std::vector<std::uint8_t> nxt(N + 1, 0);
+    cur[0] = 1;
 
     // ADVANCE OVER ATOMS
     for (std::size_t i = 0; i < A; ++i)
     {
         const Atom& a = seg.atoms[i];
+
+        std::fill(nxt.begin(), nxt.end(), 0);
 
         if (a.kind == Atom::Kind::LITERAL)
         {
@@ -625,14 +762,14 @@ static bool MatchSegmentAtoms(const Segment& seg, const std::string& name) noexc
             const std::string& lit = a.literal;
             for (std::size_t j = 0; j <= N; ++j)
             {
-                if (!dp[i][j])
+                if (!cur[j])
                 {
                     continue;
                 }
 
                 if (j + lit.size() <= N && name.compare(j, lit.size(), lit) == 0)
                 {
-                    dp[i + 1][j + lit.size()] = true;
+                    nxt[j + lit.size()] = 1;
                 }
             }
         }
@@ -641,29 +778,28 @@ static bool MatchSegmentAtoms(const Segment& seg, const std::string& name) noexc
             // QMARK: MATCH EXACTLY ONE CHAR
             for (std::size_t j = 0; j < N; ++j)
             {
-                if (dp[i][j])
+                if (cur[j])
                 {
-                    dp[i + 1][j + 1] = true;
+                    nxt[j + 1] = 1;
                 }
             }
         }
         else if (a.kind == Atom::Kind::STAR)
         {
             // STAR: MATCH 0..N CHARS WITHIN THE SEGMENT
+            // OPTIMIZED STAR TRANSITION:
+            // If any cur[j] is true, then all nxt[k] for k>=j become true.
+            // Implement as a prefix scan from left-to-right.
+            std::uint8_t seen = 0;
             for (std::size_t j = 0; j <= N; ++j)
             {
-                if (!dp[i][j])
+                if (cur[j])
                 {
-                    continue;
+                    seen = 1;
                 }
-
-                // MATCH ZERO CHARACTERS
-                dp[i + 1][j] = true;
-
-                // MATCH ONE OR MORE CHARACTERS
-                for (std::size_t k = j; k < N; ++k)
+                if (seen)
                 {
-                    dp[i + 1][k + 1] = true;
+                    nxt[j] = 1;
                 }
             }
         }
@@ -672,14 +808,14 @@ static bool MatchSegmentAtoms(const Segment& seg, const std::string& name) noexc
             // CHARCLASS: MATCH ONE CHAR IF IN CLASS
             for (std::size_t j = 0; j < N; ++j)
             {
-                if (!dp[i][j])
+                if (!cur[j])
                 {
                     continue;
                 }
 
                 if (CharClassMatch(a.cls, name[j]))
                 {
-                    dp[i + 1][j + 1] = true;
+                    nxt[j + 1] = 1;
                 }
             }
         }
@@ -688,10 +824,12 @@ static bool MatchSegmentAtoms(const Segment& seg, const std::string& name) noexc
             // DOUBLESTAR IS NOT VALID INSIDE NORMAL SEGMENTS IN THIS REPRESENTATION
             return false;
         }
+
+        cur.swap(nxt);
     }
 
     // FULL MATCH REQUIRES CONSUMING ALL ATOMS AND ALL CHARACTERS
-    return dp[A][N];
+    return cur[N] != 0;
 }
 
 
@@ -820,6 +958,36 @@ static void ExpandRec(const Pattern& pattern, const ExpandOptions& opt, const fs
         }
 
         return;
+    }
+
+    // FAST-PATH: LITERAL-ONLY SEGMENT CAN BE RESOLVED WITHOUT ENUMERATION.
+    // THIS IS SEMANTICALLY IDENTICAL TO LISTDIR+MATCH BUT AVOIDS SCANNING.
+    {
+        std::string_view lit;
+        if (SegmentIsLiteralOnly(seg, lit))
+        {
+            // DOTFILES POLICY: A LEADING '.' IS EXPLICIT, SO IT IS ALLOWED
+            // EVEN WHEN include_dotfiles IS FALSE.
+            std::error_code ec;
+            fs::path next = cur_dir / fs::path(std::string(lit));
+
+            if (!fs::exists(next, ec))
+            {
+                return;
+            }
+
+            // IF THERE ARE MORE SEGMENTS, WE MUST DESCEND INTO A DIRECTORY
+            if (seg_index + 1 < pattern.segments.size())
+            {
+                if (!fs::is_directory(next, ec))
+                {
+                    return;
+                }
+            }
+
+            ExpandRec(pattern, opt, next, seg_index + 1, out);
+            return;
+        }
     }
 
     // NORMAL SEGMENT: MATCH IN CURRENT DIRECTORY AND ADVANCE
@@ -1500,9 +1668,6 @@ bool Arcana::Glob::Parse(std::string_view input, Pattern& out, ParseError& err, 
  */
 bool Arcana::Glob::Expand(const Pattern& pattern, const fs::path& base_dir, std::vector<std::string>& out, const ExpandOptions& opt) noexcept
 {
-    // RESET OUTPUT
-    out.clear();
-
     std::error_code ec;
 
     // SELECT START DIRECTORY
@@ -1558,50 +1723,62 @@ bool Arcana::Glob::Expand(const Pattern& pattern, const fs::path& base_dir, std:
  * @param err_map Mapping error (capture/instantiate).
  * @return true on success, false on parse or mapping failure.
  */
-bool Arcana::Glob:: MapGlobToGlob(std::string_view  from_glob,
+bool Arcana::Glob:: MapGlobToGlob(std::vector<std::string>  from_glob,
                     std::string_view  to_glob,
-                    const std::vector<std::string>& src_list,
+                    std::vector<std::string> src_list,
                     std::vector<std::string>&       out_list,
                     ParseError&       err_from,
                     ParseError&       err_to,
                     MapError&         err_map) noexcept
 {
-    Pattern from_pat;
+    // RESET OUTPUT LIST
+    out_list.clear();
+
+    // PARSE DESTINATION GLOB ONCE (CONSTANT ACROSS MAPPINGS)
     Pattern to_pat;
-
-    // PARSE SOURCE GLOB
-    if (!Glob::Parse(from_glob, from_pat, err_from))
-    {
-        return false;
-    }
-
-    // PARSE DESTINATION GLOB
     if (!Glob::Parse(to_glob, to_pat, err_to))
     {
         return false;
     }
 
-    // RESET OUTPUT LIST
-    out_list.clear();
-
-    // MAP EACH SOURCE PATH THROUGH CAPTURE + INSTANTIATE
-    for (const auto& src : src_list)
+    for (uint32_t i = 0; i < from_glob.size(); ++i)
     {
-        std::vector<Arcana::Glob::Capture> caps;
-        if (!MatchCapture(from_pat, src, caps))
+        const auto& from = from_glob[i];
+
+        Pattern from_pat;
+    
+        // PARSE SOURCE GLOB
+        if (!Glob::Parse(from, from_pat, err_from))
         {
-            err_map.code = MapError::Code::CAPTURE;
             return false;
         }
-
-        std::string out;
-        if (!Instantiate(to_pat, caps, out))
+    
+        // MAP EACH SOURCE PATH THROUGH CAPTURE + INSTANTIATE
+        for (auto it = src_list.begin(); it != src_list.end();)
         {
-            err_map.code = MapError::Code::INSTANTIATE;
-            return false;
-        }
+            std::vector<Arcana::Glob::Capture> caps;
+            if (!MatchCapture(from_pat, *it, caps))
+            {
+                if (i == from_glob.size() - 1)
+                {
+                    err_map.code = MapError::Code::CAPTURE;
+                    return false;
+                } 
+                ++it;
+                continue;
+            }
+    
+            std::string out;
+            if (!Instantiate(to_pat, caps, out))
+            {
+                err_map.code = MapError::Code::INSTANTIATE;
+                return false;
+            }
+            
+            it = src_list.erase(it);
 
-        out_list.emplace_back(std::move(out));
+            out_list.emplace_back(std::move(out));
+        }
     }
 
     return true;

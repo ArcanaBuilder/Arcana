@@ -55,6 +55,7 @@ enum class SymbolType : std::uint8_t
     MAIN        = 0, ///< Main task symbol.
     ROOT,            ///< Project root directory.
     VERSION,         ///< Arcana version.
+    RELEASE,         ///< Arcana release name.
     PROFILE,         ///< Active build profile.
     THREADS,         ///< Active thread count.
     MAX_THREADS,     ///< Maximum available threads.

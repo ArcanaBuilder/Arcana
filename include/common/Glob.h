@@ -324,9 +324,9 @@ bool Expand(const Pattern& pattern, const fs::path& base_dir, std::vector<std::s
  *
  * @return true on success, false on error.
  */
-bool MapGlobToGlob(std::string_view                 from_glob,
+bool MapGlobToGlob(std::vector<std::string>    from_glob,
                     std::string_view                to_glob,
-                    const std::vector<std::string>& src_list,
+                    std::vector<std::string> src_list,
                     std::vector<std::string>&       out_list,
                     ParseError&                     err_from,
                     ParseError&                     err_to,

@@ -158,6 +158,21 @@ static Rules rule_VARIABLE_ASSIGNMENT =
 };
 
 
+/**
+ * @brief Grammar rule: variable join.
+ *
+ * Pattern:
+ *   IDENTIFIER '+=' ANY (NEWLINE | ';' | EOF)
+ */
+static Rules rule_VARIABLE_JOIN =
+{
+    Scan::TokenType::IDENTIFIER                           |
+    Scan::TokenType::PLUS                                 |
+    Scan::TokenType::ASSIGN                               |
+    Scan::TokenType::ANY                                  |
+    ( Scan::TokenType::NEWLINE || Scan::TokenType::SEMICOLON || Scan::TokenType::ENDOFFILE )
+};
+
 
 /**
  * @brief Grammar rule: empty line.
@@ -265,7 +280,7 @@ static Rules rule_MAP =
  * Pattern:
  *   'assert' '"' ANY '"' (EQ | NE | IN) '"' ANY '"' '-' '>' '"' ANY '"' (NEWLINE | ';' | EOF)
  */
-static Rules rule_ASSERT =
+static Rules rule_ASSERT_MSG =
 {
     Scan::TokenType::ASSERT                         |
     Scan::TokenType::DQUOTE                         |
@@ -280,6 +295,30 @@ static Rules rule_ASSERT =
     Scan::TokenType::DQUOTE                         |
     Scan::TokenType::ANY                            |
     Scan::TokenType::DQUOTE                         |
+    ( Scan::TokenType::NEWLINE || Scan::TokenType::SEMICOLON || Scan::TokenType::ENDOFFILE )
+};
+
+
+
+/**
+ * @brief Grammar rule: assert directive.
+ *
+ * Pattern:
+ *   'assert' '"' ANY '"' (EQ | NE | IN) '"' ANY '"' '-' '>' ANY (NEWLINE | ';' | EOF)
+ */
+static Rules rule_ASSERT_ACT =
+{
+    Scan::TokenType::ASSERT                         |
+    Scan::TokenType::DQUOTE                         |
+    Scan::TokenType::ANY                            |
+    Scan::TokenType::DQUOTE                         |
+    ( Scan::TokenType::EQ || Scan::TokenType::NE || Scan::TokenType::IN )  |
+    Scan::TokenType::DQUOTE                         |
+    Scan::TokenType::ANY                            |
+    Scan::TokenType::DQUOTE                         |
+    Scan::TokenType::MINUS                          |
+    Scan::TokenType::ANGULARRP                      |
+    Scan::TokenType::ANY                            |
     ( Scan::TokenType::NEWLINE || Scan::TokenType::SEMICOLON || Scan::TokenType::ENDOFFILE )
 };
 
@@ -308,23 +347,27 @@ Engine::Engine()
 {
     // REGISTER PRODUCTIONS
     _rules[Rule::VARIABLE_ASSIGN  ] = rule_VARIABLE_ASSIGNMENT.buffer;
+    _rules[Rule::VARIABLE_JOIN    ] = rule_VARIABLE_JOIN.buffer;
     _rules[Rule::EMPTY_LINE       ] = rule_EMPTY_LINE.buffer;
     _rules[Rule::ATTRIBUTE        ] = rule_ATTRIBUTE.buffer;
     _rules[Rule::TASK_DECL        ] = rule_TASK_DECL.buffer;
     _rules[Rule::IMPORT           ] = rule_IMPORT.buffer;
     _rules[Rule::USING            ] = rule_USING.buffer;
     _rules[Rule::MAPPING          ] = rule_MAP.buffer;
-    _rules[Rule::ASSERT           ] = rule_ASSERT.buffer;
+    _rules[Rule::ASSERT_MSG       ] = rule_ASSERT_MSG.buffer;
+    _rules[Rule::ASSERT_ACT       ] = rule_ASSERT_ACT.buffer;
 
     // ALLOCATE INDEX BUFFERS (ONE PER RULE POSITION)
     _index[Rule::VARIABLE_ASSIGN  ] = std::vector<Index>(rule_VARIABLE_ASSIGNMENT.buffer.size());
+    _index[Rule::VARIABLE_JOIN    ] = std::vector<Index>(rule_VARIABLE_JOIN.buffer.size());
     _index[Rule::EMPTY_LINE       ] = std::vector<Index>(rule_EMPTY_LINE.buffer.size());
     _index[Rule::ATTRIBUTE        ] = std::vector<Index>(rule_ATTRIBUTE.buffer.size());
     _index[Rule::TASK_DECL        ] = std::vector<Index>(rule_TASK_DECL.buffer.size());
     _index[Rule::IMPORT           ] = std::vector<Index>(rule_IMPORT.buffer.size());
     _index[Rule::USING            ] = std::vector<Index>(rule_USING.buffer.size());
     _index[Rule::MAPPING          ] = std::vector<Index>(rule_MAP.buffer.size());
-    _index[Rule::ASSERT           ] = std::vector<Index>(rule_ASSERT.buffer.size());
+    _index[Rule::ASSERT_MSG       ] = std::vector<Index>(rule_ASSERT_MSG.buffer.size());
+    _index[Rule::ASSERT_ACT       ] = std::vector<Index>(rule_ASSERT_ACT.buffer.size());
 }
 
 

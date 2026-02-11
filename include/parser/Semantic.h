@@ -13,6 +13,17 @@
 #include "Defines.h"
 
 
+
+
+BEGIN_MODULE(Cache)
+
+class Manager;
+
+END_MODULE(Cache)
+
+
+
+
 BEGIN_MODULE(Semantic)
 
 
@@ -95,6 +106,7 @@ enum class Type
     FLUSHCACHE          ,   //!< Task triggers cache flush
     ECHO                ,   //!< Control command echoing
     EXCLUDE             ,   //!< Exclusion pattern(s) from glob/expansion
+    GLOB                ,   //!< Glob pattern(s)
     IFOS                ,   //!< OS-specific selection (mangled with @@<os>)
 
     ATTRIBUTE__UNKNOWN  ,   //!< Sentinel for invalid/unrecognized attribute
@@ -329,7 +341,9 @@ END_NAMESPACE(Using)
 //    ██╔══╝  ██║   ██║██╔══██╗██║███╗██║██╔══██║██╔══██╗██║  ██║╚════██║
 //    ██║     ╚██████╔╝██║  ██║╚███╔███╔╝██║  ██║██║  ██║██████╔╝███████║
 //    ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
-//                                                                                                                                                                                                   
+//           
+
+
 
 class  Engine;
 struct AssertCheck;
@@ -457,12 +471,23 @@ struct AssertCheck
         DEPENDENCIES,  //!< File/dependency existence check under a base path
     };
 
+    /**
+     * @brief Supported assert check types.
+     */
+    enum class Type : std::uint8_t
+    {
+        MESSAGE,     //!< Standard assert, message to stdout
+        ACTIONS,     //!< Callback Action, no early exit
+    };
+
     std::size_t line;                 //!< Source line number (1-based)
     std::string stmt;                 //!< Raw assert statement string (for diagnostics)
     std::string lvalue;               //!< Left side expression (expanded later)
     std::string rvalue;               //!< Right side expression (expanded later)
     CheckType   check;                //!< Operation kind
     std::string reason;               //!< Human-readable failure reason template
+    std::vector<std::string> actions; //!< Human-readable failure reason template
+    Type        type;
 
     std::filesystem::path search_path;//!< Base path used for DEPENDENCIES (lvalue appended externally)
 };
@@ -482,7 +507,7 @@ struct AssertCheck
 struct InstructionAssign
 {
     std::string var_name;                     //!< Variable identifier
-    std::string var_value;                    //!< Raw value string (may contain `{arc:...}` tokens)
+    std::vector<std::string> var_value;       //!< Raw value string (may contain `{arc:...}` tokens)
     Attr::List  attributes;                   //!< Attributes attached to this variable
 
     std::vector<std::string> glob_expansion;  //!< Result of glob expansion (if var_value is a glob)
@@ -496,13 +521,23 @@ struct InstructionAssign
      */
     InstructionAssign(const std::string& var, const std::string& val)
         :
-        var_name(var),
-        var_value(val)
-    {}
+        var_name(var)
+    {
+        var_value.push_back(val);
+    }
 
     // copy
     InstructionAssign(const InstructionAssign& other)             = default;
     InstructionAssign& operator=(const InstructionAssign & other) = default;
+
+    inline std::string GetListValue()
+    {
+        if (var_value.size() == 1) return var_value[0];
+        
+        std::stringstream ss;
+        for (auto& v : var_value) ss << v << " ";
+        return ss.str();
+    }
 
     /**
      * @brief Check whether an attribute is present.
@@ -672,6 +707,7 @@ struct Profile
 struct Enviroment
 {
     friend class Engine;
+    friend class Manager;
     friend inline void EnvMerge(Enviroment& dst, Enviroment& src);
 
 public:
@@ -707,7 +743,7 @@ public:
      * @param args Parsed CLI arguments.
      * @return ARCANA_RESULT__OK or ARCANA_RESULT__NOK (or other codes you define).
      */
-          Arcana_Result              CheckArgs(const Arcana::Support::Arguments& args) noexcept;
+    Arcana_Result                    CheckArgs(const Arcana::Support::Arguments& args) noexcept;
 
     /**
      * @brief Expand all strings in the environment.
@@ -727,7 +763,7 @@ public:
      * @brief Evaluate collected assertions after expansion.
      * @return optional error message. Empty optional on success.
      */
-    const std::optional<std::string> ExecuteAsserts() noexcept;
+    const std::optional<std::string> ExecuteAsserts(std::vector<std::string>& reco_cb) noexcept;
     
     /**
      * @brief Get the default interpreter configured by `using default interpreter`.
@@ -770,8 +806,8 @@ private:
          */
         explicit Expander(Enviroment& e) noexcept
             : env(e)
-            , re_intern(R"(\{arc:(__profile__|__version__|__main__|__root__|__max_threads__|__threads__|__os__|__arch__)\})")
-            , re_arc(R"(\{arc:([A-Za-z]+)\})")
+            , re_intern(R"(\{arc:(__profile__|__version__|__release__|__main__|__root__|__max_threads__|__threads__|__os__|__arch__)\})")
+            , re_arc(R"(\{arc:([A-Za-z_][A-Za-z0-9_]+)\})")
             , re_fs(R"(\{fs:([^}]+)\})")
         {}
 
@@ -895,7 +931,7 @@ public:
      * @param val  Variable value (raw).
      * @return SemanticOutput containing status and error/hint if any.
      */
-    SemanticOutput Collect_Assignment(const std::string& name, const std::string&  val); 
+    SemanticOutput Collect_Assignment(const std::string& name, const std::string&  val, bool join = false); 
 
     /**
      * @brief Collect one task declaration.
@@ -933,7 +969,7 @@ public:
      * @return SemanticOutput containing status and error/hint if any.
      */
     SemanticOutput Collect_Assert    (std::size_t line, const std::string& stmt, const std::string& lvalue, 
-                                      const std::string& op, const std::string& rvalue, const std::string& reason);
+                                      const std::string& op, const std::string& rvalue, const std::string& reason, const bool actions);
 
     /**
      * @brief Get a *copy* of the currently collected environment.

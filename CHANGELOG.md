@@ -3,6 +3,22 @@
 All relevant changes to this project will be documented in this file.
 
 
+## [0.5.0] - 2025-02-11
+### Changes
+- Improved the Glob engine performance
+- Minor performance improves
+
+### Added
+- Variable sum (+= semantic)
+- Assert with recovery callbacks list
+- **@glob** attribute, from now a glob pattern must be specified as glob
+- **\_\_release__** builtin symbol
+- Ability to search for multiple glob patterns and optionally map them into one
+
+### Fixed Bugs
+- Alingned variable declaration grammar regex to variable expansion regex 
+
+
 ## [0.4.3] - 2025-12-21
 ### Removed
 - Module **Debug**

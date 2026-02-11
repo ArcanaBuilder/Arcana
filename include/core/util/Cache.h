@@ -19,6 +19,7 @@
  */
 
 #include "Defines.h"
+#include "Semantic.h"
 
 #include <map>
 #include <filesystem>
@@ -123,7 +124,6 @@ public:
      */
     void HandleProfileChange(const std::string& profile) noexcept;
 
-
     /**
      * @brief Writes a generated script to the cache.
      *
@@ -149,8 +149,10 @@ private:
     fs::path _script_path;                              ///< Script output directory.
     fs::path _input_path;                               ///< Cached input directory.
     fs::path _profile;                                  ///< Active profile path.
+    fs::path _arcfile;                                  ///< Active arcfile path.
     std::map<std::string, std::string> _cached_inputs;  ///< Cached input hashes.
     std::string _cached_profile;                        ///< Cached profile identifier.
+    std::string _cached_arcfile;                        ///< Cached arcfile hash.
 };
 
 

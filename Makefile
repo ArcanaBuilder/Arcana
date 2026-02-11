@@ -6,7 +6,7 @@ CXXFLAGS := -std=c++17 -g3 -O0
 CXXFLAGS += -Wall -Wextra
 CXXFLAGS += -Wunused-variable -Wunused-function -Wunused-parameter -Wunreachable-code
 CXXFLAGS += -Wunused-but-set-variable -Wunused-result
-CXXFLAGS += -DDEBUG
+CXXFLAGS += -DDEBUG -DARC_PROFILE
 CXXFLAGS += -Iinclude/common -Iinclude/core -Iinclude/parser -Iinclude/parser/util -Iinclude/core/util
 
 LDFLAGS  ?=

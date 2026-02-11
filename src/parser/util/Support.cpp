@@ -56,7 +56,7 @@ R"HEADER(
 static Arcana_Result Version(void)
 {
     MSG(ARCANA_HEADER);
-    MSG("Version: " << __ARCANA__VERSION__);
+    MSG("Version: " << __ARCANA__VERSION__ << " (" << __ARCANA__RELEASE__ << ")");
 
     return Arcana_Result::ARCANA_RESULT__OK_AND_EXIT;
 }
@@ -113,7 +113,7 @@ LANGUAGE:
   The only exception is the ability to expand variables declared in Arcana within task statements.
 
   NATIVE STATEMENTS:
-    import <file.arc>                               Import an arcscript as arcana source file.
+    import <file.arc>                               Imports an arcscript as arcana source file.
     
     using profiles <Profile list>                   Allows the user to define a set of profiles to use 
                                                     in the arcana code.
@@ -131,7 +131,11 @@ LANGUAGE:
 
     map <SOURCE> -> <TARGET>                        Same as attribute @map. 
 
-    assert "lvalue" <op> "rvalue" -> "reason"       Execute assert equal operation. 
+    assert "lvalue" <op> "rvalue" -> "reason"       Executes assert operation with early-exit with 
+                                                    reason "reason". 
+
+    assert "lvalue" <op> "rvalue" -> <CB List>      Executes assert operation without early-exit and
+                                                    invokes the recovery callbacks list <CB List>. 
 
   
   BUILTIN SYMBOLS:
@@ -145,6 +149,8 @@ LANGUAGE:
 
     __version__                     A symbol that identifies the current version of Arcana.
                                     It can be used for compatibility checks and diagnostics.
+
+    __release__                     A symbol that carry on the current release name. Just for fun.
 
     __profile__                     A symbol that identifies the currently selected execution profile.
                                     If no profile is selected, it will have the value 'None'.
@@ -164,6 +170,8 @@ LANGUAGE:
 
   VARIABLES:
     NAME = VALUE                    Simple assignment of VALUE into NAME
+
+    @glob
     GLOB = path/**/*.c              Simple assignment of path/**/*.c into GLOB, but at runtime
                                     the engine will try to expand the glob **/*.c
     @map GLOB
@@ -210,9 +218,11 @@ LANGUAGE:
     @ifos        <os>               Valid only for variables. Enables the annotated variables or 
                                     tasks only when the host OS matches <os>.
 
-    @pub                            Export task to the caller. By defaults all symbols are private.
+    @pub                            Exports task to the caller. By defaults all symbols are private.
 
-    @main                           Mark the task as main task.
+    @main                           Marks the task as main task.
+
+    @glob                           Marks the variable as glob.
 
     @echo                           Prints at runtime on stdout the executed task instructions.
 
@@ -679,7 +689,7 @@ Arcana_Result Support::HandleArgsPreParse(const Arguments &args)
     if (args.flush_cache)
     {
         Cache::Manager::Instance().EraseCache();
-        return Arcana_Result::ARCANA_RESULT__OK_AND_EXIT;
+        return Arcana_Result::ARCANA_RESULT__OK;
     }
 
     if (args.generator.found)
@@ -843,7 +853,11 @@ Arcana_Result Support::HandleArgsPostParse(const Arguments &args, Arcana::Semant
             found = true;
 
             print_kv("TYPE", "Variable");
-            print_kv("VALUE", res->second.var_value);
+            print_ctx("VALUE");
+            for (const auto& value : res->second.var_value)
+            {
+                print_line(value);
+            }
 
             if (res->second.attributes.size())
             {
@@ -1306,13 +1320,14 @@ std::string Support::RuleRepr(const Grammar::Rule type)
     {
         case Grammar::Rule::UNDEFINED:         return "UNDEFINED";
         case Grammar::Rule::VARIABLE_ASSIGN:   return "Assignment";
+        case Grammar::Rule::VARIABLE_JOIN:     return "Join";
         case Grammar::Rule::EMPTY_LINE:        return "Empty Line";
         case Grammar::Rule::ATTRIBUTE:         return "Attribute";
         case Grammar::Rule::TASK_DECL:         return "Task Declaration";
         case Grammar::Rule::IMPORT:            return "Import";
         case Grammar::Rule::USING:             return "Using";
         case Grammar::Rule::MAPPING:           return "Mapping";
-        case Grammar::Rule::ASSERT:            return "Assert";
+        case Grammar::Rule::ASSERT_MSG:        return "Assert";
         default:                               return "<INVALID>";
     }
 }

@@ -541,7 +541,8 @@ Manager::Manager()
     _cache_folder(".arcana"),
     _script_path(_P(_cache_folder) / _P("script")),
     _input_path(_P(_cache_folder) / _P("input")),
-    _profile(_P(_cache_folder) / _P("profile"))
+    _profile(_P(_cache_folder) / _P("profile")),
+    _arcfile(_P(_cache_folder) / _P("arcfile"))
 {}
 
 /**
@@ -616,6 +617,12 @@ void Manager::LoadCache() noexcept
         create_file(_profile, "");
     }
 
+    // ENSURE ARCFILE MARKER EXISTS
+    if (!dir_exists(_arcfile))
+    {
+        create_file(_arcfile, "");
+    }
+
     // LOAD ALL CACHED INPUT HASHES
     for_each_file(_input_path, [this] (const std::filesystem::path& fullpath,
                                        const std::string& fname,
@@ -626,8 +633,9 @@ void Manager::LoadCache() noexcept
         _cached_inputs[fname] = content;
     });
 
-    // LOAD CURRENT PROFILE MARKER
+    // LOAD CURRENT PROFILE & ARCFILE MARKER
     _cached_profile = read_file(_profile);
+    _cached_arcfile = read_file(_arcfile);
 }
 
 /**
@@ -650,6 +658,7 @@ void Manager::HandleProfileChange(const std::string& profile) noexcept
     // UPDATE PROFILE MARKER
     create_file(_profile, profile);
 }
+
 
 /**
  * @brief Check if a file changed since last cache snapshot.
