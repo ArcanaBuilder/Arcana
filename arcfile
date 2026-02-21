@@ -1,4 +1,4 @@
-using profiles Release Debug;
+using profiles Debug Release;
 using default interpreter /bin/bash;
 using threads 12;
 
@@ -54,7 +54,6 @@ print('arch       : {arc:__arch__}')
 }
 
 @echo
-@multithread
 @requires MakeFolders
 task Compile(SOURCES) 
 {
@@ -81,13 +80,6 @@ task Clean()
     rm -rf {arc:BUILDDIR}
 }
 
-@profile Debug 
-@pub
-@main
-@requires Message Compile Link
-task Build() {}
-
-@profile Release 
 @pub
 @main
 @requires Message Compile Link

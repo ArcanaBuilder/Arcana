@@ -154,10 +154,7 @@ int main(int argc, char** argv)
     CHECK_RESULT(Support::HandleArgsPostParse(args, env));
 
     // LOAD CACHE.
-    Cache::Manager::Instance().LoadCache();
-
-    // APPLY PROFILE-RELATED CACHE RULE.
-    Cache::Manager::Instance().HandleProfileChange(env.GetProfile().selected);
+    Cache::Manager::Instance().LoadCache(env.GetProfile().selected);
 
     // GENERATE JOBLIST AND EXECUTE.
     return Execute(args);

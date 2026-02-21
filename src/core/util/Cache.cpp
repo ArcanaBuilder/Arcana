@@ -15,6 +15,16 @@ USE_MODULE(Arcana::Cache);
 
 
 
+
+enum CacheType : std::uint32_t
+{
+    CT__PROFILE = 0,
+    CT__FILES   = 1
+};
+
+
+
+
 //    ███████╗███████╗    ██╗  ██╗███████╗██╗     ██████╗ ███████╗██████╗ 
 //    ██╔════╝██╔════╝    ██║  ██║██╔════╝██║     ██╔══██╗██╔════╝██╔══██╗
 //    █████╗  ███████╗    ███████║█████╗  ██║     ██████╔╝█████╗  ██████╔╝
@@ -521,7 +531,26 @@ std::string Cache::MD5(const std::string& data) noexcept
 }
 
 
+/**
+ * @brief Compute MD5 for a string buffer.
+ * @param data Input bytes.
+ * @return Binary MD5 digest (16 raw bytes inside std::string).
+ */
+std::string Cache::MD5_bin(const std::string& data) noexcept
+{
+    MD5Context ctx;
 
+    md5_init(ctx);
+    md5_update(ctx,
+               reinterpret_cast<const std::uint8_t*>(data.data()),
+               data.size());
+
+    std::uint8_t digest[16];
+    md5_final(ctx, digest);
+
+    // ritorna i 16 byte raw dentro una std::string
+    return std::string(reinterpret_cast<const char*>(digest), 16);
+}
 
 
 
@@ -540,10 +569,14 @@ Manager::Manager()
     :
     _cache_folder(".arcana"),
     _script_path(_P(_cache_folder) / _P("script")),
-    _input_path(_P(_cache_folder) / _P("input")),
-    _profile(_P(_cache_folder) / _P("profile")),
-    _arcfile(_P(_cache_folder) / _P("arcfile"))
-{}
+    _binary(_P(_cache_folder)),
+    _cached_profile("")
+{
+    if (!dir_exists(_cache_folder))
+    {
+        create_dir(_cache_folder);
+    }
+}
 
 /**
  * @brief Erase the entire cache folder.
@@ -569,94 +602,34 @@ void Manager::EraseCache() noexcept
  */
 void Manager::ClearCache() noexcept
 {
-    // WIPE SCRIPT FOLDER
-    if (dir_exists(_script_path))
-    {
-        remove_dir_recursive(_script_path);
-    }
 
-    // WIPE INPUT FOLDER
-    if (dir_exists(_input_path))
-    {
-        remove_dir_recursive(_input_path);
-    }
-
-    // RESET IN-MEMORY CACHE
-    _cached_inputs.clear();
-
-    // RELOAD DISK STATE
-    LoadCache();
 }
 
 /**
  * @brief Ensure cache layout exists and load cached input hashes and profile marker.
  */
-void Manager::LoadCache() noexcept
+void Manager::LoadCache(const std::string& profile) noexcept
 {
-    // ENSURE CACHE ROOT EXISTS
-    if (!dir_exists(_cache_folder))
-    {
-        create_dir(_cache_folder);
-    }
-
     // ENSURE SCRIPT PATH EXISTS
     if (!dir_exists(_script_path))
     {
         create_dir(_script_path);
     }
 
-    // ENSURE INPUT PATH EXISTS
-    if (!dir_exists(_input_path))
+    _binary /= MD5(profile);
+
+    _mnt_binary.open(_binary);
+
+    if (!_mnt_binary.read_at(CacheType::CT__PROFILE, _cached_profile))
     {
-        create_dir(_input_path);
+        _cached_profile = MD5_bin(_cached_profile);
+        _mnt_binary.write_at(CacheType::CT__PROFILE, _cached_profile);
+
+        return;
     }
 
-    // ENSURE PROFILE MARKER EXISTS
-    if (!file_exists(_profile))
-    {
-        create_file(_profile, "");
-    }
+    while ()
 
-    // ENSURE ARCFILE MARKER EXISTS
-    if (!dir_exists(_arcfile))
-    {
-        create_file(_arcfile, "");
-    }
-
-    // LOAD ALL CACHED INPUT HASHES
-    for_each_file(_input_path, [this] (const std::filesystem::path& fullpath,
-                                       const std::string& fname,
-                                       const std::string& content)
-    {
-        UNUSED(fullpath);
-
-        _cached_inputs[fname] = content;
-    });
-
-    // LOAD CURRENT PROFILE & ARCFILE MARKER
-    _cached_profile = read_file(_profile);
-    _cached_arcfile = read_file(_arcfile);
-}
-
-/**
- * @brief Invalidate cached inputs when profile changes.
- * @param profile Selected profile name.
- */
-void Manager::HandleProfileChange(const std::string& profile) noexcept
-{
-    // IF PROFILE CHANGED, DROP INPUT CACHE
-    if (_cached_profile.compare(profile) != 0)
-    {
-        if (dir_exists(_input_path))
-        {
-            remove_dir_recursive(_input_path);
-        }
-
-        _cached_inputs.clear();
-    }
-
-    // UPDATE PROFILE MARKER
-    create_file(_profile, profile);
 }
 
 
@@ -671,6 +644,7 @@ void Manager::HandleProfileChange(const std::string& profile) noexcept
  */
 bool Manager::HasFileChanged(const std::string& path) noexcept
 {
+#if 0
     // HASH PATH TO GET STABLE CACHE KEY
     std::string md5_file    = MD5(path);
 
@@ -691,6 +665,9 @@ bool Manager::HasFileChanged(const std::string& path) noexcept
     }
 
     return false;
+#else
+    return true;
+#endif
 }
 
 /**
