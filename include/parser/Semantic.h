@@ -103,7 +103,7 @@ enum class Type
     MULTITHREAD         ,   //!< Allow multi-thread expansion/execution semantics
     MAIN                ,   //!< Marks the main task (entry)
     INTERPRETER         ,   //!< Select interpreter for task (or default env interpreter)
-    FLUSHCACHE          ,   //!< Task triggers cache flush
+    CACHE               ,   //!< Task triggers cache
     ECHO                ,   //!< Control command echoing
     EXCLUDE             ,   //!< Exclusion pattern(s) from glob/expansion
     GLOB                ,   //!< Glob pattern(s)
@@ -530,7 +530,7 @@ struct InstructionAssign
     InstructionAssign(const InstructionAssign& other)             = default;
     InstructionAssign& operator=(const InstructionAssign & other) = default;
 
-    inline std::string GetListValue()
+    inline std::string GetListValue() const
     {
         if (var_value.size() == 1) return var_value[0];
         
@@ -584,7 +584,6 @@ struct InstructionAssign
 struct InstructionTask
 {
     std::string  task_name;     //!< Task identifier
-    Task::Inputs task_inputs;   //!< Names of variables used as inputs to the task
     Task::Instrs task_instrs;   //!< Instruction strings (command templates)
     FListCRef    dependencies;   //!< Resolved dependency tasks (const references)
     FListCRef    thens;         //!< Resolved successor tasks (const references)
@@ -601,11 +600,9 @@ struct InstructionTask
      * @param instrs Task instruction templates.
      */
     InstructionTask(const std::string&  name,
-                    const Task::Inputs& inputs,
                     const Task::Instrs& instrs)
         :
         task_name(name),
-        task_inputs(inputs),
         task_instrs(instrs)
     {}
 
@@ -764,6 +761,8 @@ public:
      * @return optional error message. Empty optional on success.
      */
     const std::optional<std::string> ExecuteAsserts(std::vector<std::string>& reco_cb) noexcept;
+
+
     
     /**
      * @brief Get the default interpreter configured by `using default interpreter`.
@@ -936,11 +935,10 @@ public:
     /**
      * @brief Collect one task declaration.
      * @param name   Task name.
-     * @param inputs Raw input list string (requires parsing/splitting).
      * @param instrs Instruction lines.
      * @return SemanticOutput containing status and error/hint if any.
      */
-    SemanticOutput Collect_Task      (const std::string& name, const std::string& inputs, const Task::Instrs& instrs);
+    SemanticOutput Collect_Task      (const std::string& name, const Task::Instrs& instrs);
 
     /**
      * @brief Collect a `using` directive.

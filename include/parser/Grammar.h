@@ -201,8 +201,8 @@ enum class ATTRIBUTE : uint32_t
     /// Sentinel: end of this positional enum
     GRAMMAR_END           ,
 };
-
-
+  
+ 
 
 /**
  * @brief Positional capture indices for Rule::TASK_DECL.
@@ -225,9 +225,6 @@ enum class TASK_DECL : uint32_t
 
     /// '(' token/span
     ROUNDLP               ,
-
-    /// Inputs token/span (raw input list between parentheses)
-    INPUTS                ,
 
     /// ')' token/span
     ROUNDRP               ,

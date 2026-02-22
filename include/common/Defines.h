@@ -115,7 +115,7 @@
 /**
  * @brief Current Arcana version string.
  */
-#define __ARCANA__VERSION__                     "0.5.0"
+#define __ARCANA__VERSION__                     "0.5.1"
 
 
 /**

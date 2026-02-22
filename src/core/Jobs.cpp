@@ -120,16 +120,20 @@ static const ExpansionMap Expansion_Map =
  */
 static void PruneUnchangedInstructions(Jobs::Job& job,
                                        const Semantic::InstructionTask& task,
-                                       const Semantic::VTable& vtable) noexcept
+                                       Semantic::VTable& vtable) noexcept
 {
     // FAST-EXIT ON EMPTY INPUTS OR EMPTY INSTRUCTIONS
-    if (task.task_inputs.empty() || job.instructions.empty())
+    if (job.instructions.empty())
     {
         return;
     }
 
+    std::vector<std::string> inputs;
+
     // TRACK WHICH INSTRUCTIONS MUST BE KEPT
     std::vector<bool> keep(job.instructions.size(), true);
+    bool never_found = true; 
+    bool any_changes = false;
 
     // MAP FILE -> INSTRUCTION DEPENDENCY AND PRUNE IF UNCHANGED
     auto process_file = [&] (const std::string& file)
@@ -138,7 +142,7 @@ static void PruneUnchangedInstructions(Jobs::Job& job,
         {
             return;
         }
-
+        
         for (std::size_t i = 0; i < job.instructions.size(); ++i)
         {
             // SKIP ALREADY PRUNED INSTRUCTIONS
@@ -148,11 +152,14 @@ static void PruneUnchangedInstructions(Jobs::Job& job,
             }
 
             const std::string& instr = job.instructions[i];
+            bool changed = Cache::Manager::Instance().HasFileChanged(file);
+
+            if (changed) any_changes = true;
 
             // SIMPLE DEPENDENCY HEURISTIC: INSTRUCTION CONTAINS FILE
             if (instr.find(file) != std::string::npos)
             {
-                bool changed = Cache::Manager::Instance().HasFileChanged(file);
+                never_found = false;
 
                 // IF NOT CHANGED, PRUNE INSTRUCTION
                 if (!changed)
@@ -161,50 +168,80 @@ static void PruneUnchangedInstructions(Jobs::Job& job,
                 }
             }
         }
+
     };
 
-    // LOOP OVER TASK INPUT VARIABLES
-    for (const auto& input_name : task.task_inputs)
+    if (task.hasAttribute(Semantic::Attr::Type::CACHE))
     {
-        // LOOKUP VARIABLE (ASSUMED VALIDATED UPSTREAM)
-        auto        it      = vtable.find(input_name);
-        const auto& var_ref = it->second;
+        auto& properties = task.getProperties(Semantic::Attr::Type::CACHE);
 
-        // IF GLOB-EXPANDED, PROCESS EACH FILE
-        if (!var_ref.glob_expansion.empty())
+        const std::string& command = properties[0];
+    
+        if (command.compare("track") == 0)
         {
-            for (const auto& file : var_ref.glob_expansion)
+            for (uint32_t i = 1; i < properties.size(); ++i)
             {
-                process_file(file);
+                const auto& var = vtable[properties[i]];
+    
+                if (var.glob_expansion.size() != 0)
+                {
+                    inputs.insert(inputs.end(), var.glob_expansion.begin(), var.glob_expansion.end());  
+                }
+                else
+                {
+                    const auto& i = Arcana::Support::split(var.GetListValue());
+
+                    inputs.insert(inputs.end(), i.begin(), i.end());  
+                }
             }
         }
         else
         {
-            // FALLBACK: PROCESS SINGLE VALUE
-            if (!var_ref.var_value.empty())
+            for (uint32_t i = 1; i < properties.size(); ++i)
             {
-                for (auto& value : var_ref.var_value)
+                const auto& var = vtable[properties[i]];
+    
+                if (var.glob_expansion.size() != 0)
                 {
-                    process_file(value);
+                    Arcana::Cache::Manager::Instance().ClearCache(var.glob_expansion);
+                }
+                else
+                {
+                    const auto& i = Arcana::Support::split(var.GetListValue());
+
+                    Arcana::Cache::Manager::Instance().ClearCache(i);
                 }
             }
         }
     }
-
-    // REBUILD INSTRUCTION LIST WITH KEPT ITEMS ONLY
-    Semantic::Task::Instrs filtered;
-    filtered.reserve(job.instructions.size());
-
-    for (std::size_t i = 0; i < job.instructions.size(); ++i)
+ 
+    // LOOP OVER TASK INPUT VARIABLES
+    for (const auto& input_name : inputs)
     {
-        if (keep[i])
-        {
-            filtered.emplace_back(std::move(job.instructions[i]));
-        }
+        process_file(input_name);
     }
 
-    // SWAP FILTERED INSTRUCTIONS BACK
-    job.instructions.swap(filtered);
+    if (never_found && !any_changes && inputs.size() > 0)
+    {
+        job.instructions.clear();
+    }
+    else
+    {
+        // REBUILD INSTRUCTION LIST WITH KEPT ITEMS ONLY
+        Semantic::Task::Instrs filtered;
+        filtered.reserve(job.instructions.size());
+    
+        for (std::size_t i = 0; i < job.instructions.size(); ++i)
+        {
+            if (keep[i])
+            {
+                filtered.emplace_back(std::move(job.instructions[i]));
+            }
+        }
+    
+        // SWAP FILTERED INSTRUCTIONS BACK
+        job.instructions.swap(filtered);
+    }
 }
 
 
@@ -497,12 +534,6 @@ FromInstruction(const Semantic::InstructionTask& task, Semantic::VTable& vtable,
     // APPLY EXECUTION ATTRIBUTES
     new_job.parallelizable = task.hasAttribute(Semantic::Attr::Type::MULTITHREAD);
     new_job.echo           = task.hasAttribute(Semantic::Attr::Type::ECHO);
-
-    // OPTIONALLY FLUSH CACHE
-    if (task.hasAttribute(Semantic::Attr::Type::FLUSHCACHE))
-    {
-        Cache::Manager::Instance().ClearCache();
-    }
 
     return std::make_pair(status, new_job);
 }

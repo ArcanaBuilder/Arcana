@@ -3,6 +3,7 @@
 #include "Glob.h"
 #include "Core.h"
 #include "Support.h"
+#include "Cache.h"
 #include "TableHelper.h"
 #include "Profiler.h"
 
@@ -43,7 +44,7 @@ static const AttributeMap Known_Attributes =
     { "multithread" , Attr::Type::MULTITHREAD },
     { "main"        , Attr::Type::MAIN        },
     { "interpreter" , Attr::Type::INTERPRETER },
-    { "flushcache"  , Attr::Type::FLUSHCACHE  },
+    { "cache"       , Attr::Type::CACHE       },
     { "echo"        , Attr::Type::ECHO        },
     { "exclude"     , Attr::Type::EXCLUDE     },
     { "glob"        , Attr::Type::GLOB        },
@@ -78,7 +79,7 @@ static const std::vector<std::string> _attributes =
     "multithread",
     "main",
     "interpreter",
-    "flushcache",
+    "cache",
     "echo",
     "exclude",
     "glob",
@@ -99,6 +100,17 @@ static const std::vector<std::string> _usings =
 
 
 
+/**
+ * @brief Canonical cache instructions
+ */
+static const std::vector<std::string> _cache =
+{
+    "track",
+    "untrack",
+};
+
+
+
 // ------------------------------
 // OUTPUT MACROS
 // ------------------------------
@@ -112,6 +124,7 @@ static const std::vector<std::string> _usings =
 
 
 
+
 //    ███████╗███╗   ██╗ ██████╗ ██╗███╗   ██╗███████╗
 //    ██╔════╝████╗  ██║██╔════╝ ██║████╗  ██║██╔════╝
 //    █████╗  ██╔██╗ ██║██║  ███╗██║██╔██╗ ██║█████╗  
@@ -119,6 +132,8 @@ static const std::vector<std::string> _usings =
 //    ███████╗██║ ╚████║╚██████╔╝██║██║ ╚████║███████╗
 //    ╚══════╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝╚═╝  ╚═══╝╚══════╝
 //                                                    
+
+
 
 /**
  * @brief Construct semantic engine and initialize attribute rule table.
@@ -137,7 +152,7 @@ Engine::Engine()
     _attr_rules[_I(Attr::Type::MULTITHREAD )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };
     _attr_rules[_I(Attr::Type::MAIN        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };
     _attr_rules[_I(Attr::Type::INTERPRETER )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , { Attr::Target::TASK,                        } };
-    _attr_rules[_I(Attr::Type::FLUSHCACHE  )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };
+    _attr_rules[_I(Attr::Type::CACHE       )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::UNLIMITED, { Attr::Target::TASK,                        } };
     _attr_rules[_I(Attr::Type::ECHO        )] = { Attr::Qualificator::NO_PROPERY       , Attr::Count::ZERO     , { Attr::Target::TASK,                        } };
     _attr_rules[_I(Attr::Type::IFOS        )] = { Attr::Qualificator::REQUIRED_PROPERTY, Attr::Count::ONE      , {                     Attr::Target::VARIABLE } };
 }
@@ -187,6 +202,7 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
             ss << "Attribute " << TOKEN_MAGENTA(name) << " requires one option, not " << props_count;
             return SEM_NOK(ss.str());
         }
+
     }
     else
     {
@@ -228,6 +244,28 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
         {
             ss << "Invalid OS " << TOKEN_MAGENTA(property[0]);
             return SEM_NOK(ss.str());
+        }
+    }
+    else if (attr == Attr::Type::CACHE)
+    {
+        auto keys = Table::Keys(_env.vtable);
+
+        if (property.size() == 1)
+        {
+            ss << "Missing arguments for attribute " << TOKEN_MAGENTA(name);
+            return SEM_NOK(ss.str());
+        }
+
+        if (std::find(_cache.begin(), _cache.end(), property[0]) == _cache.end())
+        {
+            ss << "Invalid keyword " << TOKEN_MAGENTA(property[0]) << " for attribute @" << TOKEN_CYAN(name);
+            return SEM_NOK_HINT(ss.str(), Support::FindClosest(_cache, property[0]));
+        }
+
+        if (std::find(keys.begin(), keys.end(), property[1]) == keys.end())
+        {
+            ss << "Invalid " << name << " " << property[0] << TOKEN_MAGENTA(property[1]) << ": undeclared variable";
+            return SEM_NOK_HINT(ss.str(), Support::FindClosest(keys, property[1]));
         }
     }
 
@@ -314,15 +352,12 @@ SemanticOutput Engine::Collect_Assignment(const std::string& name, const std::st
  * @param instrs Instruction lines.
  * @return SemanticOutput with status.
  */
-SemanticOutput Engine::Collect_Task(const std::string& name, const std::string& inputs, const Task::Instrs& instrs)
+SemanticOutput Engine::Collect_Task(const std::string& name, const Task::Instrs& instrs)
 {
     std::stringstream ss;
 
-    // PARSE INPUTS LIST
-    Task::Inputs    task_inputs = Support::split(inputs);
-
     // BUILD TASK INSTRUCTION
-    InstructionTask task { name, task_inputs, instrs };
+    InstructionTask task { name, instrs };
     FTable&         ftable = _env.ftable;
 
     // ATTACH PENDING ATTRIBUTES AND CLEAR PENDING QUEUE
@@ -932,19 +967,6 @@ const std::optional<std::string> Enviroment::Expand() noexcept
             }
         }
 
-        // VALIDATE TASK INPUTS ARE DECLARED VARIABLES
-        for (const auto& input : task.task_inputs)
-        {
-            if (std::find(var_keys.begin(), var_keys.end(), input) == var_keys.end())
-            {
-                std::stringstream ss;
-                ss << "Invalid input " << TOKEN_MAGENTA(input << ANSI_RESET << " for task " << ANSI_BMAGENTA << name)
-                   << ": Undefined variable";
-
-                return ss.str();
-            }
-        }
-
         // EXPAND INSTRUCTION LINES
         for (auto& instr : task.task_instrs)
         {
@@ -1055,9 +1077,6 @@ const std::optional<std::string> Enviroment::ExecuteAsserts(std::vector<std::str
 
 
 
-
-
-
 //    ███████╗██╗  ██╗██████╗  █████╗ ███╗   ██╗██████╗ ███████╗██████╗ 
 //    ██╔════╝╚██╗██╔╝██╔══██╗██╔══██╗████╗  ██║██╔══██╗██╔════╝██╔══██╗
 //    █████╗   ╚███╔╝ ██████╔╝███████║██╔██╗ ██║██║  ██║█████╗  ██████╔╝
@@ -1139,7 +1158,7 @@ std::optional<std::string> Enviroment::Expander::ExpandArcAll(std::string& s) no
     return "Too deep / cyclic {arc:...} expansion (depth limit reached)";
 }
 
-
+ 
 
 /**
  * @brief Expand a text using internals + variable expansion.

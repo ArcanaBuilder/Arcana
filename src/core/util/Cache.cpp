@@ -19,7 +19,7 @@ USE_MODULE(Arcana::Cache);
 enum CacheType : std::uint32_t
 {
     CT__PROFILE = 0,
-    CT__FILES   = 1
+    CT__FILES   = 16
 };
 
 
@@ -267,6 +267,12 @@ std::string read_file(const fs::path& p) noexcept
 std::string MD5_file(const fs::path& p) noexcept
 {
     return Cache::MD5(read_file(p));
+}
+
+
+std::string MD5_file_bin(const fs::path& p) noexcept
+{
+    return Cache::MD5_bin(read_file(p));
 }
 
 
@@ -600,9 +606,19 @@ void Manager::EraseCache() noexcept
  *
  * Then it reloads the cache state from disk.
  */
-void Manager::ClearCache() noexcept
+void Manager::ClearCache(const std::vector<std::string>& keys) noexcept
 {
+    for (const auto& key : keys)
+    {
+        const std::string md5_file = MD5_bin(key);
+        const auto it              = _cached_files.find(md5_file);
 
+        if (it != _cached_files.end())
+        {
+            _mnt_binary.erase_record(it->second.first, sizeof (FileRecord));
+            _cached_files.erase(it);
+        }
+    }
 }
 
 /**
@@ -618,18 +634,71 @@ void Manager::LoadCache(const std::string& profile) noexcept
 
     _binary /= MD5(profile);
 
-    _mnt_binary.open(_binary);
+    if (!_mnt_binary.open(_binary.string()))
+    {
+        return;
+    }
 
-    if (!_mnt_binary.read_at(CacheType::CT__PROFILE, _cached_profile))
+    if (!_mnt_binary.read_block16(CacheType::CT__PROFILE, _cached_profile))
     {
         _cached_profile = MD5_bin(_cached_profile);
-        _mnt_binary.write_at(CacheType::CT__PROFILE, _cached_profile);
+        _mnt_binary.write_block16(CacheType::CT__PROFILE, _cached_profile);
 
         return;
     }
 
-    while ()
+    // LOAD FILE RECORDS
+    const std::uint64_t fsz = _mnt_binary.file_size();
+    if (fsz < CacheType::CT__FILES)
+    {
+        return;
+    }
 
+    std::uint64_t off = CacheType::CT__FILES;
+
+    if (((fsz - CacheType::CT__FILES) % FILE_REC_SIZE) != 0ULL)
+    {
+        return;
+    }
+
+    for (;;)
+    {
+        if ((off + FILE_REC_SIZE) > fsz)
+        {
+            break;
+        }
+
+        FileRecord rec{};
+        if (!_mnt_binary.read_exact(off, &rec, sizeof(rec)))
+        {
+            break;
+        }
+
+        bool all_zero = true;
+        for (int i = 0; i < 16; ++i)
+        {
+            if (rec.path_md5[i] != 0)
+            {
+                all_zero = false;
+                break;
+            }
+        }
+
+        if (all_zero)
+        {
+            off += FILE_REC_SIZE;
+            continue;
+        }
+
+        const std::string k = KeyToString(rec);
+        const std::string v = ValToString(rec);
+
+        _cached_files.upsert(k, v, off);
+
+        off += FILE_REC_SIZE;
+    }
+
+    return;
 }
 
 
@@ -644,31 +713,26 @@ void Manager::LoadCache(const std::string& profile) noexcept
  */
 bool Manager::HasFileChanged(const std::string& path) noexcept
 {
-#if 0
-    // HASH PATH TO GET STABLE CACHE KEY
-    std::string md5_file    = MD5(path);
-
-    // HASH CONTENT TO DETECT CHANGES
-    std::string md5_content = MD5_file(path);
-
-    // COMPUTE CACHE FILE PATH
-    fs::path md5_path = _input_path / md5_file;
+    const std::string md5_file    = MD5_bin(path);
+    const std::string md5_content = MD5_file_bin(path);
 
     // LOOKUP CACHED HASH
-    const auto it = _cached_inputs.find(md5_file);
+    const auto it = _cached_files.find(md5_file);
 
     // IF NEW OR DIFFERENT, UPDATE CACHE
-    if ((it == _cached_inputs.end()) || (it->second.compare(md5_content) != 0))
+    if ((it == _cached_files.end()) || (it->second.second.compare(md5_content) != 0))
     {
-        create_file(md5_path, md5_content);
+        FileRecord rec{};
+        RecordFrom(md5_file, md5_content, rec);
+
+        _mnt_binary.write_exact(_mnt_binary.file_size(), &rec, sizeof(rec));
         return true;
     }
-
+ 
     return false;
-#else
-    return true;
-#endif
 }
+
+
 
 /**
  * @brief Write a script file for an instruction, using a stable name derived from job name and index.

@@ -30,7 +30,7 @@ assert "python3"           in "{fs:{arc:BINS}}" -> "python3 is required for this
 # PRIVATE TASKS
 ###########################
 
-
+@cache track SOURCES
 task MakeFolders() 
 {
     cd {arc:SRCDIR}
@@ -54,13 +54,14 @@ print('arch       : {arc:__arch__}')
 }
 
 @echo
+@cache track SOURCES 
 @requires MakeFolders
-task Compile(SOURCES) 
+task Compile() 
 {
 {arc:COMPILER} {arc:FLAGS} {arc:INCLUDES} -c {arc:list:SOURCES} -o {arc:list:OBJECTS}
 }
     
-
+@cache track SOURCES
 task Link()
 {        
 {arc:COMPILER} {arc:FLAGS} {arc:inline:OBJECTS} -o {arc:TARGET}
@@ -73,7 +74,7 @@ task Link()
 
 
 @pub
-@flushcache
+@cache untrack SOURCES
 @then MakeFolders
 task Clean() 
 { 
@@ -82,7 +83,7 @@ task Clean()
 
 @pub
 @main
-@requires Message Compile Link
+@requires Compile Link
 task Build() {}
 
 @pub

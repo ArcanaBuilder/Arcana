@@ -23,6 +23,7 @@
 
 #include <fstream>
 #include <array>
+#include <cstring>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -65,34 +66,32 @@ std::string MD5_bin(const std::string& data) noexcept;
 //    ╚██████╗███████╗██║  ██║███████║███████║███████╗███████║
 //     ╚═════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝╚══════╝
 // 
-
-class BinFile {
+class BinFile
+{
 public:
-    static constexpr std::size_t DefaultBlock = 16;
-
     BinFile() = default;
+
     ~BinFile()
     {
         close();
     }
 
-    // Apre un file; se uno era già aperto lo chiude
     bool open(const std::string& path)
     {
-        close(); // chiudi quello precedente se esiste
+        close();
 
         file_.open(path,
                    std::ios::binary |
-                   std::ios::in    |
+                   std::ios::in |
                    std::ios::out);
 
-        // Se non esiste, proviamo a crearlo:
-        if (!file_) {
+        if (!file_)
+        {
             file_.clear();
             file_.open(path,
                        std::ios::binary |
-                       std::ios::in    |
-                       std::ios::out   |
+                       std::ios::in |
+                       std::ios::out |
                        std::ios::trunc);
         }
 
@@ -102,7 +101,9 @@ public:
     void close()
     {
         if (file_.is_open())
+        {
             file_.close();
+        }
     }
 
     bool is_open() const
@@ -110,47 +111,99 @@ public:
         return file_.is_open();
     }
 
-    // Legge 'size' byte a partire da offset (default 32)
-    // buffer deve avere almeno 'size' elementi
-    bool read_at(std::uint64_t offset,
-                std::string& out,
-                std::size_t size = DefaultBlock)
+    std::uint64_t file_size() noexcept
     {
-        if (!is_open()) return false;
+        if (!is_open())
+        {
+            return 0;
+        }
 
-        file_.seekg(0, std::ios::beg);
+        file_.clear();
 
-        out.resize(size);
+        file_.seekg(0, std::ios::end);
+        if (!file_)
+        {
+            file_.clear();
+            return 0;
+        }
+
+        const std::streampos endpos = file_.tellg();
+        if (endpos < 0)
+        {
+            file_.clear();
+            return 0;
+        }
+
+        return static_cast<std::uint64_t>(endpos);
+    }
+
+    bool read_exact(std::uint64_t offset, void* dst, std::size_t size) noexcept
+    {
+        if (!is_open())
+        {
+            return false;
+        }
 
         file_.clear();
         file_.seekg(static_cast<std::streamoff>(offset), std::ios::beg);
-        if (!file_) return false;
+        if (!file_)
+        {
+            file_.clear();
+            return false;
+        }
 
-        file_.read(out.data(), static_cast<std::streamsize>(size));
+        file_.read(reinterpret_cast<char*>(dst), static_cast<std::streamsize>(size));
 
-        // Se EOF, può aver letto meno byte. Se vuoi mantenerli:
-        out.resize(static_cast<std::size_t>(file_.gcount()));
+        if (file_.gcount() != static_cast<std::streamsize>(size))
+        {
+            file_.clear();
+            return false;
+        }
+
+        return true;
+    }
+
+    bool write_exact(std::uint64_t offset, const void* src, std::size_t size) noexcept
+    {
+        if (!is_open())
+        {
+            return false;
+        }
+
+        file_.clear();
+        file_.seekp(static_cast<std::streamoff>(offset), std::ios::beg);
+        if (!file_)
+        {
+            file_.clear();
+            return false;
+        }
+
+        file_.write(reinterpret_cast<const char*>(src), static_cast<std::streamsize>(size));
+        file_.flush();
 
         return static_cast<bool>(file_);
     }
 
-    // Scrive 'size' byte a partire da offset (default 32)
-    bool write_at(std::uint64_t offset,
-                const std::string& data,
-                std::size_t size = DefaultBlock)
+    bool read_block16(std::uint64_t offset, std::string& out) noexcept
     {
-        if (!is_open()) return false;
+        out.assign(16, '\0');
+        return read_exact(offset, out.data(), 16);
+    }
 
-        file_.seekg(0, std::ios::beg);
+    bool write_block16(std::uint64_t offset, const std::string& data) noexcept
+    {
+        if (data.size() != 16)
+        {
+            return false;
+        }
 
-        if (data.size() < size) return false;   // meglio errore esplicito
+        return write_exact(offset, data.data(), 16);
+    }
 
-        file_.clear();
-        file_.seekp(static_cast<std::streamoff>(offset), std::ios::beg);
-        if (!file_) return false;
-
-        file_.write(data.data(), static_cast<std::streamsize>(size));
-        return static_cast<bool>(file_);
+    bool erase_record(std::uint64_t offset, std::size_t record_size) noexcept
+    {
+        std::vector<char> zeros(record_size, 0);
+        return write_exact(offset, zeros.data(), record_size);
     }
 
 private:
@@ -195,7 +248,7 @@ public:
     /**
      * @brief Clears the in-memory cache state.
      */
-    void ClearCache() noexcept;
+    void ClearCache(const std::vector<std::string>& keys = {}) noexcept;
 
 
     /**
@@ -233,70 +286,56 @@ public:
 private:
     /** @brief Private constructor for singleton enforcement. */
     Manager();
-
     ~Manager() = default;
 
+    static constexpr std::size_t MD5_RAW_SIZE   = 16;
+    static constexpr std::size_t FILE_REC_SIZE  = 32;
 
-    class Pair
+    struct FileRecord
     {
-    public:
-        std::string key;
-        std::string value;
-
-        bool operator == (const Pair& other) 
-        {
-            return key.compare(other.key)     == 0 &&
-                   value.compare(other.value) == 0;
-        } 
-
-        static const Pair Create(const char* source, const size_t len = 32)
-        {
-            static const char hexmap[] = "0123456789ABCDEF";
-
-            Pair p;
-            p.key.reserve(len);
-            p.value.reserve(len);
-
-            std::size_t i = 0;
-
-            for (i = 0; i < len / 2; ++i) 
-            {
-                unsigned char b = source[i];
-
-                p.key.push_back(hexmap[b >> 4]);
-                p.key.push_back(hexmap[b & 0xF]);
-            }
-
-            for (; i < len; ++i) 
-            {
-                unsigned char b = source[i];
-
-                p.value.push_back(hexmap[b >> 4]);
-                p.value.push_back(hexmap[b & 0xF]);
-            }
-
-            return p;
-        }
+        char path_md5[MD5_RAW_SIZE];
+        char content_md5[MD5_RAW_SIZE];
     };
 
-    class PairMap : public std::map<std::string, std::string>
+    static bool IsMD5Raw16(const std::string& s) noexcept
     {
-    public:
-        // Inserisci una coppia Pair
-        bool insert(const std::string& k, const std::string& v)
-        {
-            auto [it, inserted] = emplace(k, v);
-            if (!inserted)
-            {
-                // se vuoi sovrascrivere invece di fallire:
-                // it->second = p.value;
-                // return true;
-            }
-            return inserted;
-        }
+        return s.size() == MD5_RAW_SIZE;
     }
 
+    static void RecordFrom(const std::string& k16, const std::string& v16, FileRecord& out) noexcept
+    {
+        std::memcpy(out.path_md5,    k16.data(), MD5_RAW_SIZE);
+        std::memcpy(out.content_md5, v16.data(), MD5_RAW_SIZE);
+    }
 
+    static std::string KeyToString(const FileRecord& r) noexcept
+    {
+        return std::string(r.path_md5, MD5_RAW_SIZE);
+    }
+
+    static std::string ValToString(const FileRecord& r) noexcept
+    {
+        return std::string(r.content_md5, MD5_RAW_SIZE);
+    }
+
+    class PairMap : public std::map<std::string, std::pair<std::uint64_t, std::string>>
+    {
+    public:
+        bool upsert(const std::string& k, const std::string& v, const std::uint64_t offset)
+        {
+            auto value = std::make_pair(offset, v);
+
+            auto it = this->find(k);
+            if (it == this->end())
+            {
+                this->emplace(k, value);
+                return true;
+            }
+
+            it->second = value;
+            return true;
+        }
+    };
 
     fs::path _cache_folder;                             ///< Cache root directory.
     fs::path _script_path;                              ///< Script output directory.
@@ -304,7 +343,7 @@ private:
 
     BinFile             _mnt_binary;
     std::string         _cached_profile;                        ///< Cached profile identifier.
-    std::vector<Pair>   _cached_files;
+    PairMap             _cached_files;
 };
 
 

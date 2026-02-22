@@ -885,7 +885,6 @@ Arcana_Result Support::HandleArgsPostParse(const Arguments &args, Arcana::Semant
             found = true;
             
             print_kv("TYPE", "Task");
-            print_kv("INPUTS", vector_inline(res->second.task_inputs));
             print_kv("INTERPRETER", res->second.interpreter);
 
             if (res->second.attributes.size())
