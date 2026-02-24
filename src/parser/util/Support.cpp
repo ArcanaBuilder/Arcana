@@ -241,12 +241,35 @@ LANGUAGE:
     @profile     <profile>          Restricts the annotated variables or tasks to the specified 
                                     build profile.
 
-    @flushcache                     Clears cache, forces subsequent tasks to ignore it.
+    @cache <command> <var list>     Untrack, Track and Store cache, see more in CACHE.
 
     @interpreter <interpreter>      Force the task to be executed with the specified interpreter.
     
     @multithread                    Enable the multithread for the selected task, not guaranteed.
 
+CACHE:
+    @cache <command> <var list>
+
+    Manage input file cache.
+
+    Commands:
+    track    Track files resolved from the given variables.
+    untrack  Remove resolved files from cache.
+    store    Store current state of resolved files into cache.
+
+    Variables:
+    Variables must use Arcana expansion syntax:
+
+        {arc:VARNAME}
+            Use variable value as file path (single value or textual list).
+
+        {arc:list:VARNAME}
+            Expand variable using LIST algorithm.
+            If VARNAME has a glob expansion, all resolved files are used.
+
+    Notes:
+    - <var list> accepts one or more variables.
+    - LIST mode is required to resolve glob-expanded variables.
 
 EXAMPLES:
   arcana
@@ -735,7 +758,7 @@ Arcana_Result Support::HandleArgsPreParse(const Arguments &args)
 
 
 
-Arcana_Result Support::HandleArgsPostParse(const Arguments &args, Arcana::Semantic::Enviroment& env)
+Arcana_Result Support::HandleArgsPostParse(const Arguments &args, Arcana::Semantic::Enviroment& env, const Arcana::Jobs::List& list)
 {
     if (args.pubtasks)
     {
@@ -787,14 +810,14 @@ Arcana_Result Support::HandleArgsPostParse(const Arguments &args, Arcana::Semant
     }
     else if (args.value)
     {
-        auto vector_inline = [] (const std::vector<std::string>& vec) noexcept -> std::string
+        auto vector_inline = [] (const std::vector<std::string>& vec, char sep = ',') noexcept -> std::string
         {
             uint32_t i = 0;
             std::stringstream ss;
 
             for (const auto& item : vec)
             {
-                if (i) ss << ", ";
+                if (i) ss << sep << " ";
                 ss << item;
                 i++;
             }
@@ -813,7 +836,7 @@ Arcana_Result Support::HandleArgsPostParse(const Arguments &args, Arcana::Semant
 
                 if (item.props.size())
                 {
-                    ss << " " << vector_inline(item.props);
+                    ss << " " << vector_inline(item.props, ' ');
                 }
                 ss << std::endl;
 
@@ -857,6 +880,7 @@ Arcana_Result Support::HandleArgsPostParse(const Arguments &args, Arcana::Semant
             for (const auto& value : res->second.var_value)
             {
                 print_line(value);
+                print_line("");
             }
 
             if (res->second.attributes.size())
@@ -895,7 +919,20 @@ Arcana_Result Support::HandleArgsPostParse(const Arguments &args, Arcana::Semant
 
             if (res->second.task_instrs.size())
             {
-                print_ctx("INSTRUCTIONS");
+                for (const auto& job : list.All())
+                {
+                    if (job.name.compare(res->second.task_name) == 0)
+                    {
+                        print_ctx("JOB INSTRUCTIONS");
+                        for (const auto& instr : job.instructions)
+                        {
+                            print_line(instr);
+                        }
+                    }
+                }
+
+                print_line("");
+                print_ctx("TASK INSTRUCTIONS");
                 for (const auto& instr : res->second.task_instrs)
                 {
                     print_line(instr);

@@ -576,6 +576,7 @@ Manager::Manager()
     _cache_folder(".arcana"),
     _script_path(_P(_cache_folder) / _P("script")),
     _binary(_P(_cache_folder)),
+    _store_idx(0),
     _cached_profile("")
 {
     if (!dir_exists(_cache_folder))
@@ -583,6 +584,45 @@ Manager::Manager()
         create_dir(_cache_folder);
     }
 }
+
+void Manager::Freeze() noexcept
+{
+    uint64_t pos = CacheType::CT__PROFILE;
+
+    _mnt_binary.reopen(_binary.string(), true);
+    _mnt_binary.write_exact(pos, _cached_profile.data(), 16);
+
+    pos = CacheType::CT__FILES;
+
+    for(const auto& [key, value] : _cached_files)
+    {
+        _mnt_binary.write_exact(pos, key.data()         , 16);
+        pos += 16;
+        _mnt_binary.write_exact(pos, value.second.data(), 16);
+        pos += 16;
+    } 
+ 
+    _mnt_binary.close();
+}
+
+
+void Manager::Store(const std::string& key) noexcept
+{
+    if (_store_idx == 0)
+    {
+        _mnt_binary.reopen(_binary.string(), true);
+        _mnt_binary.write_exact(_store_idx, _cached_profile.data(), 16);
+        _store_idx += 16;
+    }
+
+    const std::string md5_file = MD5_bin(key);
+
+    _mnt_binary.write_exact(_store_idx, md5_file.data() , 16);
+    _store_idx += 16;
+    _mnt_binary.write_exact(_store_idx, _cached_files[md5_file].second.data(), 16);
+    _store_idx += 16;
+}
+
 
 /**
  * @brief Erase the entire cache folder.
@@ -615,7 +655,6 @@ void Manager::ClearCache(const std::vector<std::string>& keys) noexcept
 
         if (it != _cached_files.end())
         {
-            _mnt_binary.erase_record(it->second.first, sizeof (FileRecord));
             _cached_files.erase(it);
         }
     }
@@ -642,65 +681,29 @@ void Manager::LoadCache(const std::string& profile) noexcept
     if (!_mnt_binary.read_block16(CacheType::CT__PROFILE, _cached_profile))
     {
         _cached_profile = MD5_bin(_cached_profile);
-        _mnt_binary.write_block16(CacheType::CT__PROFILE, _cached_profile);
-
         return;
     }
 
     // LOAD FILE RECORDS
-    const std::uint64_t fsz = _mnt_binary.file_size();
-    if (fsz < CacheType::CT__FILES)
+    for (uint64_t off = CacheType::CT__FILES; off < _mnt_binary.file_size(); off += FILE_REC_SIZE)
     {
-        return;
-    }
+        char path_md5[MD5_RAW_SIZE];
+        char content_md5[MD5_RAW_SIZE];
 
-    std::uint64_t off = CacheType::CT__FILES;
-
-    if (((fsz - CacheType::CT__FILES) % FILE_REC_SIZE) != 0ULL)
-    {
-        return;
-    }
-
-    for (;;)
-    {
-        if ((off + FILE_REC_SIZE) > fsz)
+        if (!_mnt_binary.read_exact(off, path_md5, MD5_RAW_SIZE) || !_mnt_binary.read_exact(off + 16, content_md5, MD5_RAW_SIZE))
         {
             break;
         }
 
-        FileRecord rec{};
-        if (!_mnt_binary.read_exact(off, &rec, sizeof(rec)))
-        {
-            break;
-        }
+        const std::string k = std::string(path_md5,    MD5_RAW_SIZE);
+        const std::string v = std::string(content_md5, MD5_RAW_SIZE);
 
-        bool all_zero = true;
-        for (int i = 0; i < 16; ++i)
-        {
-            if (rec.path_md5[i] != 0)
-            {
-                all_zero = false;
-                break;
-            }
-        }
-
-        if (all_zero)
-        {
-            off += FILE_REC_SIZE;
-            continue;
-        }
-
-        const std::string k = KeyToString(rec);
-        const std::string v = ValToString(rec);
-
-        _cached_files.upsert(k, v, off);
-
-        off += FILE_REC_SIZE;
+        _cached_files.upsert(k, v, false);
     }
 
     return;
 }
-
+ 
 
 /**
  * @brief Check if a file changed since last cache snapshot.
@@ -716,20 +719,8 @@ bool Manager::HasFileChanged(const std::string& path) noexcept
     const std::string md5_file    = MD5_bin(path);
     const std::string md5_content = MD5_file_bin(path);
 
-    // LOOKUP CACHED HASH
-    const auto it = _cached_files.find(md5_file);
-
     // IF NEW OR DIFFERENT, UPDATE CACHE
-    if ((it == _cached_files.end()) || (it->second.second.compare(md5_content) != 0))
-    {
-        FileRecord rec{};
-        RecordFrom(md5_file, md5_content, rec);
-
-        _mnt_binary.write_exact(_mnt_binary.file_size(), &rec, sizeof(rec));
-        return true;
-    }
- 
-    return false;
+    return _cached_files.upsert(md5_file, md5_content, true); 
 }
 
 

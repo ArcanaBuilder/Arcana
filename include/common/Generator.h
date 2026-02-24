@@ -32,46 +32,56 @@ using profiles Debug Release;
 using default interpreter /bin/bash;
 using threads 1;
 
-@profile Debug;   FLAGS = 
-@profile Release; FLAGS = 
+@profile Debug;   FLAGS = -Wall -g3 -O0
+@profile Release; FLAGS = -Wall -g0 -O2
 
-COMPILER = 
-INCLUDES = 
-TARGET   = 
-SOURCES  = 
-OBJECTS  =
-BUILDDIR = 
-SRCDIR   = 
-SYSBINS  = /bin
+COMPILER = gcc
+INCLUDES = -Iincludes
+SRCDIR   = src
+OBJDIR   = src
+TARGET   = app
+
+@glob 
+SOURCES  = {arc:SRCDIR}/*.c
+OBJECTS  = {arc:OBJDIR}/*.o
 
 map SOURCES -> OBJECTS;
 
-assert "{arc:COMPILER}" in "{fs:{arc:SYSBINS}}" -> "{arc:COMPILER} is required for this project";
-
+assert "{arc:__os__}" eq "linux" -> "This project can only be build under linux, {arc:__os__} not admitted";
 
 ###########################
 # PRIVATE TASKS
 ###########################
 
 
+@echo
+@cache track {arc:list:SOURCES} 
+@multithread
+task Compile() 
+{
+{arc:COMPILER} {arc:FLAGS} {arc:INCLUDES} -c {arc:list:SOURCES} -o {arc:list:OBJECTS}
+}
+    
+@cache store {arc:list:SOURCES}  
+task Link()
+{        
+{arc:COMPILER} {arc:FLAGS} {arc:inline:OBJECTS} -o {arc:TARGET}
+}
 
 ###########################
 # PUBLIC TASKS
 ###########################
 
 @pub
-@flushcache
+@cache untrack {arc:list:SOURCES}
 task Clean() 
 { 
-
+rm -rf {arc:BUILDDIR}
 }
 
 @pub
-@main
-task Build() 
-{
-
-}
+@main Compile Link
+task Build() {}
 
 @pub
 @requires Clean Build

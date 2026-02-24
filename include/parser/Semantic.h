@@ -539,6 +539,13 @@ struct InstructionAssign
         return ss.str();
     }
 
+    inline std::string GetListGlob() const
+    {
+        std::stringstream ss;
+        for (auto& v : glob_expansion) ss << v << " ";
+        return ss.str();
+    }
+
     /**
      * @brief Check whether an attribute is present.
      * @param attr Attribute type.
@@ -589,7 +596,14 @@ struct InstructionTask
     FListCRef    thens;         //!< Resolved successor tasks (const references)
     Attr::List   attributes;    //!< Attributes attached to task
     Interpreter  interpreter;   //!< Interpreter override (if any)
-    bool         flush_cache = false; //!< Whether running this task flushes cache
+    bool         expanded;
+    struct Cache
+    {
+        enum Type { TRACK, UNTRACK, STORE } type = UNTRACK;
+        bool enabled = false;
+        std::vector<std::string> data = {};
+    }
+    cache;
 
     InstructionTask() = default;
 
@@ -792,12 +806,42 @@ private:
      * by reference, using the parent env for lookups.
      */
     struct Expander
-    {
-        Enviroment& env;            //!< Reference to parent environment
+    {        
+        /**
+         * @brief Expansion algorithm selector for `{arc:<mode>:<var>}` patterns.
+         */
+        enum class Algorithm : uint8_t
+        {
+            NORMAL,
+            LIST,
+            INLINE,
+        };
 
-        const std::regex re_intern; //!< Matches internal `{arc:__...__}` symbols
-        const std::regex re_arc;    //!< Matches `{arc:NAME}` variable references
-        const std::regex re_fs;     //!< Matches `{fs:...}` filesystem search path directives
+        using ExpansionMap = Support::AbstractKeywordMap<Algorithm>;
+
+        Enviroment& env;                  //!< Reference to parent environment
+
+        const std::regex re_intern;       //!< Matches internal `{arc:__...__}` symbols
+        const std::regex re_arc;          //!< Matches `{arc:NAME}` variable references
+        const std::regex re_arc_mode;     //!< Matches `{arc:<mode>:<var>}` variable references
+        const std::regex re_fs;           //!< Matches `{fs:...}` filesystem search path directives
+
+        const ExpansionMap Expansion_Map;
+
+        struct List
+        {
+            struct Match
+            {
+                Algorithm   algo;
+                size_t      start;
+                size_t      count;
+                size_t      pattern_len;
+                Arcana::Semantic::InstructionAssign* datasource;
+            };
+
+            std::string        source;
+            std::vector<Match> matches;
+        };
 
         /**
          * @brief Construct an expander for the given environment.
@@ -807,7 +851,12 @@ private:
             : env(e)
             , re_intern(R"(\{arc:(__profile__|__version__|__release__|__main__|__root__|__max_threads__|__threads__|__os__|__arch__)\})")
             , re_arc(R"(\{arc:([A-Za-z_][A-Za-z0-9_]+)\})")
+            , re_arc_mode(R"(\{arc:([a-z]+):([a-zA-Z][a-zA-Z0-9]*)\})")
             , re_fs(R"(\{fs:([^}]+)\})")
+            , Expansion_Map ({
+                { "list"   , Algorithm::LIST   },
+                { "inline" , Algorithm::INLINE },
+            })
         {}
 
         /**
@@ -822,7 +871,11 @@ private:
          * @param s String to modify in-place.
          * @return optional error message (e.g. undefined variable or depth limit).
          */
-        std::optional<std::string> ExpandArcAll(std::string& s) noexcept;
+        std::optional<std::string> ExpandArcAll(std::string& s,
+                                                const std::vector<Algorithm>& allowed_algorithms,
+                                                std::vector<std::string>* list_exp) noexcept;
+
+        std::optional<std::string> ExpandLists();
 
         /**
          * @brief Expand one string:
@@ -832,7 +885,9 @@ private:
          * @param s String to modify in-place.
          * @return optional error message.
          */
-        std::optional<std::string> ExpandText(std::string& s) noexcept;
+        std::optional<std::string> ExpandText(std::string& s,
+                                              const std::vector<Algorithm>& allowed_algorithms,
+                                              std::vector<std::string>* list_exp = nullptr) noexcept;
 
         /**
          * @brief Extract all `{fs:...}` occurrences from an expanded string.

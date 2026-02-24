@@ -62,19 +62,6 @@ class List;
 
 
 
-/**
- * @brief Error information produced during job expansion.
- */
-struct ExpansionError
-{
-    bool        ok;   ///< Indicates whether expansion succeeded.
-    std::string msg;  ///< Error message.
-    std::string hint; ///< Optional hint for error resolution.
-
-    ExpansionError() : ok(false) {}
-};
-
-
 
 /**
  * @brief Executable job description.
@@ -88,6 +75,7 @@ struct Job
     Semantic::Task::Instrs instructions;    ///< Instructions to execute.
     Semantic::Interpreter  interpreter;     ///< Interpreter used to run the job.
     bool                   parallelizable;  ///< Whether the job can run in parallel.
+    bool                   expanded;
     bool                   echo;            ///< Whether command echoing is enabled.
 };
 

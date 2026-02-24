@@ -5,16 +5,20 @@ using threads 12;
 @profile Debug;   FLAGS = -std=c++17 -g3 -O0 -Wall -Wextra -pedantic -DDEBUG
 @profile Release; FLAGS = -std=c++17 -Ofast -Wall -Wextra -DRELEASE
 
-BUILDDIR = arcbuild
-SRCDIR   = src
-TOOL     = arcana
-TARGET   = {arc:BUILDDIR}/{arc:TOOL}
+BUILDDIR  = arcbuild
+SRCDIR    = src
+TOOL      = arcana
+TARGET    = {arc:BUILDDIR}/{arc:TOOL}
 
 @glob
-SOURCES  = {arc:SRCDIR}/**/*.cpp
-OBJECTS  = {arc:BUILDDIR}/**/*.o
-INCLUDES = -Iinclude/common -Iinclude/core -Iinclude/parser -Iinclude/parser/util -Iinclude/core/util
-BINS     = /bin
+SOURCES   = {arc:SRCDIR}/**/*.cpp
+OBJECTS   = {arc:BUILDDIR}/**/*.o
+INCLUDES  = -Iinclude/common
+INCLUDES += -Iinclude/core
+INCLUDES += -Iinclude/parser 
+INCLUDES += -Iinclude/parser/util 
+INCLUDES += -Iinclude/core/util
+BINS      = /bin
 
 map SOURCES -> OBJECTS;
 
@@ -30,7 +34,7 @@ assert "python3"           in "{fs:{arc:BINS}}" -> "python3 is required for this
 # PRIVATE TASKS
 ###########################
 
-@cache track SOURCES
+@cache track {arc:list:SOURCES}  
 task MakeFolders() 
 {
     cd {arc:SRCDIR}
@@ -54,14 +58,15 @@ print('arch       : {arc:__arch__}')
 }
 
 @echo
-@cache track SOURCES 
+@cache track {arc:list:SOURCES} 
 @requires MakeFolders
+@multithread
 task Compile() 
 {
 {arc:COMPILER} {arc:FLAGS} {arc:INCLUDES} -c {arc:list:SOURCES} -o {arc:list:OBJECTS}
 }
     
-@cache track SOURCES
+@cache store {arc:list:SOURCES}  
 task Link()
 {        
 {arc:COMPILER} {arc:FLAGS} {arc:inline:OBJECTS} -o {arc:TARGET}
@@ -74,7 +79,7 @@ task Link()
 
 
 @pub
-@cache untrack SOURCES
+@cache untrack {arc:list:SOURCES} 
 @then MakeFolders
 task Clean() 
 { 

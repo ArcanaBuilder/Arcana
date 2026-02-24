@@ -79,6 +79,15 @@ struct Enviroment;
 END_MODULE(Semantic)
 
 
+
+BEGIN_MODULE(Jobs)
+
+class List;
+
+END_MODULE(Jobs)
+
+
+
 BEGIN_MODULE(Support)
 
 struct SemanticOutput;
@@ -413,7 +422,7 @@ Arcana_Result HandleArgsPreParse(const Arguments &args);
  * @param args Argument data structure.
  * @return ARCANA_RESULT__OK on success, otherwise a failure code.
  */
-Arcana_Result HandleArgsPostParse(const Arguments &args, Semantic::Enviroment& env);
+Arcana_Result HandleArgsPostParse(const Arguments &args, Semantic::Enviroment& env, const Jobs::List& list);
 
 
 

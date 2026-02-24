@@ -106,6 +106,7 @@ static const std::vector<std::string> _usings =
 static const std::vector<std::string> _cache =
 {
     "track",
+    "store",
     "untrack",
 };
 
@@ -262,11 +263,13 @@ SemanticOutput Engine::Collect_Attribute(const std::string& name, const std::str
             return SEM_NOK_HINT(ss.str(), Support::FindClosest(_cache, property[0]));
         }
 
+        /*
         if (std::find(keys.begin(), keys.end(), property[1]) == keys.end())
         {
-            ss << "Invalid " << name << " " << property[0] << TOKEN_MAGENTA(property[1]) << ": undeclared variable";
+            ss << "Invalid " << property[0] << " property for " << TOKEN_MAGENTA(property[1]) << ": undeclared variable";
             return SEM_NOK_HINT(ss.str(), Support::FindClosest(keys, property[1]));
         }
+        */
     }
 
     // ENQUEUE ATTRIBUTE FOR NEXT ENTITY
@@ -882,7 +885,7 @@ const std::optional<std::string> Enviroment::Expand() noexcept
         for (auto& value : var.var_value)
         {
             // EXPAND TEXT TOKENS
-            if (auto err = ex.ExpandText(value); err.has_value())
+            if (auto err = ex.ExpandText(value, {}); err.has_value())
             {
                 return err;
             }
@@ -904,6 +907,32 @@ const std::optional<std::string> Enviroment::Expand() noexcept
             }
 
             Arcana::Glob::Expand(pattern, ".", var.glob_expansion, opt);
+        }
+    }
+
+    
+    // HANDLE MAPPED VARS EXPANSION
+    auto map_required = Table::GetValues(vtable, Semantic::Attr::Type::MAP);
+
+    if (!map_required.has_value()) return std::nullopt;
+
+    for (auto& stmt : map_required.value())
+    {
+        Glob::ParseError e1, e2;
+        Glob::MapError   m1;
+
+        auto& map_to   = stmt.get();
+        auto& map_from = vtable[map_to.getProperties(Semantic::Attr::Type::MAP).at(0)];
+
+        if (!Arcana::Glob::MapGlobToGlob(map_from.var_value, map_to.var_value[0],
+                                            map_from.glob_expansion, map_to.glob_expansion, e1, e2, m1))
+        {
+            std::stringstream ss;
+            ss << "While mapping " << TOKEN_MAGENTA(map_from.var_name)
+                << " to " << TOKEN_MAGENTA(map_to.var_name)
+                << ": incompatible globs";
+
+            return ss.str();
         }
     }
 
@@ -938,7 +967,7 @@ const std::optional<std::string> Enviroment::Expand() noexcept
             return err;
         }
 
-        if (auto err = ex.ExpandText(assert.reason); err.has_value())
+        if (auto err = ex.ExpandText(assert.reason, {}); err.has_value())
         {
             return err;
         }
@@ -947,13 +976,62 @@ const std::optional<std::string> Enviroment::Expand() noexcept
     // EXPAND FTABLE
     for (auto& [name, task] : ftable)
     {
+        if (task.cache.enabled = task.hasAttribute(Attr::Type::CACHE); task.cache.enabled)
+        {
+            auto properties = task.getProperties(Attr::Type::CACHE);
+
+            if (properties[0] == "track")
+            {
+                task.cache.type = InstructionTask::Cache::Type::TRACK;
+            }
+            else if (properties[0] == "untrack")
+            {
+                task.cache.type = InstructionTask::Cache::Type::UNTRACK;
+            }
+            else
+            {
+                task.cache.type = InstructionTask::Cache::Type::STORE;
+
+            }
+
+            for (uint32_t i = 1; i < properties.size(); ++i)
+            {
+                std::size_t old_size = task.cache.data.size();
+
+                if (auto err = ex.ExpandText(properties[i], {Expander::Algorithm::LIST}, &task.cache.data); err.has_value())
+                {
+                    return err;
+                }
+
+#warning SF: handle multi value vars
+#if 0
+                if (!task.cache.data.size())
+                {
+                    auto values = Support::split(task., ' ');
+                    task.cache.data.insert(task.cache.data.end(), values.begin(), values.end());
+                }
+#endif
+                for (std::size_t j = old_size; j < task.cache.data.size(); ++j)
+                {
+                    const auto& file = task.cache.data[j];
+
+                    if (!Support::file_exists(file))
+                    {
+                        std::stringstream ss;
+                        ss << "Cannot " << properties[0] << " " << TOKEN_CYAN(file) << " from instruction " << TOKEN_CYAN(properties[i]);
+                        return ss.str();
+                    }
+                }
+            }
+        }
+
         // EXPAND TASK INTERPRETER OVERRIDE
         if (task.hasAttribute(Attr::Type::INTERPRETER))
         {
             std::stringstream ss;
             auto properties = task.getProperties(Attr::Type::INTERPRETER);
 
-            if (auto err = ex.ExpandText(properties[0]); err.has_value())
+            if (auto err = ex.ExpandText(properties[0], {}); err.has_value())
             {
                 return err;
             }
@@ -967,39 +1045,33 @@ const std::optional<std::string> Enviroment::Expand() noexcept
             }
         }
 
+
+        std::vector<std::string> expanded_instrs;
+        task.expanded = false;
         // EXPAND INSTRUCTION LINES
         for (auto& instr : task.task_instrs)
         {
-            if (auto err = ex.ExpandText(instr); err.has_value())
+            size_t old_val = expanded_instrs.size();
+
+            if (auto err = ex.ExpandText(instr, {
+                Expander::Algorithm::INLINE, 
+                Expander::Algorithm::LIST
+            }, &expanded_instrs); err.has_value())
             {
                 return err;
             }
+            
+            if (expanded_instrs.size() - old_val > 1)
+            {
+                task.expanded = true;
+            }
+            else if (expanded_instrs.size() == old_val)
+            {
+                expanded_instrs.push_back(instr);
+            }
         }
-    }
 
-    // HANDLE MAPPED VARS EXPANSION
-    auto map_required = Table::GetValues(vtable, Semantic::Attr::Type::MAP);
-
-    if (!map_required.has_value()) return std::nullopt;
-
-    for (auto& stmt : map_required.value())
-    {
-        Glob::ParseError e1, e2;
-        Glob::MapError   m1;
-
-        auto& map_to   = stmt.get();
-        auto& map_from = vtable[map_to.getProperties(Semantic::Attr::Type::MAP).at(0)];
-
-        if (!Arcana::Glob::MapGlobToGlob(map_from.var_value, map_to.var_value[0],
-                                            map_from.glob_expansion, map_to.glob_expansion, e1, e2, m1))
-        {
-            std::stringstream ss;
-            ss << "While mapping " << TOKEN_MAGENTA(map_from.var_name)
-                << " to " << TOKEN_MAGENTA(map_to.var_name)
-                << ": incompatible globs";
-
-            return ss.str();
-        }
+        task.task_instrs = expanded_instrs;
     }
     
     return std::nullopt;
@@ -1016,7 +1088,7 @@ const std::optional<std::string> Enviroment::ExecuteAsserts(std::vector<std::str
     bool assert_failed = false;
     std::stringstream ss;
 
-    reco_cb.clear();
+    reco_cb.clear(); 
 
     for (const auto& assert : atable)
     {
@@ -1126,38 +1198,151 @@ std::optional<std::string> Enviroment::Expander::ExpandInternals(std::string& s)
  * @param s String to expand in-place.
  * @return Empty optional on success, error string on failure.
  */
-std::optional<std::string> Enviroment::Expander::ExpandArcAll(std::string& s) noexcept
+std::optional<std::string> Enviroment::Expander::ExpandArcAll(std::string& s, const std::vector<Algorithm>& allowed_algorithms,
+                                                              std::vector<std::string>* list_exp) noexcept
 {
-    for (int depth = 0; depth < 256; ++depth)
-    {
-        // SEARCH NEXT VARIABLE TOKEN
-        std::smatch m;
-        if (!std::regex_search(s, m, re_arc))
-        {
-            return std::nullopt;
-        }
+    std::size_t expected;
 
-        const std::string name = m[1].str();
+    List expanded;
+    expanded.source  = s;
+
+    std::vector<Arcana::Semantic::InstructionAssign*> list_expansions;
+
+    std::sregex_iterator rx_it1(expanded.source.begin(), expanded.source.end(), re_arc_mode);
+    std::sregex_iterator end;
+
+    auto expand = [&] (std::string& src, uint32_t pos = 0) -> void
+    {
+        ssize_t span = 0;
+        for (const auto& match : expanded.matches)
+        {
+            std::string content{};
+            
+            switch (match.algo)
+            {
+                case Algorithm::NORMAL: content = match.datasource->GetListValue();      break;
+                case Algorithm::LIST:   content = match.datasource->glob_expansion[pos]; break;
+                case Algorithm::INLINE: content = match.datasource->GetListGlob();       break;
+            }   
+
+            src.replace(match.start + span, match.count, content);
+    
+            span += content.length() - match.pattern_len;
+        }
+    };
+
+    for (; rx_it1 != end; ++rx_it1)
+    {
+        const std::smatch& m         = *rx_it1;
+        const std::string  algorithm = m[1].str();
+        const std::string  name      = m[2].str();
 
         // LOOKUP VARIABLE VALUE
         auto it = env.vtable.find(name);
         if (it == env.vtable.end())
         {
             std::stringstream err;
-            err << "Undefined variable " << ANSI_BMAGENTA << name << ANSI_RESET
-                << " while trying to expand " << ANSI_BMAGENTA << "{arc:" << name << "}" << ANSI_RESET;
+            err << "Undefined variable " << TOKEN_MAGENTA(name) << " in statement " << TOKEN_CYAN(s);
+            return err.str();
+        }
+
+        Algorithm algo;
+
+        if (auto eit = Expansion_Map.find(algorithm); eit != Expansion_Map.end())
+        {
+            algo = eit->second;
+        }
+
+        if (std::find(allowed_algorithms.begin(), allowed_algorithms.end(), algo) != allowed_algorithms.end())
+        {
+            if (it->second.glob_expansion.size() == 0)
+            {
+                std::stringstream err;
+                err << "Invalid expand algorithm " << TOKEN_MAGENTA(algorithm) << " for variable " << TOKEN_CYAN(name) << " in statement " << TOKEN_CYAN(s);
+                return err.str();
+            }
+
+            if (algo == Algorithm::LIST) list_expansions.push_back(&it->second);
+
+            expanded.matches.push_back( List::Match {algo, (size_t) m.position(0), (size_t) m.length(0), m[0].str().length(), &it->second} );
+        }
+        else
+        {
+            std::stringstream err;
+            err << "Invalid expand algorithm " << TOKEN_MAGENTA(algorithm) << " for variable " << TOKEN_CYAN(name) << " in statement " << TOKEN_CYAN(s);
+            return err.str();
+        }
+    }
+
+    std::sregex_iterator rx_it2(expanded.source.begin(), expanded.source.end(), re_arc);
+
+    for (; rx_it2 != end; ++rx_it2)
+    {
+        const std::smatch& m     = *rx_it2;
+        std::size_t        start = m.position(0);
+        std::size_t        len   = m.length(0);
+        const std::string  name  = m[1].str();
+
+        // LOOKUP VARIABLE VALUE
+        auto it = env.vtable.find(name);
+        if (it == env.vtable.end())
+        {
+            std::stringstream err;
+            err << "Undefined variable " << TOKEN_MAGENTA(name) << " in statement " << TOKEN_CYAN(s);
 
             return err.str();
         }
 
-        // REPLACE TOKEN WITH VALUE
-        const std::string& value = it->second.GetListValue();
-        s.replace(static_cast<std::size_t>(m.position(0)), static_cast<std::size_t>(m.length(0)), value);
+        expanded.matches.push_back( List::Match {Algorithm::NORMAL, start, len, m[0].str().length(), &it->second});
     }
 
-    return "Too deep / cyclic {arc:...} expansion (depth limit reached)";
+    std::sort(expanded.matches.begin(), expanded.matches.end(), [] (const List::Match& a, const List::Match& b)
+    {
+        return a.start < b.start;
+    });
+
+    if (list_expansions.size() > 0)
+    {
+        if (list_exp == nullptr)
+        {
+            std::stringstream err;
+            err << "Invalid expansion algorithm " << TOKEN_CYAN("list") << " algorithm in statement " << TOKEN_MAGENTA(s);
+            return err.str();
+        }
+
+        expected = list_expansions[0]->glob_expansion.size();
+
+        const bool same_len = std::all_of(list_expansions.begin(), list_expansions.end(), [&] (const auto* list)
+        {
+            return list->glob_expansion.size() == expected;
+        });
+
+        if (!same_len)
+        {
+            std::stringstream err;
+            err << "Invalid variables length for " << TOKEN_CYAN("list") << " algorithm in statement " << TOKEN_MAGENTA(s);
+            return err.str();
+        }
+
+        for (uint32_t i = 0; i < expected; ++i)
+        {
+            std::string src = s;
+            expand(src, i);
+            list_exp->push_back(src);
+        }
+    } 
+    
+    expand(s);
+
+    return std::nullopt;
 }
 
+
+std::optional<std::string> Enviroment::Expander::ExpandLists()
+{
+
+    return std::nullopt;
+}
  
 
 /**
@@ -1165,7 +1350,8 @@ std::optional<std::string> Enviroment::Expander::ExpandArcAll(std::string& s) no
  * @param s String to expand in-place.
  * @return Empty optional on success, error string on failure.
  */
-std::optional<std::string> Enviroment::Expander::ExpandText(std::string& s) noexcept
+std::optional<std::string> Enviroment::Expander::ExpandText(std::string& s, const std::vector<Algorithm>& allowed_algorithms,
+                                                            std::vector<std::string>* list_exp) noexcept
 {
     // EXPAND INTERNALS
     if (auto err = ExpandInternals(s); err.has_value())
@@ -1174,7 +1360,7 @@ std::optional<std::string> Enviroment::Expander::ExpandText(std::string& s) noex
     }
 
     // EXPAND VARIABLES
-    if (auto err = ExpandArcAll(s); err.has_value())
+    if (auto err = ExpandArcAll(s, allowed_algorithms, list_exp); err.has_value())
     {
         return err;
     }
@@ -1212,7 +1398,7 @@ void Enviroment::Expander::ExtractFsPaths(const std::string& s, std::vector<fs::
 std::optional<std::string> Enviroment::Expander::ExpandAssertSide(std::string& stmt, AssertCheck& assert) noexcept
 {
     // EXPAND TEXT TOKENS
-    if (auto err = ExpandText(stmt); err.has_value())
+    if (auto err = ExpandText(stmt, {}); err.has_value())
     {
         return err;
     }

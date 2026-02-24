@@ -71,11 +71,6 @@ class BinFile
 public:
     BinFile() = default;
 
-    ~BinFile()
-    {
-        close();
-    }
-
     bool open(const std::string& path)
     {
         close();
@@ -93,6 +88,29 @@ public:
                        std::ios::in |
                        std::ios::out |
                        std::ios::trunc);
+        }
+
+        return static_cast<bool>(file_);
+    }
+
+    
+    bool reopen(const std::string& path, bool erase)
+    {
+        file_.clear();
+
+        if (erase)
+        {
+            file_.close();
+            file_.clear();
+            file_.open(path,
+                       std::ios::binary |
+                       std::ios::in |
+                       std::ios::out |
+                       std::ios::trunc);
+        }
+        else
+        {
+            file_.seekg(0, std::ios::beg);
         }
 
         return static_cast<bool>(file_);
@@ -190,22 +208,6 @@ public:
         return read_exact(offset, out.data(), 16);
     }
 
-    bool write_block16(std::uint64_t offset, const std::string& data) noexcept
-    {
-        if (data.size() != 16)
-        {
-            return false;
-        }
-
-        return write_exact(offset, data.data(), 16);
-    }
-
-    bool erase_record(std::uint64_t offset, std::size_t record_size) noexcept
-    {
-        std::vector<char> zeros(record_size, 0);
-        return write_exact(offset, zeros.data(), record_size);
-    }
-
 private:
     std::fstream file_;
 };
@@ -229,6 +231,8 @@ public:
     Manager(Manager&&)                    noexcept = delete;
     Manager& operator = (const Manager&&) noexcept = delete;
 
+    ~Manager() = default;
+
     /**
      * @brief Returns the global cache manager instance.
      */
@@ -239,6 +243,20 @@ public:
     }
 
 
+    /**
+     * @brief Removes all cached data from disk.
+     */
+    void Store(const std::string& key) noexcept;
+
+
+
+    /**
+     * @brief Removes all cached data from disk.
+     */
+    void Freeze() noexcept;
+
+
+    
     /**
      * @brief Removes all cached data from disk.
      */
@@ -286,60 +304,40 @@ public:
 private:
     /** @brief Private constructor for singleton enforcement. */
     Manager();
-    ~Manager() = default;
 
     static constexpr std::size_t MD5_RAW_SIZE   = 16;
     static constexpr std::size_t FILE_REC_SIZE  = 32;
 
-    struct FileRecord
-    {
-        char path_md5[MD5_RAW_SIZE];
-        char content_md5[MD5_RAW_SIZE];
-    };
-
-    static bool IsMD5Raw16(const std::string& s) noexcept
-    {
-        return s.size() == MD5_RAW_SIZE;
-    }
-
-    static void RecordFrom(const std::string& k16, const std::string& v16, FileRecord& out) noexcept
-    {
-        std::memcpy(out.path_md5,    k16.data(), MD5_RAW_SIZE);
-        std::memcpy(out.content_md5, v16.data(), MD5_RAW_SIZE);
-    }
-
-    static std::string KeyToString(const FileRecord& r) noexcept
-    {
-        return std::string(r.path_md5, MD5_RAW_SIZE);
-    }
-
-    static std::string ValToString(const FileRecord& r) noexcept
-    {
-        return std::string(r.content_md5, MD5_RAW_SIZE);
-    }
-
-    class PairMap : public std::map<std::string, std::pair<std::uint64_t, std::string>>
+    class PairMap : public std::map<std::string, std::pair<bool, std::string>>
     {
     public:
-        bool upsert(const std::string& k, const std::string& v, const std::uint64_t offset)
+        bool upsert(const std::string& k, const std::string& v, bool changed)
         {
-            auto value = std::make_pair(offset, v);
-
             auto it = this->find(k);
+            
+            auto value = std::make_pair<>(changed, v);
+
             if (it == this->end())
             {
                 this->emplace(k, value);
                 return true;
             }
 
-            it->second = value;
-            return true;
+            if (it->second.second.compare(v) != 0 || it->second.first)
+            {
+                it->second = value;
+                return true;
+            }
+
+            return false;
         }
     };
 
     fs::path _cache_folder;                             ///< Cache root directory.
     fs::path _script_path;                              ///< Script output directory.
     fs::path _binary;                                   ///< Cached items file.
+
+    uint64_t _store_idx;
 
     BinFile             _mnt_binary;
     std::string         _cached_profile;                        ///< Cached profile identifier.

@@ -2,6 +2,20 @@
 
 All relevant changes to this project will be documented in this file.
 
+## [0.6.0] - 2025-02-24
+Major Release **Lushy Lion** (v 0.6.0)  
+
+### Removed
+- Attribute **flushcache**
+- Removed task params
+
+### Changes
+- Cache module logic
+- Improved job graph generation & visit
+- Moved task instructions expansion logic
+
+### Added
+- Attribute **cache**, with commands: **track**, **untrack** and **store**
 
 ## [0.5.0] - 2025-02-11
 ### Changes

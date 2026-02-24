@@ -118,12 +118,21 @@ static Arcana_Result Execute(const Support::Arguments& args)
     // BUILD JOBLIST FROM CURRENT ENVIRONMENT.
     CHECK_RESULT(Jobs::List::FromEnv(env, joblist, recovery));
 
+    // HANDLE POST PARSE EARLY-EXIT OPTIONS.
+    CHECK_RESULT(Support::HandleArgsPostParse(args, env, joblist));
+
     // CONFIGURE RUNTIME EXECUTION OPTIONS.
     runopt.silent          = args.silent;
     runopt.max_parallelism = env.GetThreads();
 
-    // EXECUTE JOBS AND PROPAGATE RESULT.
-    return Core::run_jobs(joblist, runopt);
+    // EXECUTE JOBS
+    Arcana_Result result;
+    if (result = Core::run_jobs(joblist, runopt); result == Arcana_Result::ARCANA_RESULT__OK)
+    {
+        Cache::Manager::Instance().Freeze();
+    }
+
+    return result;
 }
                                                                                                    
                                                                                                                                                                                       
@@ -149,9 +158,6 @@ int main(int argc, char** argv)
 
     // PARSE ARCFILE AND PREPARE THE SEMANTIC ENVIRONMENT.
     CHECK_RESULT(Parse(args));
-
-    // HANDLE POST PARSE EARLY-EXIT OPTIONS.
-    CHECK_RESULT(Support::HandleArgsPostParse(args, env));
 
     // LOAD CACHE.
     Cache::Manager::Instance().LoadCache(env.GetProfile().selected);
